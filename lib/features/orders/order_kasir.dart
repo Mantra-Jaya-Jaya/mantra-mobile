@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../core/widgets/base_header_widget.dart'; // Sesuaikan path ini dengan folder project-mu
-import 'order_model.dart';
+import 'package:frontend/core/services/order_service.dart';
+import 'package:frontend/core/models/order_model.dart';
 import 'detailpesanan_kasir.dart'; 
 
-// ==================== KASIR PAGE ====================
 class OrderKasir extends StatefulWidget {
   const OrderKasir({super.key});
 
@@ -15,6 +14,9 @@ class OrderKasirState extends State<OrderKasir> {
   bool isOnlineTab = true; 
   List<OrderModel> ordersList = [];
   bool isLoading = true;
+  String? errorMessage; 
+
+  final OrderService _orderService = OrderService(); 
 
   @override
   void initState() {
@@ -23,50 +25,55 @@ class OrderKasirState extends State<OrderKasir> {
   }
 
   Future<void> _loadOrders() async {
-    setState(() => isLoading = true);
+    if (!mounted) return;
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
 
     try {
-      // Simulasi penarikan data dari backend
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      final List<Map<String, dynamic>> mockJsonResponse = [
-        {
-          "id": 1045,
-          "total_pembayaran": 126500,
-          "tanggal_pesanan": "24 Oct 2023, 14:30 WIB",
-          "tipe_pesanan": "Online",
-          "status_pesanan": "Diproses",
-          "items_detail": "2x Americano Iced, 1x Caffe Latte, 2x Choco Glaze Donut"
-        },
-      ];
-
-      final parsedData = mockJsonResponse.map((json) => OrderModel.fromJson(json)).toList();
+      final List<OrderModel> dataDariBackend = await _orderService.getDaftarPesanan();
 
       if (mounted) {
         setState(() {
-          ordersList = parsedData;
+          ordersList = dataDariBackend; 
           isLoading = false;
         });
       }
     } catch (e) {
-      if (mounted) setState(() => isLoading = false);
-      print("❌ Eror memuat data: $e");
+      if (mounted) {
+        setState(() {
+          errorMessage = e.toString().replaceAll('Exception: ', '');
+          isLoading = false;
+        });
+      }
+      print("❌ Error memuat data dari backend: $e");
     }
   }
 
   Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'diproses': return const Color(0xFFFFEDD5);
-      case 'selesai': return const Color(0xFFDCFCE7);
-      default: return const Color(0xFFE5E7EB);
+    switch (status.trim().toLowerCase()) {
+      case 'dikemas':
+      case 'diproses': 
+        return const Color(0xFFFFEDD5); 
+      case 'selesai': 
+      case 'dikirim':
+        return const Color(0xFFDCFCE7); 
+      default: 
+        return const Color(0xFFE5E7EB); 
     }
   }
 
   Color _getStatusTextColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'diproses': return const Color(0xFFAF510C);
-      case 'selesai': return const Color(0xFF15803D);
-      default: return const Color(0xFF374151);
+    switch (status.trim().toLowerCase()) {
+      case 'dikemas':
+      case 'diproses': 
+        return const Color(0xFFAF510C); 
+      case 'selesai': 
+      case 'dikirim':
+        return const Color(0xFF15803D); 
+      default: 
+        return const Color(0xFF374151);
     }
   }
 
@@ -76,19 +83,25 @@ class OrderKasirState extends State<OrderKasir> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9F9F9),
-      appBar: BaseHeaderWidget(
-        title: "Daftar Pesanan",
-        hasRadius: false,
-        actions: const [],
+      appBar: AppBar(
+        title: const Text(
+          "Daftar Pesanan",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: const Color(0xFFAF510C),
+        elevation: 0,
+        automaticallyImplyLeading: false,
       ),
       body: Column(
         children: [
           const SizedBox(height: 16),
-          // Tab Toggle
           Container(
             height: 48,
             margin: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: const Color(0xFFAF510C)),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12), 
+              color: const Color(0xFFAF510C),
+            ),
             child: Row(
               children: [
                 _buildTabButton("Online", true),
@@ -97,14 +110,23 @@ class OrderKasirState extends State<OrderKasir> {
             ),
           ),
           const SizedBox(height: 16),
+          
           Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFFAF510C)))
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                    itemCount: filteredOrders.length,
-                    itemBuilder: (context, index) => _buildOrderItem(filteredOrders[index]),
-                  ),
+            child: RefreshIndicator(
+              onRefresh: _loadOrders,
+              color: const Color(0xFFAF510C),
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator(color: Color(0xFFAF510C)))
+                  : errorMessage != null
+                      ? _buildErrorWidget()
+                      : filteredOrders.isEmpty
+                          ? _buildEmptyWidget()
+                          : ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                              itemCount: filteredOrders.length,
+                              itemBuilder: (context, index) => _buildOrderItem(filteredOrders[index]),
+                            ),
+            ),
           ),
         ],
       ),
@@ -112,17 +134,92 @@ class OrderKasirState extends State<OrderKasir> {
   }
 
   Widget _buildTabButton(String label, bool isOnline) {
+    final bool isActive = isOnlineTab == isOnline;
     return Expanded(
-      child: InkWell(
+      child: GestureDetector(
         onTap: () => setState(() => isOnlineTab = isOnline),
         child: Container(
           alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            color: isOnlineTab == isOnline ? const Color(0xFFEAEFEF) : Colors.transparent,
+            color: isActive ? const Color(0xFFEAEFEF) : Colors.transparent,
           ),
-          child: Text(label, style: TextStyle(color: isOnlineTab == isOnline ? const Color(0xFFAF510C) : Colors.white, fontWeight: FontWeight.bold)),
+          child: Text(
+            label, 
+            style: TextStyle(
+              color: isActive ? const Color(0xFFAF510C) : Colors.white, 
+              fontWeight: FontWeight.bold
+            ),
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildErrorWidget() {
+    return LayoutBuilder(
+      builder: (context, constraints) => ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          Container(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.cloud_off_outlined, size: 56, color: Colors.red),
+                    const SizedBox(height: 12),
+                    Text(
+                      errorMessage ?? "Terjadi kesalahan sistem", 
+                      style: const TextStyle(color: Colors.red, fontSize: 14), 
+                      textAlign: TextAlign.center
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _loadOrders,
+                      icon: const Icon(Icons.refresh, color: Colors.white),
+                      label: const Text("Coba Lagi", style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFAF510C)),
+                    )
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyWidget() {
+    return LayoutBuilder(
+      builder: (context, constraints) => ListView( 
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          Container(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.assignment_outlined, size: 52, color: Colors.grey[400]),
+                  const SizedBox(height: 12),
+                  Text(
+                    "Belum ada pesanan ${isOnlineTab ? 'Online' : 'Offline'} saat ini",
+                    style: const TextStyle(color: Colors.grey, fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Tarik ke bawah untuk memperbarui",
+                    style: TextStyle(color: Colors.grey[400], fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -147,8 +244,23 @@ class OrderKasirState extends State<OrderKasir> {
         ),
         child: Row(
           children: [
-            ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(order.imgUrl, width: 52, height: 52, fit: BoxFit.cover)),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8), 
+              child: Image.network(
+                order.imgUrl, 
+                width: 52, 
+                height: 52, 
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 52, 
+                  height: 52, 
+                  color: const Color(0xFFF3EDE5),
+                  child: const Icon(Icons.fastfood, color: Color(0xFFAF510C), size: 24),
+                ),
+              ),
+            ),
             const SizedBox(width: 14),
+            
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -156,16 +268,39 @@ class OrderKasirState extends State<OrderKasir> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(order.orderId, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      Expanded(
+                        child: Text(
+                          order.orderId, 
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(color: _getStatusColor(order.statusText), borderRadius: BorderRadius.circular(6)),
-                        child: Text(order.statusText, style: TextStyle(color: _getStatusTextColor(order.statusText), fontSize: 10, fontWeight: FontWeight.bold)),
+                        decoration: BoxDecoration(
+                          color: _getStatusColor(order.statusText), 
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          order.statusText, 
+                          style: TextStyle(
+                            color: _getStatusTextColor(order.statusText), 
+                            fontSize: 10, 
+                            fontWeight: FontWeight.bold,
+                          )
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 6),
-                  Text(order.itemsDetail, style: const TextStyle(color: Color(0xFF566067), fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(
+                    order.itemsDetail, 
+                    style: const TextStyle(color: Color(0xFF566067), fontSize: 14), 
+                    maxLines: 1, 
+                    overflow: TextOverflow.ellipsis
+                  ),
                   const SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
