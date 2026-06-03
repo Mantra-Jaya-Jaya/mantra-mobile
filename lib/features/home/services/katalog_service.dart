@@ -54,6 +54,7 @@ class BarangModel {
   final int hargaDiskon;
   final bool punyaDiskon;
   final String gambarBarang;
+  final String deskripsi;
 
   BarangModel({
     required this.idBarang,
@@ -63,6 +64,7 @@ class BarangModel {
     required this.hargaDiskon,
     required this.punyaDiskon,
     required this.gambarBarang,
+    required this.deskripsi,
   });
 
   factory BarangModel.fromJson(Map<String, dynamic> json) {
@@ -74,6 +76,7 @@ class BarangModel {
       hargaDiskon: json['harga_diskon'] ?? 0,
       punyaDiskon: json['punya_diskon'] ?? false,
       gambarBarang: json['gambar_barang'] ?? '',
+      deskripsi: json['deskripsi'] ?? '',
     );
   }
 }
@@ -104,7 +107,10 @@ class KatalogService {
 
   /// Ambil daftar barang dengan pagination.
   /// Endpoint: GET /customer/barang?page=&limit=
-  Future<List<BarangModel>> getDaftarBarang({int page = 1, int limit = 10}) async {
+  Future<List<BarangModel>> getDaftarBarang({
+    int page = 1,
+    int limit = 10,
+  }) async {
     final response = await _client.dio.get(
       '/customer/barang',
       queryParameters: {'page': page, 'limit': limit},

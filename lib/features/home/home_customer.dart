@@ -10,6 +10,7 @@ import 'package:frontend/features/home/kategori_barang_customer.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:frontend/features/home/search_page.dart';
 import 'package:frontend/features/home/detail_barang.dart';
+import 'package:frontend/features/home/kategori_page.dart';
 import 'package:intl/intl.dart';
 
 // ✅ Deklarasi RouteObserver global untuk mendeteksi navigasi halaman
@@ -260,11 +261,36 @@ class _HomeContentState extends State<HomeContent> {
                 ],
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
-              child: Text(
-                'Kategori',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Kategori',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      // Navigasi ke halaman semua kategori dengan membawa data list awal dari API
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              AllKategoriPage(initialCategories: _kategoriList),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Lihat Semua',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFAD510D),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             _buildKategoriSection(),

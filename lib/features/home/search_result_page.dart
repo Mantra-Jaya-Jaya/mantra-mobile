@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/features/home/services/katalog_service.dart';
+import 'package:frontend/features/home/detail_barang.dart';
 
 class SearchResultPage extends StatefulWidget {
   final String searchQuery;
@@ -183,88 +184,98 @@ class _SearchResultPageState extends State<SearchResultPage> {
   }
 
   // Card UI yang disesuaikan penuh dengan logika kartu produk halaman beranda Anda
+  // Card UI yang disesuaikan penuh dengan logika kartu produk halaman beranda Anda
   Widget _buildProductCard(BarangModel barang) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      elevation: 2,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Render Gambar Network/Statis sesuai skema beranda
-          Expanded(
-            child: ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(15),
-                topRight: Radius.circular(15),
-              ),
-              child: barang.gambarBarang.isNotEmpty
-                  ? Image.network(
-                      barang.gambarBarang,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        color: Colors.grey.shade100,
-                        child: const Icon(
-                          Icons.image_not_supported,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    )
-                  : Container(
-                      color: Colors.grey.shade100,
-                      child: const Center(
-                        child: Icon(
-                          Icons.inventory_2_outlined,
-                          color: Colors.grey,
-                          size: 40,
-                        ),
-                      ),
-                    ),
-            ),
+    return GestureDetector(
+      onTap: () {
+        // 👈 Fungsi navigasi untuk berpindah ke halaman detail sambil membawa data objek barang
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DetailBarangPage(barang: barang),
           ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  barang.namaBarang,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13),
+        );
+      },
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        elevation: 2,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(15),
+                  topRight: Radius.circular(15),
                 ),
-                const SizedBox(height: 2),
-                // Logika Penanganan Teks Diskon Produk
-                if (barang.punyaDiskon) ...[
-                  Text(
-                    _currencyFormat.format(barang.hargaTerendah),
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey,
-                      decoration: TextDecoration.lineThrough,
-                    ),
-                  ),
-                  Text(
-                    _currencyFormat.format(barang.hargaDiskon),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFFAD510D),
-                      fontSize: 13,
-                    ),
-                  ),
-                ] else ...[
-                  Text(
-                    _currencyFormat.format(barang.hargaTerendah),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ],
+                child: barang.gambarBarang.isNotEmpty
+                    ? Image.network(
+                        barang.gambarBarang,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: Colors.grey.shade100,
+                          child: const Icon(
+                            Icons.image_not_supported,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      )
+                    : Container(
+                        color: Colors.grey.shade100,
+                        child: const Center(
+                          child: Icon(
+                            Icons.inventory_2_outlined,
+                            color: Colors.grey,
+                            size: 40,
+                          ),
+                        ),
+                      ),
+              ),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    barang.namaBarang,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  const SizedBox(height: 2),
+                  if (barang.punyaDiskon) ...[
+                    Text(
+                      _currencyFormat.format(barang.hargaTerendah),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey,
+                        decoration: TextDecoration.lineThrough,
+                      ),
+                    ),
+                    Text(
+                      _currencyFormat.format(barang.hargaDiskon),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFAD510D),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ] else ...[
+                    Text(
+                      _currencyFormat.format(barang.hargaTerendah),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
