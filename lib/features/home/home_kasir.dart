@@ -27,7 +27,7 @@ class _DashboardKasirPageState extends State<DashboardKasirPage> {
   final List<Widget> _pages = [
     const DashboardContent(),
     const OrderKasir(),
-    const PaymentScreen(), // <--- Sekarang langsung dipanggil kosongan!
+    const KasirPosScreen(idPesanan: 3), // <--- Sekarang langsung dipanggil kosongan!
     const SummaryPage(),
     const ProfileKasir(),
   ];
