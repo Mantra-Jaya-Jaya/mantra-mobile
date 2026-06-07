@@ -5,10 +5,13 @@ import 'package:frontend/features/summary/summary.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+// Import fitur lainnya (Silakan sesuaikan kembali jika ada path yang berbeda)
 import '../auth/login.dart';
 import '../orders/order_kasir.dart';
 import '../profile/profile_kasir.dart';
 import '../notifications/notification_kasir.dart';
+import '../payment/payment.dart'; // Menuju ke file PaymentScreen baru yang mandiri
 
 class DashboardKasirPage extends StatefulWidget {
   const DashboardKasirPage({super.key});
@@ -20,16 +23,15 @@ class DashboardKasirPage extends StatefulWidget {
 class _DashboardKasirPageState extends State<DashboardKasirPage> {
   int _currentIndex = 0;
 
-  // Placeholder untuk halaman lain
+  // List halaman utama kasir — Bersih total dari pengecekan dan parameter kamera
   final List<Widget> _pages = [
     const DashboardContent(),
     const OrderKasir(),
-    const Center(child: Text('Halaman Payments')),
+    const PaymentScreen(), // <--- Sekarang langsung dipanggil kosongan!
     const SummaryPage(),
     const ProfileKasir(),
   ];
 
-  // Menu sesuai gambar yang kamu kirim
   final List<NavMenuModel> kasirMenus = [
     NavMenuModel(label: 'Home', icon: Icons.home_outlined, index: 0),
     NavMenuModel(label: 'Orders', icon: Icons.assignment_outlined, index: 1),
@@ -40,29 +42,27 @@ class _DashboardKasirPageState extends State<DashboardKasirPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Ambil lebar layar untuk menghitung posisi koordinat X FAB secara dinamis
     double screenWidth = MediaQuery.of(context).size.width;
-    double navPadding = 20.0; // Sesuaikan dengan padding horizontal di CustomDynamicNavbar jika ada
+    double navPadding = 20.0; 
     double rowWidth = screenWidth - (navPadding * 2);
     double itemWidth = rowWidth / kasirMenus.length;
     
-    // 2. Hitung posisi X agar lekukan & FAB berada tepat di tengah menu yang aktif
     double fabX = (itemWidth * _currentIndex) + (itemWidth / 2) - 28 + navPadding;
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: IndexedStack(index: _currentIndex, children: _pages), // Menggunakan IndexedStack agar state halaman terjaga
+      body: IndexedStack(index: _currentIndex, children: _pages), 
       
-      // 3. Gunakan DynamicFabLocation custom yang sama seperti customer
       floatingActionButtonLocation: DynamicFabLocation(fabX),
       
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Tetap mempertahankan index yang sedang aktif saat FAB diklik (opsional)
-          // Atau jika ingin memaksa ke halaman payments (index 2):
-          setState(() => _currentIndex = _currentIndex); 
+          // Ketika FAB diklik, langsung pindah ke halaman Payments (index 2)
+          setState(() {
+            _currentIndex = 2; 
+          });
         },
-        backgroundColor: const Color(0xFFAD510D), // Menggunakan warna coklat agar match dengan gambar 1
+        backgroundColor: const Color(0xFFAD510D), 
         shape: const CircleBorder(),
         child: Icon(
           kasirMenus[_currentIndex].icon,
@@ -82,8 +82,7 @@ class _DashboardKasirPageState extends State<DashboardKasirPage> {
   }
 }
 
-// ... Sisanya ke bawah (ProfileKasirPlaceholder dan DashboardContent) tetap sama seperti kode aslimu
-
+// ======================= DASHBOARD CONTENT =======================
 class DashboardContent extends StatefulWidget {
   const DashboardContent({super.key});
 
@@ -156,8 +155,7 @@ class _DashboardContentState extends State<DashboardContent> {
               onPressed: _loadDashboard,
               style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFAD510D)),
-              child: const Text('Coba Lagi',
-                  style: TextStyle(color: Colors.white)),
+              child: const Text('Coba Lagi', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -187,8 +185,7 @@ class _DashboardContentState extends State<DashboardContent> {
                     children: [
                       Text(
                         _hariIniLabel,
-                        style:
-                            const TextStyle(color: Colors.white70, fontSize: 14),
+                        style: const TextStyle(color: Colors.white70, fontSize: 14),
                       ),
                       const SizedBox(height: 5),
                       Text(
@@ -385,8 +382,7 @@ class _DashboardContentState extends State<DashboardContent> {
             const SizedBox(height: 5),
             Text(
               value,
-              style:
-                  const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ],
         ),

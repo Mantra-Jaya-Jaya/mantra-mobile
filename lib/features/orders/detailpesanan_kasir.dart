@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'order_model.dart';
+import 'package:frontend/core/models/order_model.dart';
 
 class DetailPesanan extends StatefulWidget {
   final OrderModel pesanan;

@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'features/auth/signup.dart';
 import 'features/landing_page/landing_page.dart';
 import 'features/home/home_customer.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 // 1. TAMBAHKAN INI: Deklarasikan variabel secara global di luar class
 final RouteObserver<Route> routeObserver = RouteObserver<Route>();
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('id_ID', null);
   runApp(const MantraApp());
 }
 
