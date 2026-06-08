@@ -14,11 +14,35 @@ import '../models/payment_model.dart';
 // Sesuaikan import ApiClient dengan path di project kamu
 import '../network/api_client.dart';
 
+import 'package:dio/dio.dart';
+
 class PaymentService {
   final ApiClient _apiClient;
 
   PaymentService({ApiClient? apiClient})
       : _apiClient = apiClient ?? ApiClient();
+
+  Future<HasilCariProduk?> scanBarcodeProduk(String kodeBarcode) async {
+    try {
+      final response = await _apiClient.dio.get('/scan/$kodeBarcode');
+
+      if (response.statusCode == 200 && response.data['data'] != null) {
+        try {
+          return HasilCariProduk.fromJson(response.data['data']);
+        } catch (parseError) {
+          throw Exception("Gagal membaca struktur JSON: $parseError");
+        }
+      }
+      return null;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        return null; // Memang gak ketemu
+      }
+      throw Exception("Rute API salah atau Server Mati");
+    } catch (e) {
+      throw Exception("Error tidak terduga: $e");
+    }
+  }
 
   // ----------------------------------------------------------
   // Cari produk berdasarkan nama atau scan barcode
