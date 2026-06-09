@@ -7,9 +7,11 @@ enum CardVariant { newOrder, history, done }
 class DeliveryCard extends StatelessWidget {
   final CardVariant variant;
   final PengantaranModel? data; 
+  final String idPengantaran;
 
   const DeliveryCard({
     super.key,
+    required this.idPengantaran,
     this.variant = CardVariant.newOrder,
     this.data,
   });
@@ -112,7 +114,10 @@ class DeliveryCard extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const DetailPesananPage(),
+                    builder: (context) => DetailPesananPage(
+                      idPengantaran: idPengantaran,
+                      isSedangDiantar: true,
+                    ),
                   ),
                 );
               },

@@ -25,3 +25,36 @@ class PengantaranService {
     }
   }
 }
+
+class DetailPengantaranService {
+  final ApiClient _apiClient;
+
+  DetailPengantaranService({ApiClient? apiClient})
+    : _apiClient = apiClient ?? ApiClient();
+
+  // ----------------------------------------------------------
+  // Ambil Data Detail Pengantaran (Khusus Peta & Info)
+  // ----------------------------------------------------------
+  Future<DetailPengantaranModel?> getDetailPengantaran(String publicId) async {
+    try {
+      // 🚀 UBAH ENDPOINT INI SESUAI SAMA ROUTES GOLANG LU
+      final response = await _apiClient.dio.get(
+        '/kurir/pengantaran/$publicId/detail',
+      );
+
+      if (response.statusCode == 200 && response.data['data'] != null) {
+        // Terjemahin hasil JSON ke bentuk Object DetailPengantaranModel
+        return DetailPengantaranModel.fromJson(response.data['data']);
+      }
+      return null;
+    } on DioException catch (e) {
+      print(
+        '❌ DEBUG API PETA: Error nembak detail -> ${e.response?.statusCode} - ${e.message}',
+      );
+      return null;
+    } catch (e) {
+      print('❌ DEBUG API PETA: Gagal Parsing Model -> $e');
+      return null;
+    }
+  }
+}

@@ -224,7 +224,7 @@ class _TugasKurirPageState extends State<TugasKurirPage> {
                               variant: _isPengantaran
                                   ? CardVariant.history
                                   : CardVariant.done,
-                           
+                              idPengantaran: dataTugas.publicId,
                               data: dataTugas,
                             );
                           },

@@ -5,8 +5,9 @@ import '../models/pesanan_kurir_model.dart';
 class PesananCard extends StatelessWidget {
   final PesananRingkasModel data;
   final bool isHighlight;
+  final String idPengantaran;
 
-  const PesananCard({super.key, required this.data, this.isHighlight = false});
+  const PesananCard({super.key,required this.idPengantaran, required this.data, this.isHighlight = false});
 
   @override
   Widget build(BuildContext context) {
@@ -157,7 +158,9 @@ class PesananCard extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const DetailPesananPage(),
+                          builder: (context) => DetailPesananPage(
+                            idPengantaran: idPengantaran,
+                          ),
                         ),
                       );
                     },
@@ -216,7 +219,9 @@ class PesananCard extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const DetailPesananPage(),
+                      builder: (context) => DetailPesananPage(
+                        idPengantaran: idPengantaran,
+                      ),
                     ),
                   );
                 },

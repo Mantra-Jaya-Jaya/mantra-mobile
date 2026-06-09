@@ -145,6 +145,7 @@ class _DashboardContentState extends State<DashboardContent> {
                           return _buildEmptyState('Belum ada pesanan masuk.');
                         }
                         return PesananCard(
+                          idPengantaran: snapshot.data!.publicId,
                           data: snapshot.data!,
                           isHighlight: true,
                         );
@@ -252,7 +253,10 @@ class _DashboardContentState extends State<DashboardContent> {
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: daftarLainnya.length,
                           itemBuilder: (context, index) {
-                            return PesananCard(data: daftarLainnya[index]);
+                            return PesananCard(
+                              idPengantaran: daftarLainnya[index].publicId,
+                              data: daftarLainnya[index],
+                            );
                           },
                         );
                       },

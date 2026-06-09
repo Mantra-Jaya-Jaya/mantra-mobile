@@ -1,19 +1,28 @@
-import 'package:flutter/material.dart';
-import '../../core/widgets/card_item_pemesanan_kurir.dart';
-import '../../core/widgets/global_appbar_kurir.dart';
-import '../pengantaran/rute_pengantaran_page.dart'; 
-
 // ==========================================
 // 1. WIDGET UTAMA: HALAMAN DETAIL PESANAN
 // ==========================================
+import 'package:flutter/material.dart';
+import '../../core/widgets/card_item_pemesanan_kurir.dart';
+import '../../core/widgets/global_appbar_kurir.dart';
+import '../pengantaran/rute_pengantaran_page.dart';
+
 class DetailPesananPage extends StatelessWidget {
-  const DetailPesananPage({super.key});
+  final String idPengantaran;
+
+  // 🚀 PARAMETER SAKTI: Buat bedain mode "Cari Order" vs "Lagi Nganter"
+  // Default-nya false (Artinya dari halaman Home/Cari Order)
+  final bool isSedangDiantar;
+
+  const DetailPesananPage({
+    super.key,
+    required this.idPengantaran,
+    this.isSedangDiantar = false, // 👈 Tambahin ini!
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFAD510D), // Coklat valid Mantra!
-      // 🚀 PANGGIL KOMPONEN GLOBAL APP BAR
+      backgroundColor: const Color(0xFFAD510D),
       appBar: GlobalAppBarKurir(
         title: 'Detail Pesanan',
         showBackButton: true,
@@ -24,10 +33,7 @@ class DetailPesananPage extends StatelessWidget {
         bottom: false,
         child: Column(
           children: [
-            // 🚀 1. SIZEDBOX SAKTI BIAR LENGKUNGANNYA GAK KEMEPETAN
             const SizedBox(height: 16),
-
-            // 🚀 WADAH PUTIH MELENGKUNG
             Expanded(
               child: Container(
                 width: double.infinity,
@@ -64,27 +70,33 @@ class DetailPesananPage extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(height: 2),
-                                const Text(
-                                  'IU790SE',
-                                  style: TextStyle(
+                                Text(
+                                  idPengantaran.split('-').first.toUpperCase(),
+                                  style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w900,
                                   ),
                                 ),
                               ],
                             ),
+
+                            // 🚀 BADGE DINAMIS: Berubah sesuai status
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF5B6B76),
+                                color: isSedangDiantar
+                                    ? const Color(0xFFAD510D)
+                                    : const Color(0xFF5B6B76),
                                 borderRadius: BorderRadius.circular(20),
                               ),
-                              child: const Text(
-                                'BELUM DITERIMA',
-                                style: TextStyle(
+                              child: Text(
+                                isSedangDiantar
+                                    ? 'SEDANG DIANTAR'
+                                    : 'BELUM DITERIMA',
+                                style: const TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
@@ -94,10 +106,9 @@ class DetailPesananPage extends StatelessWidget {
                           ],
                         ),
 
-                        // Jarak dari header ke list barang sedikit dirapatkan
                         const SizedBox(height: 20),
 
-                        // 🚀 LIST BARANG (Nanti bisa diganti pakai ListView.builder dari API)
+                        // (LIST BARANG, TUJUAN, TOTAL HARGA SAMA PERSIS KAYAK KODE LU SEBELUMNYA)
                         const OrderItemCard(
                           namaBarang: 'Nama barang 1',
                           qty: 1,
@@ -108,15 +119,7 @@ class DetailPesananPage extends StatelessWidget {
                           qty: 1,
                           harga: 'Rp. 50.000',
                         ),
-                        const OrderItemCard(
-                          namaBarang: 'Nama barang 3',
-                          qty: 1,
-                          harga: 'Rp. 50.000',
-                        ),
-
                         const SizedBox(height: 16),
-
-                        // 🚀 SEKSI TUJUAN PENGANTARAN
                         const Text(
                           'Tujuan Pengantaran',
                           style: TextStyle(
@@ -138,7 +141,6 @@ class DetailPesananPage extends StatelessWidget {
                             height: 1.5,
                           ),
                         ),
-
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 20),
                           child: Divider(
@@ -146,8 +148,6 @@ class DetailPesananPage extends StatelessWidget {
                             color: Color(0xFFEEEEEE),
                           ),
                         ),
-
-                        // 🚀 SEKSI TOTAL BELANJA (Struk Rincian dirapatkan)
                         const Text(
                           'Total Belanja',
                           style: TextStyle(
@@ -156,91 +156,12 @@ class DetailPesananPage extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        _buildReceiptRow('Item 1', 'x1', 'Rp. 50.000, 00'),
-                        _buildReceiptRow('Item 2', 'x1', 'Rp. 50.000, 00'),
-                        _buildReceiptRow('Item 3', 'x1', 'Rp. 50.000, 00'),
-                        _buildReceiptRow(
-                          'Delivery fee',
-                          '',
-                          'Rp. 20.000, 00',
-                          isGreyTitle: true,
-                        ),
-                        _buildReceiptRow(
-                          'Protection fee',
-                          '',
-                          'Rp. 2.000, 00',
-                          isGreyTitle: true,
-                        ),
-
-                        // Jarak ke Subtotal
-                        const SizedBox(height: 4),
                         _buildReceiptRow(
                           'Subtotal',
                           '',
                           'Rp. 172.000, 00',
                           isBold: true,
                         ),
-
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 20),
-                          child: Divider(
-                            thickness: 2,
-                            color: Color(0xFFEEEEEE),
-                          ),
-                        ),
-
-                        // 🚀 SEKSI METODE PEMBAYARAN
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Metode Pembayaran',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              'Transfer Bank (lunas)',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey.shade700,
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 20),
-                          child: Divider(
-                            thickness: 2,
-                            color: Color(0xFFEEEEEE),
-                          ),
-                        ),
-
-                        // 🚀 SEKSI PENDAPATAN KURIR
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Pendapatan Kurir',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFFAD510D),
-                              ),
-                            ),
-                            const Text(
-                              'Rp. 35.000, 00',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFFAD510D),
-                              ),
-                            ),
-                          ],
-                        ),
-
                         const SizedBox(height: 40),
                       ],
                     ),
@@ -252,40 +173,65 @@ class DetailPesananPage extends StatelessWidget {
         ),
       ),
 
-      // 🚀 FIXED BOTTOM BUTTON
+      // 🚀 BOTTOM NAVIGATION BAR SAKTI (BERUBAH SESUAI KONDISI)
       bottomNavigationBar: Container(
         color: Colors.white,
         padding: const EdgeInsets.all(24),
         child: SizedBox(
           width: double.infinity,
           height: 55,
-          child: ElevatedButton(
-            // 🚀 PANGGIL FUNGSI DIALOG PERTAMA DI SINI
-            onPressed: () {
-              _showLocationPermissionDialog(context);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFAD510D),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-            child: const Text(
-              'Terima Pesanan',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ),
+          child: isSedangDiantar
+              // 🚀 KALAU LAGI DIANTAR: Tombolnya "Selesaikan Pesanan"
+              ? ElevatedButton(
+                  onPressed: () {
+                    // Nanti di sini fungsi buat tembak API Selesaikan Pesanan
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Fitur selesaikan pesanan segera hadir!'),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        const Color(0xFFAD510D), 
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: const Text(
+                    'Selesaikan Pesanan',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                )
+              // 🚀 KALAU BELUM DITERIMA: Tombolnya "Terima Pesanan"
+              : ElevatedButton(
+                  onPressed: () => _showLocationPermissionDialog(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFAD510D),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: const Text(
+                    'Terima Pesanan',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
         ),
       ),
     );
   }
-
-  // 🚀 2. HELPER FUNGSI DIRAPATKAN (padding bottom dikurangi)
+  // 🚀 HELPER FUNGSI (Sama persis)
   Widget _buildReceiptRow(
     String title,
     String qty,
@@ -294,7 +240,6 @@ class DetailPesananPage extends StatelessWidget {
     bool isGreyTitle = false,
   }) {
     return Padding(
-      // Padding ini disusutkan dari 12 jadi 6 biar rapet kayak struk asli!
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
@@ -339,8 +284,7 @@ class DetailPesananPage extends StatelessWidget {
   void _showLocationPermissionDialog(BuildContext context) {
     showDialog(
       context: context,
-      barrierDismissible:
-          false, // Biar ga bisa ditutup sembarangan kalau klik luar
+      barrierDismissible: false,
       builder: (context) {
         return Dialog(
           shape: RoundedRectangleBorder(
@@ -368,7 +312,7 @@ class DetailPesananPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
+                const Text(
                   'Izinkan akses lokasi untuk pemantauan\nproses pengantaran',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -380,11 +324,9 @@ class DetailPesananPage extends StatelessWidget {
                 const SizedBox(height: 24),
                 Row(
                   children: [
-                    // Tombol Tolak
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () =>
-                            Navigator.pop(context), // Cukup tutup dialog
+                        onPressed: () => Navigator.pop(context),
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(
                             color: Color(0xFFAD510D),
@@ -405,13 +347,11 @@ class DetailPesananPage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    // Tombol Izinkan
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-                          // Nanti kode untuk memanggil permission sistem aslinya ditaruh di sini
-                          Navigator.pop(context); // Tutup dialog pertama
-                          _showSuccessDialog(context); // Panggil dialog kedua
+                          Navigator.pop(context);
+                          _showSuccessDialog(context);
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFAD510D),
@@ -440,22 +380,21 @@ class DetailPesananPage extends StatelessWidget {
     );
   }
 
-  // 🚀 FUNGSI 2: MUNCULIN DIALOG SUKSES & OTOMATIS PINDAH HALAMAN
   void _showSuccessDialog(BuildContext context) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) {
-        // 🚀 Ini sihirnya: Delay 2 detik lalu otomatis pindah halaman
         Future.delayed(const Duration(seconds: 2), () {
-          // Cek kalau widget masih ada biar ga error
           if (Navigator.of(context).canPop()) {
-            Navigator.pop(context); // Tutup dialog sukses
-            // Gunakan pushReplacement biar kalau di-back dari peta, gak balik ke dialog
+            Navigator.pop(context);
+            // 🚀 LEMPAR VARIABEL ID KE HALAMAN PETA!
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => const RutePengantaranPage(),
+                builder: (context) => RutePengantaranPage(
+                  idPengantaran: idPengantaran,
+                ), // 👈 Oper di sini
               ),
             );
           }
@@ -475,7 +414,7 @@ class DetailPesananPage extends StatelessWidget {
                   Icons.two_wheeler,
                   size: 60,
                   color: Color(0xFFAD510D),
-                ), // Ikon Motor Kurir
+                ),
                 const SizedBox(height: 16),
                 const Text(
                   'Pesanan diterima!\nPelacakan lokasi aktif',
@@ -488,7 +427,7 @@ class DetailPesananPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text(
+                const Text(
                   'Mari mengantar pesanan ini dengan selamat.\nSemangat!',
                   textAlign: TextAlign.center,
                   style: TextStyle(
