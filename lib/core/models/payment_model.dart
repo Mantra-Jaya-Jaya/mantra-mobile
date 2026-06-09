@@ -20,7 +20,10 @@ class VarianProduk {
   factory VarianProduk.fromJson(Map<String, dynamic> json) {
     return VarianProduk(
       idSpesifikasiBarang: json['id_spesifikasi_barang'] ?? 0,
-      label: json['label'] ?? '',
+      label:
+          json['nama_detail']?.toString() ??
+          json['label']?.toString() ??
+          'Default',
       hargaBarang: json['harga_barang'] ?? 0,
       hargaDiskon: json['harga_diskon'] ?? 0,
       stok: json['stok'] ?? 0,

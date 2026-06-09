@@ -1,17 +1,6 @@
 // ============================================================
 // screens/kasir_pos_screen.dart
 // ============================================================
-//
-// Layar utama kasir POS:
-//  - Kosong saat pertama dibuka (hanya search bar + tombol scan)
-//  - Cari barang → tampil hasil → klik varian → masuk keranjang
-//  - Scan barcode → langsung tambah ke keranjang
-//  - Keranjang terisi → tampil total + tombol "Pilih Metode Pembayaran"
-//
-// Dependency pubspec.yaml yang wajib ada:
-//   mobile_scanner: ^5.x.x        (scan barcode/QR)
-//   intl: ^0.19.x                 (format angka rupiah)
-// ============================================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -23,7 +12,6 @@ import '../../core/services/payment_service.dart';
 import 'metode_pembayaran.dart';
 
 class KasirPosScreen extends StatefulWidget {
-  /// idPesanan aktif yang sedang dibuat (bisa dari halaman sebelumnya)
   final int idPesanan;
 
   const KasirPosScreen({super.key, required this.idPesanan});
@@ -51,15 +39,50 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
   MobileScannerController? _scannerCtrl;
 
   // ── Helpers ──────────────────────────────────────────────
-  final _fmt = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+  final _fmt = NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp ',
+    decimalDigits: 0,
+  );
 
   int get _subtotal => _keranjang.fold(0, (sum, i) => sum + i.subtotal);
   int get _pajak => (_subtotal * 0.11).round();
   int get _total => _subtotal + _pajak;
 
-  // ── Search ───────────────────────────────────────────────
+  // 🚀 FUNGSI BARU: PROSES BARCODE LANGSUNG KE KERANJANG
+  Future<void> _prosesBarcode(String kode) async {
+    setState(() => _loadingCari = true);
+    try {
+      final produk = await _service.scanBarcodeProduk(kode);
+
+      if (produk != null && produk.varian.isNotEmpty) {
+        // Otomatis tambah varian pertama ke keranjang
+        await _tambahItem(produk, produk.varian.first);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Berhasil ditambahkan: ${produk.namaBarang}'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        _snackError('Barang dengan Barcode $kode tidak ditemukan');
+      }
+    } catch (e) {
+      _snackError('Gagal memproses barcode: $e');
+    } finally {
+      setState(() {
+        _loadingCari = false;
+        _searchCtrl.clear();
+      });
+    }
+  }
+
+  // 🚀 FUNGSI CARI PINTAR (BISA BACA KETIKAN BARCODE)
   Future<void> _cari(String q) async {
-    if (q.trim().isEmpty) {
+    final input = q.trim();
+    if (input.isEmpty) {
       setState(() {
         _hasilCari = [];
         _showHasil = false;
@@ -67,19 +90,25 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
       return;
     }
 
+    // Cek apakah inputan murni angka (Kasir ketik barcode manual)
+    final isNumeric = RegExp(r'^[0-9]+$').hasMatch(input);
+    if (isNumeric && input.length >= 8) {
+      await _prosesBarcode(input);
+      return;
+    }
+
+    // Kalau inputan huruf, cari berdasarkan nama produk
     setState(() {
       _loadingCari = true;
       _showHasil = true;
     });
 
     try {
-      final hasil = await _service.cariProduk(q.trim());
+      final hasil = await _service.cariProduk(input);
       setState(() => _hasilCari = hasil);
     } catch (e) {
       setState(() => _hasilCari = []);
-      if (mounted) {
-        _snackError('Produk tidak ditemukan');
-      }
+      if (mounted) _snackError('Produk tidak ditemukan');
     } finally {
       setState(() => _loadingCari = false);
     }
@@ -87,13 +116,11 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
 
   // ── Tambah ke keranjang ──────────────────────────────────
   Future<void> _tambahItem(HasilCariProduk produk, VarianProduk varian) async {
-    // Cek stok
     if (varian.stok <= 0) {
       _snackError('Stok habis');
       return;
     }
 
-    // Cek apakah item sudah ada di keranjang
     final idx = _keranjang.indexWhere(
       (i) => i.idSpesifikasiBarang == varian.idSpesifikasiBarang,
     );
@@ -107,7 +134,6 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
 
     try {
       if (idx >= 0) {
-        // Sudah ada → tambah qty
         final newQty = _keranjang[idx].jumlah + 1;
         await _service.updateQuantityItem(
           idPesanan: widget.idPesanan,
@@ -116,21 +142,24 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
         );
         setState(() => _keranjang[idx].jumlah = newQty);
       } else {
-        // Baru → tambah dengan qty 1
         await _service.updateQuantityItem(
           idPesanan: widget.idPesanan,
           idSpesifikasiBarang: varian.idSpesifikasiBarang,
           jumlah: 1,
         );
         setState(() {
-          _keranjang.add(ItemKeranjang(
-            idPesanan: widget.idPesanan,
-            idSpesifikasiBarang: varian.idSpesifikasiBarang,
-            namaProduk: produk.namaBarang,
-            labelVarian: varian.label,
-            hargaSatuan: varian.hargaDiskon > 0 ? varian.hargaDiskon : varian.hargaBarang,
-            jumlah: 1,
-          ));
+          _keranjang.add(
+            ItemKeranjang(
+              idPesanan: widget.idPesanan,
+              idSpesifikasiBarang: varian.idSpesifikasiBarang,
+              namaProduk: produk.namaBarang,
+              labelVarian: varian.label,
+              hargaSatuan: varian.hargaDiskon > 0
+                  ? varian.hargaDiskon
+                  : varian.hargaBarang,
+              jumlah: 1,
+            ),
+          );
         });
       }
     } catch (e) {
@@ -172,15 +201,14 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
   void _bukaScanner() {
     _scannerCtrl = MobileScannerController(
       detectionSpeed: DetectionSpeed.noDuplicates,
-      // Landscape agar kamera memanjang ke bawah (portrait mode di UI)
       facing: CameraFacing.back,
+      formats: [BarcodeFormat.all], // 🚀 PASTIKAN BISA BACA SEMUA FORMAT
     );
     setState(() => _scannerOpen = true);
   }
 
   void _tutupScanner() {
-    _scannerCtrl?.dispose();
-    _scannerCtrl = null;
+    _scannerCtrl?.stop();
     setState(() => _scannerOpen = false);
   }
 
@@ -191,7 +219,9 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
     final kode = barcode!.rawValue!;
     HapticFeedback.mediumImpact();
     _tutupScanner();
-    _cari(kode);
+
+    // 🚀 LANGSUNG LEMPAR KE PROSES BARCODE
+    _prosesBarcode(kode);
   }
 
   // ── Helpers ──────────────────────────────────────────────
@@ -215,7 +245,6 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
   // ── Build ─────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    // Tampilan scanner fullscreen (portrait, kamera memanjang ke bawah)
     if (_scannerOpen) {
       return _buildScannerView();
     }
@@ -233,20 +262,11 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
       ),
       body: Column(
         children: [
-          // ── Search Bar + Scan Button ───────────────────
           _buildSearchBar(),
-
-          // ── Hasil Pencarian (dropdown style) ──────────
           if (_showHasil) _buildHasilCari(),
-
-          // ── Keranjang / Empty State ────────────────────
           Expanded(
-            child: _keranjang.isEmpty
-                ? _buildEmptyState()
-                : _buildKeranjang(),
+            child: _keranjang.isEmpty ? _buildEmptyState() : _buildKeranjang(),
           ),
-
-          // ── Footer: Total + Tombol Bayar ──────────────
           if (_keranjang.isNotEmpty) _buildFooter(),
         ],
       ),
@@ -271,7 +291,7 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
                 onSubmitted: _cari,
                 textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
-                  hintText: 'Cari barang...',
+                  hintText: 'Cari barang / Ketik Barcode...',
                   hintStyle: TextStyle(color: Colors.grey.shade400),
                   prefixIcon: Icon(Icons.search, color: Colors.grey.shade500),
                   suffixIcon: _loadingCari
@@ -284,17 +304,17 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
                           ),
                         )
                       : _searchCtrl.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchCtrl.clear();
-                                setState(() {
-                                  _hasilCari = [];
-                                  _showHasil = false;
-                                });
-                              },
-                            )
-                          : null,
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchCtrl.clear();
+                            setState(() {
+                              _hasilCari = [];
+                              _showHasil = false;
+                            });
+                          },
+                        )
+                      : null,
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(vertical: 14),
                 ),
@@ -302,7 +322,6 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
             ),
           ),
           const SizedBox(width: 10),
-          // Tombol scan
           GestureDetector(
             onTap: _bukaScanner,
             child: Container(
@@ -333,7 +352,6 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
         child: Center(child: CircularProgressIndicator()),
       );
     }
-
     if (_hasilCari.isEmpty) {
       return Container(
         color: Colors.white,
@@ -344,7 +362,6 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
         ),
       );
     }
-
     return Container(
       color: Colors.white,
       constraints: BoxConstraints(
@@ -383,16 +400,17 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
       subtitle: punya1Varian
-          ? Text(_fmt.format(produk.varian.first.hargaDiskon > 0
-              ? produk.varian.first.hargaDiskon
-              : produk.varian.first.hargaBarang))
+          ? Text(
+              _fmt.format(
+                produk.varian.first.hargaDiskon > 0
+                    ? produk.varian.first.hargaDiskon
+                    : produk.varian.first.hargaBarang,
+              ),
+            )
           : Text('${produk.varian.length} varian'),
-      // Kalau hanya 1 varian, langsung tambah tanpa expand
       initiallyExpanded: punya1Varian,
       onExpansionChanged: punya1Varian
-          ? (_) {
-              _tambahItem(produk, produk.varian.first);
-            }
+          ? (_) => _tambahItem(produk, produk.varian.first)
           : null,
       children: produk.varian.map((v) {
         final harga = v.hargaDiskon > 0 ? v.hargaDiskon : v.hargaBarang;
@@ -419,7 +437,11 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.shopping_cart_outlined, size: 80, color: Colors.grey.shade300),
+          Icon(
+            Icons.shopping_cart_outlined,
+            size: 80,
+            color: Colors.grey.shade300,
+          ),
           const SizedBox(height: 16),
           Text(
             'Belum ada barang',
@@ -449,7 +471,9 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
         final item = _keranjang[i];
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
@@ -481,7 +505,6 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
                     ],
                   ),
                 ),
-                // Qty control
                 Row(
                   children: [
                     _qtyButton(
@@ -524,7 +547,9 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
               : const Color(0xFF8B4513).withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: onTap == null ? Colors.grey.shade300 : const Color(0xFF8B4513),
+            color: onTap == null
+                ? Colors.grey.shade300
+                : const Color(0xFF8B4513),
           ),
         ),
         child: Icon(
@@ -554,7 +579,6 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Ringkasan
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -566,7 +590,10 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Pajak (11%)', style: TextStyle(color: Colors.grey.shade600)),
+              Text(
+                'Pajak (11%)',
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
               Text(_fmt.format(_pajak)),
             ],
           ),
@@ -589,7 +616,6 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          // Tombol Bayar
           ElevatedButton.icon(
             onPressed: _loadingUpdate ? null : _kePembayaran,
             icon: const Icon(Icons.payment),
@@ -611,7 +637,6 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
     );
   }
 
-  // ── Navigator ke halaman pembayaran ──────────────────────
   void _kePembayaran() {
     Navigator.push(
       context,
@@ -631,22 +656,14 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Kamera memanjang ke bawah penuh (portrait)
           Positioned.fill(
             child: MobileScanner(
               controller: _scannerCtrl!,
               onDetect: _onBarcodeDetected,
-              // fit: BoxFit.cover memastikan kamera memenuhi layar portrait
               fit: BoxFit.cover,
             ),
           ),
-
-          // Overlay gelap di atas dan bawah, kotak scan di tengah
-          Positioned.fill(
-            child: CustomPaint(painter: _ScanOverlayPainter()),
-          ),
-
-          // Header
+          Positioned.fill(child: CustomPaint(painter: _ScanOverlayPainter())),
           Positioned(
             top: 0,
             left: 0,
@@ -671,7 +688,6 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
                         ),
                       ),
                     ),
-                    // Tombol flash
                     IconButton(
                       onPressed: () => _scannerCtrl?.toggleTorch(),
                       icon: const Icon(Icons.flash_on, color: Colors.white),
@@ -681,15 +697,16 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
               ),
             ),
           ),
-
-          // Label bawah
           Positioned(
             bottom: 60,
             left: 0,
             right: 0,
             child: Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.black54,
                   borderRadius: BorderRadius.circular(20),
@@ -719,16 +736,22 @@ class _ScanOverlayPainter extends CustomPainter {
       width: boxSize,
       height: boxSize,
     );
-
     final overlay = Paint()..color = Colors.black54;
 
-    // Daerah gelap di luar kotak scan
     canvas.drawRect(Rect.fromLTRB(0, 0, size.width, boxRect.top), overlay);
-    canvas.drawRect(Rect.fromLTRB(0, boxRect.top, boxRect.left, boxRect.bottom), overlay);
-    canvas.drawRect(Rect.fromLTRB(boxRect.right, boxRect.top, size.width, boxRect.bottom), overlay);
-    canvas.drawRect(Rect.fromLTRB(0, boxRect.bottom, size.width, size.height), overlay);
+    canvas.drawRect(
+      Rect.fromLTRB(0, boxRect.top, boxRect.left, boxRect.bottom),
+      overlay,
+    );
+    canvas.drawRect(
+      Rect.fromLTRB(boxRect.right, boxRect.top, size.width, boxRect.bottom),
+      overlay,
+    );
+    canvas.drawRect(
+      Rect.fromLTRB(0, boxRect.bottom, size.width, size.height),
+      overlay,
+    );
 
-    // Border kotak scan
     final borderPaint = Paint()
       ..color = const Color(0xFF8B4513)
       ..strokeWidth = 3
@@ -738,7 +761,6 @@ class _ScanOverlayPainter extends CustomPainter {
       borderPaint,
     );
 
-    // Corner highlights
     const cornerLen = 28.0;
     final cornerPaint = Paint()
       ..color = Colors.white
@@ -746,18 +768,46 @@ class _ScanOverlayPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    // Top-left
-    canvas.drawLine(Offset(boxRect.left, boxRect.top + cornerLen), Offset(boxRect.left, boxRect.top), cornerPaint);
-    canvas.drawLine(Offset(boxRect.left, boxRect.top), Offset(boxRect.left + cornerLen, boxRect.top), cornerPaint);
-    // Top-right
-    canvas.drawLine(Offset(boxRect.right - cornerLen, boxRect.top), Offset(boxRect.right, boxRect.top), cornerPaint);
-    canvas.drawLine(Offset(boxRect.right, boxRect.top), Offset(boxRect.right, boxRect.top + cornerLen), cornerPaint);
-    // Bottom-left
-    canvas.drawLine(Offset(boxRect.left, boxRect.bottom - cornerLen), Offset(boxRect.left, boxRect.bottom), cornerPaint);
-    canvas.drawLine(Offset(boxRect.left, boxRect.bottom), Offset(boxRect.left + cornerLen, boxRect.bottom), cornerPaint);
-    // Bottom-right
-    canvas.drawLine(Offset(boxRect.right, boxRect.bottom - cornerLen), Offset(boxRect.right, boxRect.bottom), cornerPaint);
-    canvas.drawLine(Offset(boxRect.right, boxRect.bottom), Offset(boxRect.right - cornerLen, boxRect.bottom), cornerPaint);
+    canvas.drawLine(
+      Offset(boxRect.left, boxRect.top + cornerLen),
+      Offset(boxRect.left, boxRect.top),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(boxRect.left, boxRect.top),
+      Offset(boxRect.left + cornerLen, boxRect.top),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(boxRect.right - cornerLen, boxRect.top),
+      Offset(boxRect.right, boxRect.top),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(boxRect.right, boxRect.top),
+      Offset(boxRect.right, boxRect.top + cornerLen),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(boxRect.left, boxRect.bottom - cornerLen),
+      Offset(boxRect.left, boxRect.bottom),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(boxRect.left, boxRect.bottom),
+      Offset(boxRect.left + cornerLen, boxRect.bottom),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(boxRect.right, boxRect.bottom - cornerLen),
+      Offset(boxRect.right, boxRect.bottom),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(boxRect.right, boxRect.bottom),
+      Offset(boxRect.right - cornerLen, boxRect.bottom),
+      cornerPaint,
+    );
   }
 
   @override
