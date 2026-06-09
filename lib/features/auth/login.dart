@@ -4,12 +4,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/network/api_client.dart';
 import '../../core/utils/api_error.dart';
 import 'services/auth_service.dart';
-import '../home/home_kasir.dart'; // import kasir
+import '../home/home_kasir.dart';
 import 'lupa_password.dart';
-// import admin jika ada
-
-import 'signup.dart'; // Pastikan file signup.dart sudah ada
+import 'signup.dart';
 import '../home/home_customer.dart';
+import '../home/home_kurir.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -69,7 +68,10 @@ class _LoginScreenState extends State<LoginScreen> {
           );
           break;
         case 'kurir':
-          // Navigator.pushReplacementNamed(context, '/kurir/home'); // TODO: Sesuaikan dengan Kurir
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const DashboardKurir()),
+          );
           break;
         case 'admin':
           // Navigator.pushReplacementNamed(context, '/admin/home'); // TODO: Sesuaikan dengan Admin
