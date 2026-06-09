@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../auth/lupa_password.dart';
 import 'package:frontend/core/widgets/base_header_widget.dart';
+import 'package:frontend/core/services/kurir_profile_service.dart';
 
 class UbahPassword extends StatefulWidget {
   const UbahPassword({super.key});
@@ -125,7 +126,39 @@ class UbahPasswordState extends State<UbahPassword> {
               height: 48,
               child: ElevatedButton(
                 onPressed: _isFormValid
-                    ? () => Navigator.pop(context, true)
+                    ? () async {
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (context) => const Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xFFAF510C),
+                            ),
+                          ),
+                        );
+                        try {
+                          await KurirService().changePassword(
+                            passwordLama: _oldPassController.text,
+                            passwordBaru: _newPassController.text,
+                            konfirmasiPassword:
+                                _confirmPassController.text,
+                          );
+                          if (!context.mounted) return;
+                          Navigator.pop(context);
+                          Navigator.pop(context, true);
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                "Gagal mengubah password: ${e.toString()}",
+                              ),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
                     : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFAF510C),

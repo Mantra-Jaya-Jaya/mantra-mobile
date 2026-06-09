@@ -29,4 +29,16 @@ class KurirService {
       rethrow;
     }
   }
+
+  Future<void> changePassword({
+    required String passwordLama,
+    required String passwordBaru,
+    required String konfirmasiPassword,
+  }) async {
+    await _dio.put('/change-password', data: {
+      'password_lama': passwordLama,
+      'password_baru': passwordBaru,
+      'konfirmasi_password': konfirmasiPassword,
+    });
+  }
 }

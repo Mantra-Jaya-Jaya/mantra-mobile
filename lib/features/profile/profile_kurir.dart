@@ -1,37 +1,162 @@
 import 'package:flutter/material.dart';
-import '../../core/widgets/global_appbar_kurir.dart'; 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../core/widgets/global_appbar_kurir.dart';
+import '../auth/services/auth_service.dart';
+import '../auth/login.dart';
+import 'package:frontend/core/network/api_client.dart';
+import 'ubah_password.dart';
 
-class ProfileKurirPage extends StatelessWidget {
+class ProfileKurirPage extends StatefulWidget {
   const ProfileKurirPage({super.key});
+
+  @override
+  State<ProfileKurirPage> createState() => _ProfileKurirPageState();
+}
+
+class _ProfileKurirPageState extends State<ProfileKurirPage> {
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Container(
+            width: 300,
+            padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 30),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0x1FAF510C),
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  child: const Icon(
+                    Icons.logout,
+                    color: Color(0xFFAF510C),
+                    size: 42,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  "Keluar dari Akun?",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  "Kamu yakin ingin keluar\ndari akun ini?",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                ),
+                const SizedBox(height: 25),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          side: const BorderSide(color: Color(0xFFAF510C)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          "Tidak",
+                          style: TextStyle(color: Color(0xFFAF510C)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          Navigator.pop(context);
+
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (context) => const Center(
+                              child: CircularProgressIndicator(
+                                color: Color(0xFFAF510C),
+                              ),
+                            ),
+                          );
+
+                          await _storage.deleteAll();
+
+                          final dio = ApiClient().dio;
+                          final authService =
+                              AuthService(dio, _storage);
+                          authService.logout().catchError((error) {
+                            debugPrint("API Logout error (ignored): $error");
+                          });
+
+                          if (!mounted) return;
+                          Navigator.pop(context);
+
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LoginScreen(),
+                            ),
+                            (route) => false,
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFAF510C),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          "Iya",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 🚀 1. Ubah background dasar jadi coklat biar nyatu sama AppBar
       backgroundColor: const Color(0xFFAD510D),
-
-      // 🚀 APP BAR (Pakai komponen global biar seragam)
       appBar: const GlobalAppBarKurir(
         title: 'Profile Kurir',
-        showBackButton: false, // Tanpa panah karena ini tab utama
+        showBackButton: false,
       ),
-
-      // 🚀 KONTEN UTAMA
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
-            // Kasih sedikit jarak antara AppBar dan Lengkungan (opsional, biar mirip desain tugas)
             const SizedBox(height: 16),
-
-            // 🚀 2. WADAH PUTIH MELENGKUNG SAKTI
             Expanded(
               child: Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(30), // Ini yang bikin gak kaku!
+                    top: Radius.circular(30),
                   ),
                 ),
                 child: ClipRRect(
@@ -44,12 +169,10 @@ class ProfileKurirPage extends StatelessWidget {
                       left: 24,
                       right: 24,
                       top: 32,
-                      bottom:
-                          120, // Spasi ekstra biar gak ketabrak Bottom Nav Induk
+                      bottom: 120,
                     ),
                     child: Column(
                       children: [
-                        // 🚀 IKON PROFILE
                         Container(
                           width: 90,
                           height: 90,
@@ -65,10 +188,7 @@ class ProfileKurirPage extends StatelessWidget {
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 32),
-
-                        // 🚀 CARD INFORMASI AKUN
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
@@ -91,7 +211,6 @@ class ProfileKurirPage extends StatelessWidget {
                                 ),
                               ),
                               Divider(height: 1, color: Colors.grey.shade200),
-
                               _buildInfoItem('Nama Lengkap', 'Aji Santoso'),
                               _buildInfoItem('Email', 'aji.kurir@mantra.com'),
                               _buildInfoItem(
@@ -104,20 +223,22 @@ class ProfileKurirPage extends StatelessWidget {
                                 'Semarang, 14 April 1998',
                               ),
                               _buildInfoItem('Jenis Kelamin', 'Laki-laki'),
-                              _buildInfoItem('Pendidikan Terakhir', 'SMA/SMK'),
+                              _buildInfoItem(
+                                'Pendidikan Terakhir',
+                                'SMA/SMK',
+                              ),
                               _buildInfoItem(
                                 'Alamat',
                                 'Griya Candi Bahagia, Jl. Cempaka Kayu No.39, Semarang, Jawa Tengah',
                               ),
-
-                              // Status Karyawan
                               Padding(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 20,
                                   vertical: 16,
                                 ),
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
                                   children: [
                                     const Text(
                                       'Status',
@@ -154,15 +275,19 @@ class ProfileKurirPage extends StatelessWidget {
                             ],
                           ),
                         ),
-
                         const SizedBox(height: 32),
-
-                        // 🚀 TOMBOL UBAH PASSWORD
                         SizedBox(
                           width: double.infinity,
                           height: 55,
                           child: ElevatedButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const UbahPassword(),
+                                ),
+                              );
+                            },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFAD510D),
                               elevation: 0,
@@ -180,15 +305,12 @@ class ProfileKurirPage extends StatelessWidget {
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 16),
-
-                        // 🚀 TOMBOL KELUAR DARI AKUN
                         SizedBox(
                           width: double.infinity,
                           height: 55,
                           child: ElevatedButton(
-                            onPressed: () {},
+                            onPressed: _showLogoutDialog,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF2C3E50),
                               elevation: 0,
@@ -218,13 +340,13 @@ class ProfileKurirPage extends StatelessWidget {
     );
   }
 
-  // 🚀 HELPER WIDGET BUAT ITEM INFORMASI
   Widget _buildInfoItem(String label, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
