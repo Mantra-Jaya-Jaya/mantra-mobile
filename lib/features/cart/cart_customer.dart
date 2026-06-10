@@ -14,6 +14,7 @@ class _CartCustomerPageState extends State<CartCustomerPage> {
   List<Map<String, dynamic>> cartItems = [
     {
       'id': 1,
+      'id_spesifikasi_barang': 1,
       'imagePath': 'assets/images/produk.png',
       'title': 'Mug Coffe 510 ml',
       'subtitle': 'Detail Pemesanan',
@@ -23,6 +24,7 @@ class _CartCustomerPageState extends State<CartCustomerPage> {
     },
     {
       'id': 2,
+      'id_spesifikasi_barang': 2,
       'imagePath': 'assets/images/produk.png',
       'title': 'Totebag',
       'subtitle': 'Detail Pemesanan',
@@ -32,6 +34,7 @@ class _CartCustomerPageState extends State<CartCustomerPage> {
     },
     {
       'id': 3,
+      'id_spesifikasi_barang': 3,
       'imagePath': 'assets/images/produk.png',
       'title': 'Heels Wanita',
       'subtitle': 'Detail Pemesanan',
@@ -41,6 +44,7 @@ class _CartCustomerPageState extends State<CartCustomerPage> {
     },
     {
       'id': 4,
+      'id_spesifikasi_barang': 4,
       'imagePath': 'assets/images/produk.png',
       'title': 'Dress Elegan',
       'subtitle': 'Detail Pemesanan',
