@@ -39,28 +39,28 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
   }
 
   IconData _iconForMetode(String kodeMetode) {
-    if (kodeMetode == 'mantrapay') return Icons.wallet_rounded;
-    if (kodeMetode.startsWith('va_')) return Icons.account_balance_rounded;
-    if (kodeMetode.startsWith('ew_')) return Icons.phone_android_rounded;
+    if (kodeMetode == 'cash') return Icons.wallet_rounded;
+    if (kodeMetode.startsWith('va')) return Icons.account_balance_rounded;
+    if (kodeMetode.startsWith('ew')) return Icons.phone_android_rounded;
     if (kodeMetode == 'qris') return Icons.qr_code_scanner_rounded;
     if (kodeMetode == 'cod') return Icons.handshake_rounded;
     return Icons.payment_rounded;
   }
 
   String _subtitleForMetode(String kodeMetode) {
-    if (kodeMetode == 'mantrapay') return 'Saldo internal';
+    if (kodeMetode == 'cash') return 'Bayar tunai';
     if (kodeMetode == 'qris') return 'Scan QR untuk bayar';
     if (kodeMetode == 'cod') return 'Bayar tunai di tempat';
-    if (kodeMetode.startsWith('va_')) return 'Transfer bank otomatis';
-    if (kodeMetode.startsWith('ew_')) return 'Bayar via e-wallet';
+    if (kodeMetode.startsWith('va')) return 'Transfer bank otomatis';
+    if (kodeMetode.startsWith('ew')) return 'Bayar via e-wallet';
     return '';
   }
 
   @override
   Widget build(BuildContext context) {
-    final mantrapayList = _getByCategory('mantrapay');
-    final vaList = _getByCategory('va_');
-    final ewalletList = _getByCategory('ew_');
+    final mantrapayList = _getByCategory('cash');
+    final vaList = _getByCategory('va');
+    final ewalletList = _getByCategory('ewallet');
     final qrisList = _getByCategory('qris');
     final codList = _getByCategory('cod');
 
