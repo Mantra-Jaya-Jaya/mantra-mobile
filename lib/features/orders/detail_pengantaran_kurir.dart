@@ -1,23 +1,48 @@
-// ==========================================
-// 1. WIDGET UTAMA: HALAMAN DETAIL PESANAN
-// ==========================================
 import 'package:flutter/material.dart';
+import '../../core/models/pesanan_kurir_model.dart'; // Sesuaikan path model lu yang bener (DetailPesananModel)
+import '../../core/services/pesanan_kurir_service.dart'; // Sesuaikan path service lu
 import '../../core/widgets/card_item_pemesanan_kurir.dart';
 import '../../core/widgets/global_appbar_kurir.dart';
 import '../pengantaran/rute_pengantaran_page.dart';
 
-class DetailPesananPage extends StatelessWidget {
+class DetailPesananPage extends StatefulWidget {
   final String idPengantaran;
-
-  // 🚀 PARAMETER SAKTI: Buat bedain mode "Cari Order" vs "Lagi Nganter"
-  // Default-nya false (Artinya dari halaman Home/Cari Order)
   final bool isSedangDiantar;
 
   const DetailPesananPage({
     super.key,
     required this.idPengantaran,
-    this.isSedangDiantar = false, // 👈 Tambahin ini!
+    this.isSedangDiantar = false,
   });
+
+  @override
+  State<DetailPesananPage> createState() => _DetailPesananPageState();
+}
+
+class _DetailPesananPageState extends State<DetailPesananPage> {
+  final DetailPesananService _service = DetailPesananService();
+  late Future<DetailPesananModel?>
+  _detailFuture; // Asumsi pakai DetailPesananModel dari jawaban sebelumnya
+
+  @override
+  void initState() {
+    super.initState();
+    _detailFuture = _service.getDetailPesanan(widget.idPengantaran);
+  }
+
+  String _formatRupiah(int number) {
+    String str = number.toString();
+    String result = '';
+    int count = 0;
+    for (int i = str.length - 1; i >= 0; i--) {
+      result = str[i] + result;
+      count++;
+      if (count % 3 == 0 && i != 0) {
+        result = '.$result';
+      }
+    }
+    return 'Rp. $result';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,163 +53,370 @@ class DetailPesananPage extends StatelessWidget {
         showBackButton: true,
         onBackPressed: () => Navigator.pop(context),
       ),
-
       body: SafeArea(
         bottom: false,
-        child: Column(
-          children: [
-            const SizedBox(height: 16),
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-                ),
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(30),
-                  ),
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 32,
+        child: FutureBuilder<DetailPesananModel?>(
+          future: _detailFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              );
+            }
+            if (snapshot.hasError ||
+                !snapshot.hasData ||
+                snapshot.data == null) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.white,
+                      size: 50,
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // 🚀 HEADER: ORDER ID & STATUS BADGE
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Gagal memuat detail pesanan',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _detailFuture = _service.getDetailPesanan(
+                            widget.idPengantaran,
+                          );
+                        });
+                      },
+                      child: const Text(
+                        'Coba Lagi',
+                        style: TextStyle(color: Color(0xFFAD510D)),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final data = snapshot.data!;
+
+            return Column(
+              children: [
+                const SizedBox(height: 16),
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(30),
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(30),
+                      ),
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 32,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            // ==========================================
+                            // 🚀 HEADER: ORDER ID & STATUS BADGE
+                            // ==========================================
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  'ORDER ID',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey.shade400,
-                                  ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'ORDER ID',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.grey.shade400,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      data.publicId
+                                          .split('-')
+                                          .first
+                                          .toUpperCase(),
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  idPengantaran.split('-').first.toUpperCase(),
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w900,
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: widget.isSedangDiantar
+                                        ? const Color(0xFFAD510D)
+                                        : const Color(0xFF5B6B76),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    widget.isSedangDiantar
+                                        ? 'SEDANG DIANTAR'
+                                        : 'BELUM DITERIMA',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
+                            const SizedBox(height: 24),
 
-                            // 🚀 BADGE DINAMIS: Berubah sesuai status
+                            // ==========================================
+                            // 🚀 LIST BARANG
+                            // ==========================================
+                            ...data.daftarBarang.map((item) {
+                              return OrderItemCard(
+                                namaBarang: item.namaBarang,
+                                varian: item
+                                    .varian, // 🚀 Varian dioper secara terpisah
+                                qty: item.jumlahBeli,
+                                harga: _formatRupiah(item.subtotalItem),
+                                imageUrl: item.gambarBarang,
+                              );
+                            }).toList(),
+
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Tujuan Pengantaran',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+
+                            // ==========================================
+                            // 🚀 TUJUAN PENGANTARAN (Desain Box Elegan)
+                            // ==========================================
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
+                              padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: isSedangDiantar
-                                    ? const Color(0xFFAD510D)
-                                    : const Color(0xFF5B6B76),
-                                borderRadius: BorderRadius.circular(20),
+                                color: const Color(
+                                  0xFFF9F9F9,
+                                ), // Abu-abu super tipis biar clean
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.grey.shade200),
                               ),
-                              child: Text(
-                                isSedangDiantar
-                                    ? 'SEDANG DIANTAR'
-                                    : 'BELUM DITERIMA',
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(
+                                        0xFFAD510D,
+                                      ).withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.location_on,
+                                      color: Color(0xFFAD510D),
+                                      size: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          data.namaCustomer,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.black87,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          data.alamatLengkap,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.grey.shade600,
+                                            height: 1.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 24),
+                              child: Divider(
+                                thickness: 2,
+                                color: Color(0xFFEEEEEE),
+                              ),
+                            ),
+
+                            // ==========================================
+                            // 🚀 METODE BAYAR (Desain Coklat)
+                            // ==========================================
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Rincian Pembayaran',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFAD510D).withOpacity(
+                                      0.1,
+                                    ), // 🚀 Background Coklat Transparan
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: const Color(
+                                        0xFFAD510D,
+                                      ).withOpacity(0.3),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    data.metodeBayar.namaMetode,
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFFAD510D),
+                                    ), // 🚀 Teks Coklat
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+
+                            // ==========================================
+                            // 🚀 RINCIAN TOTAL BELANJA (Breakdown Matematika)
+                            // ==========================================
+                            ...data.daftarBarang.map(
+                              (item) => Padding(
+                                padding: const EdgeInsets.only(bottom: 10.0),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      flex: 3,
+                                      child: Text(
+                                        item.namaBarang,
+                                        style: TextStyle(
+                                          color: Colors.grey.shade600,
+                                          fontSize: 13,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 3,
+                                      child: Text(
+                                        '${item.jumlahBeli} x ${_formatRupiah(item.hargaSatuan)}',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: Colors.grey.shade600,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        _formatRupiah(item.subtotalItem),
+                                        textAlign: TextAlign.right,
+                                        style: const TextStyle(
+                                          color: Colors.black87,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
+
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8),
+                              child: Divider(
+                                thickness: 1,
+                                color: Color(0xFFEEEEEE),
+                              ),
+                            ),
+
+                            // 🚀 TOTAL KESELURUHAN
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Total Keseluruhan',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                                Text(
+                                  _formatRupiah(data.totalPembayaran),
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFFAD510D),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 40),
                           ],
                         ),
-
-                        const SizedBox(height: 20),
-
-                        // (LIST BARANG, TUJUAN, TOTAL HARGA SAMA PERSIS KAYAK KODE LU SEBELUMNYA)
-                        const OrderItemCard(
-                          namaBarang: 'Nama barang 1',
-                          qty: 1,
-                          harga: 'Rp. 50.000',
-                        ),
-                        const OrderItemCard(
-                          namaBarang: 'Nama barang 2',
-                          qty: 1,
-                          harga: 'Rp. 50.000',
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Tujuan Pengantaran',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Ibu Yunani',
-                          style: TextStyle(fontSize: 14, color: Colors.black87),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Griya Candi Bahagia, Jl. Cempaka Kayu No.39,\nSemarang, Jawa Tengah',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade700,
-                            height: 1.5,
-                          ),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 20),
-                          child: Divider(
-                            thickness: 2,
-                            color: Color(0xFFEEEEEE),
-                          ),
-                        ),
-                        const Text(
-                          'Total Belanja',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        _buildReceiptRow(
-                          'Subtotal',
-                          '',
-                          'Rp. 172.000, 00',
-                          isBold: true,
-                        ),
-                        const SizedBox(height: 40),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ),
 
-      // 🚀 BOTTOM NAVIGATION BAR SAKTI (BERUBAH SESUAI KONDISI)
+      // 🚀 BOTTOM NAVIGATION BAR SAKTI
       bottomNavigationBar: Container(
         color: Colors.white,
         padding: const EdgeInsets.all(24),
         child: SizedBox(
           width: double.infinity,
           height: 55,
-          child: isSedangDiantar
-              // 🚀 KALAU LAGI DIANTAR: Tombolnya "Selesaikan Pesanan"
+          child: widget.isSedangDiantar
               ? ElevatedButton(
                   onPressed: () {
-                    // Nanti di sini fungsi buat tembak API Selesaikan Pesanan
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Fitur selesaikan pesanan segera hadir!'),
@@ -192,8 +424,7 @@ class DetailPesananPage extends StatelessWidget {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        const Color(0xFFAD510D), 
+                    backgroundColor: const Color(0xFFAD510D),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -208,9 +439,23 @@ class DetailPesananPage extends StatelessWidget {
                     ),
                   ),
                 )
-              // 🚀 KALAU BELUM DITERIMA: Tombolnya "Terima Pesanan"
               : ElevatedButton(
-                  onPressed: () => _showLocationPermissionDialog(context),
+                  onPressed: () async {
+                    // 1. Tembak Service-nya
+                    final newPengantaranId = await _service.terimaPesanan(widget.idPengantaran);
+
+                    // 2. Cek apakah berhasil dapet ID baru dari backend
+                    if (newPengantaranId != null) {
+                      // Sukses! Tampilin dialog izin lokasi, dan lempar 'newPengantaranId' ke dialognya
+                      // Biar pas dialog sukses, dia pindah ke halaman Peta bawa ID yang baru ini!
+                      _showLocationPermissionDialog(context, newPengantaranId);
+                    } else {
+                      // Gagal (Mungkin keduluan kurir lain)
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Gagal! Pesanan mungkin sudah diambil kurir lain.')),
+                      );
+                    }
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFAD510D),
                     elevation: 0,
@@ -231,57 +476,9 @@ class DetailPesananPage extends StatelessWidget {
       ),
     );
   }
-  // 🚀 HELPER FUNGSI (Sama persis)
-  Widget _buildReceiptRow(
-    String title,
-    String qty,
-    String price, {
-    bool isBold = false,
-    bool isGreyTitle = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              title,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-                color: isGreyTitle
-                    ? Colors.grey.shade400
-                    : (isBold ? Colors.black : Colors.grey.shade400),
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 1,
-            child: Text(
-              qty,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              price,
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-                color: isBold ? Colors.black : Colors.black87,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  void _showLocationPermissionDialog(BuildContext context) {
+  // 🚀 HELPER FUNCTIONS DIALOG (Sama seperti sebelumnya)
+  void _showLocationPermissionDialog(BuildContext context, String newId) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -351,7 +548,8 @@ class DetailPesananPage extends StatelessWidget {
                       child: ElevatedButton(
                         onPressed: () {
                           Navigator.pop(context);
-                          _showSuccessDialog(context);
+                          // 🚀 PERBAIKAN 1: Oper newId ke dialog sukses!
+                          _showSuccessDialog(context, newId);
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFAD510D),
@@ -380,7 +578,8 @@ class DetailPesananPage extends StatelessWidget {
     );
   }
 
-  void _showSuccessDialog(BuildContext context) {
+  // 🚀 PERBAIKAN 2: Tambahin penampung "String newId" di sini!
+  void _showSuccessDialog(BuildContext context, String newId) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -388,13 +587,12 @@ class DetailPesananPage extends StatelessWidget {
         Future.delayed(const Duration(seconds: 2), () {
           if (Navigator.of(context).canPop()) {
             Navigator.pop(context);
-            // 🚀 LEMPAR VARIABEL ID KE HALAMAN PETA!
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => RutePengantaranPage(
-                  idPengantaran: idPengantaran,
-                ), // 👈 Oper di sini
+                // 🚀 PERBAIKAN 3: GANTI widget.idPengantaran JADI newId !!!
+                // Ini biang kerok 404-nya! Dia sebelumnya ngebawa ID Pesanan lama!
+                builder: (context) => RutePengantaranPage(idPengantaran: newId),
               ),
             );
           }
