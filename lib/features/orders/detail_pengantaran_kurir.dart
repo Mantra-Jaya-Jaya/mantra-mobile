@@ -1,23 +1,148 @@
-// ==========================================
-// 1. WIDGET UTAMA: HALAMAN DETAIL PESANAN
-// ==========================================
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'dart:io';
 import '../../core/widgets/card_item_pemesanan_kurir.dart';
 import '../../core/widgets/global_appbar_kurir.dart';
+import '../../core/services/pengantaran_service.dart';
+import '../../core/services/pesanan_kurir_service.dart';
+import '../../core/models/pengantaran_model.dart';
 import '../pengantaran/rute_pengantaran_page.dart';
+import 'camera_page.dart';
 
-class DetailPesananPage extends StatelessWidget {
+class DetailPesananPage extends StatefulWidget {
   final String idPengantaran;
-
-  // 🚀 PARAMETER SAKTI: Buat bedain mode "Cari Order" vs "Lagi Nganter"
-  // Default-nya false (Artinya dari halaman Home/Cari Order)
   final bool isSedangDiantar;
 
   const DetailPesananPage({
     super.key,
     required this.idPengantaran,
-    this.isSedangDiantar = false, // 👈 Tambahin ini!
+    this.isSedangDiantar = false,
   });
+
+  @override
+  State<DetailPesananPage> createState() => _DetailPesananPageState();
+}
+
+class _DetailPesananPageState extends State<DetailPesananPage> {
+  final DetailPengantaranService _deliveryService = DetailPengantaranService();
+  final PesananService _pesananService = PesananService();
+  
+  DetailPengantaranModel? _detail;
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  final rupiahFormatter = NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp. ',
+    decimalDigits: 0,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      DetailPengantaranModel? data;
+      if (widget.isSedangDiantar) {
+        data = await _deliveryService.getDetailPengantaran(widget.idPengantaran);
+      } else {
+        data = await _pesananService.getDetailPesanan(widget.idPengantaran);
+      }
+
+      if (mounted) {
+        setState(() {
+          _detail = data;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = "Gagal memuat detail pesanan: $e";
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _acceptOrder() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFFAD510D)),
+      ),
+    );
+
+    try {
+      await _pesananService.ambilPesanan(widget.idPengantaran);
+      if (mounted) {
+        Navigator.pop(context); // Tutup loading dialog
+        _showSuccessDialog(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Tutup loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengambil pesanan: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
+  }
+
+  void _completeOrder() async {
+    final path = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (context) => const CameraPage()),
+    );
+
+    if (path == null) {
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFFAD510D)),
+      ),
+    );
+
+    try {
+      await _pesananService.updateStatus(widget.idPengantaran, 'Selesai', filePath: path);
+      if (mounted) {
+        Navigator.pop(context); // Tutup loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pesanan berhasil diselesaikan!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context, true); // Refresh daftar tugas
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Tutup loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menyelesaikan pesanan: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +153,6 @@ class DetailPesananPage extends StatelessWidget {
         showBackButton: true,
         onBackPressed: () => Navigator.pop(context),
       ),
-
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -45,193 +169,218 @@ class DetailPesananPage extends StatelessWidget {
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(30),
                   ),
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 32,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // 🚀 HEADER: ORDER ID & STATUS BADGE
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'ORDER ID',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey.shade400,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  idPengantaran.split('-').first.toUpperCase(),
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            // 🚀 BADGE DINAMIS: Berubah sesuai status
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isSedangDiantar
-                                    ? const Color(0xFFAD510D)
-                                    : const Color(0xFF5B6B76),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                isSedangDiantar
-                                    ? 'SEDANG DIANTAR'
-                                    : 'BELUM DITERIMA',
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // (LIST BARANG, TUJUAN, TOTAL HARGA SAMA PERSIS KAYAK KODE LU SEBELUMNYA)
-                        const OrderItemCard(
-                          namaBarang: 'Nama barang 1',
-                          qty: 1,
-                          harga: 'Rp. 50.000',
-                        ),
-                        const OrderItemCard(
-                          namaBarang: 'Nama barang 2',
-                          qty: 1,
-                          harga: 'Rp. 50.000',
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Tujuan Pengantaran',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Ibu Yunani',
-                          style: TextStyle(fontSize: 14, color: Colors.black87),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Griya Candi Bahagia, Jl. Cempaka Kayu No.39,\nSemarang, Jawa Tengah',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade700,
-                            height: 1.5,
-                          ),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 20),
-                          child: Divider(
-                            thickness: 2,
-                            color: Color(0xFFEEEEEE),
-                          ),
-                        ),
-                        const Text(
-                          'Total Belanja',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        _buildReceiptRow(
-                          'Subtotal',
-                          '',
-                          'Rp. 172.000, 00',
-                          isBold: true,
-                        ),
-                        const SizedBox(height: 40),
-                      ],
-                    ),
-                  ),
+                  child: _buildBodyContent(),
                 ),
               ),
             ),
           ],
         ),
       ),
-
-      // 🚀 BOTTOM NAVIGATION BAR SAKTI (BERUBAH SESUAI KONDISI)
-      bottomNavigationBar: Container(
-        color: Colors.white,
-        padding: const EdgeInsets.all(24),
-        child: SizedBox(
-          width: double.infinity,
-          height: 55,
-          child: isSedangDiantar
-              // 🚀 KALAU LAGI DIANTAR: Tombolnya "Selesaikan Pesanan"
-              ? ElevatedButton(
-                  onPressed: () {
-                    // Nanti di sini fungsi buat tembak API Selesaikan Pesanan
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Fitur selesaikan pesanan segera hadir!'),
+      bottomNavigationBar: _isLoading || _detail == null
+          ? null
+          : Container(
+              color: Colors.white,
+              padding: const EdgeInsets.all(24),
+              child: SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: widget.isSedangDiantar
+                    ? ElevatedButton(
+                        onPressed: _completeOrder,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFAD510D), 
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Text(
+                          'Selesaikan Pesanan',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      )
+                    : ElevatedButton(
+                        onPressed: () => _showLocationPermissionDialog(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFAD510D),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Text(
+                          'Terima Pesanan',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        const Color(0xFFAD510D), 
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Text(
-                    'Selesaikan Pesanan',
+              ),
+            ),
+    );
+  }
+
+  Widget _buildBodyContent() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFFAD510D)),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 50, color: Colors.grey),
+              const SizedBox(height: 16),
+              Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadData,
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFAD510D)),
+                child: const Text('Coba Lagi', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_detail == null) {
+      return const Center(child: Text('Data pesanan tidak ditemukan'));
+    }
+
+    final detail = _detail!;
+    final String displayOrderId = detail.idPengantaran.length >= 8
+        ? detail.idPengantaran.substring(0, 8).toUpperCase()
+        : detail.idPengantaran.toUpperCase();
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 24,
+        vertical: 32,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'ORDER ID',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: Colors.grey.shade400,
                     ),
                   ),
-                )
-              // 🚀 KALAU BELUM DITERIMA: Tombolnya "Terima Pesanan"
-              : ElevatedButton(
-                  onPressed: () => _showLocationPermissionDialog(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFAD510D),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                  const SizedBox(height: 2),
+                  Text(
+                    displayOrderId,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
-                  child: const Text(
-                    'Terima Pesanan',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: widget.isSedangDiantar
+                      ? const Color(0xFFAD510D)
+                      : const Color(0xFF5B6B76),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  detail.statusPengantaran.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          
+          // Daftar barang dinamis
+          ...detail.daftarBarang.map((item) => OrderItemCard(
+                namaBarang: item.namaBarang,
+                qty: item.jumlahBeli,
+                harga: rupiahFormatter.format(item.hargaSatuan),
+              )),
+              
+          const SizedBox(height: 16),
+          const Text(
+            'Tujuan Pengantaran',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            detail.penerima.nama,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            detail.tujuan.alamatLengkap,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade700,
+              height: 1.5,
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Divider(
+              thickness: 2,
+              color: Color(0xFFEEEEEE),
+            ),
+          ),
+          const Text(
+            'Total Belanja',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildReceiptRow(
+            'Subtotal',
+            '',
+            rupiahFormatter.format(detail.totalPembayaran),
+            isBold: true,
+          ),
+          const SizedBox(height: 40),
+        ],
       ),
     );
   }
-  // 🚀 HELPER FUNGSI (Sama persis)
+
   Widget _buildReceiptRow(
     String title,
     String qty,
@@ -350,8 +499,8 @@ class DetailPesananPage extends StatelessWidget {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.pop(context);
-                          _showSuccessDialog(context);
+                          Navigator.pop(context); // Tutup dialog izin lokasi
+                          _acceptOrder();
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFAD510D),
@@ -387,14 +536,13 @@ class DetailPesananPage extends StatelessWidget {
       builder: (context) {
         Future.delayed(const Duration(seconds: 2), () {
           if (Navigator.of(context).canPop()) {
-            Navigator.pop(context);
-            // 🚀 LEMPAR VARIABEL ID KE HALAMAN PETA!
+            Navigator.pop(context); // Tutup success dialog
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
                 builder: (context) => RutePengantaranPage(
-                  idPengantaran: idPengantaran,
-                ), // 👈 Oper di sini
+                  idPengantaran: widget.idPengantaran,
+                ),
               ),
             );
           }

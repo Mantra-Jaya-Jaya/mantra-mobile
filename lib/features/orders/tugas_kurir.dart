@@ -3,6 +3,7 @@ import '../../core/widgets/delivery_card.dart';
 import '../../core/widgets/global_appbar_kurir.dart';
 import '../../core/services/pengantaran_service.dart';
 import '../../core/models/pengantaran_model.dart';
+import '../notifications/notification_kurir.dart';
 
 class TugasKurirPage extends StatefulWidget {
   const TugasKurirPage({super.key});
@@ -41,6 +42,20 @@ class _TugasKurirPageState extends State<TugasKurirPage> {
         title: 'Daftar Tugas',
         showBackButton: false,
         onBackPressed: () {},
+        actions: [
+          IconButton(
+            padding: const EdgeInsets.only(right: 18),
+            icon: const Icon(Icons.notifications_none, color: Colors.white, size: 28),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NotificationKurirPage(),
+                ),
+              );
+            },
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(82),
           child: Padding(

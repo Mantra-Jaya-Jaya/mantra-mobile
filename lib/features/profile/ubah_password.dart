@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../auth/lupa_password.dart';
 import 'package:frontend/core/widgets/base_header_widget.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:frontend/core/network/api_client.dart';
+import '../auth/login.dart';
 
 class UbahPassword extends StatefulWidget {
   const UbahPassword({super.key});
@@ -18,6 +22,7 @@ class UbahPasswordState extends State<UbahPassword> {
   bool _obscureOld = true;
   bool _obscureNew = true;
   bool _obscureConfirm = true;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -34,6 +39,84 @@ class UbahPasswordState extends State<UbahPassword> {
           _newPassController.text.isNotEmpty &&
           _confirmPassController.text.isNotEmpty;
     });
+  }
+
+  void _submitUbahPassword() async {
+    if (!_isFormValid || _isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    // Tampilkan loading overlay
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFFAF510C)),
+      ),
+    );
+
+    try {
+      await ApiClient().dio.put(
+        '/change-password',
+        data: {
+          'password_lama': _oldPassController.text,
+          'password_baru': _newPassController.text,
+          'konfirmasi_password': _confirmPassController.text,
+        },
+      );
+
+      if (mounted) {
+        // Tutup loading overlay
+        Navigator.pop(context);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password berhasil diubah. Silakan login kembali.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Hapus token lokal karena backend me-revoke semua sesi
+        await const FlutterSecureStorage().deleteAll();
+
+        // Redirect ke login dan hapus stack navigation
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const LoginScreen(),
+          ),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        // Tutup loading overlay
+        Navigator.pop(context);
+        
+        String errMsg = 'Gagal mengubah password';
+        if (e is DioException && e.response?.data != null) {
+          final data = e.response!.data;
+          if (data['message'] != null) {
+            errMsg = data['message'].toString();
+          }
+        }
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errMsg),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -124,8 +207,8 @@ class UbahPasswordState extends State<UbahPassword> {
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
-                onPressed: _isFormValid
-                    ? () => Navigator.pop(context, true)
+                onPressed: _isFormValid && !_isLoading
+                    ? _submitUbahPassword
                     : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFAF510C),
@@ -138,7 +221,7 @@ class UbahPasswordState extends State<UbahPassword> {
                 child: Text(
                   "Simpan Password",
                   style: TextStyle(
-                    color: _isFormValid ? Colors.white : Colors.white70,
+                    color: _isFormValid && !_isLoading ? Colors.white : Colors.white70,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

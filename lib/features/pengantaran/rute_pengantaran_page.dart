@@ -9,6 +9,7 @@ import 'package:dio/dio.dart'; // 🚀 WAJIB ADA: Buat nembak API Rute OSRM
 // 🚀 IMPORT DIKEMBALIKAN SESUAI FILE ASLI LU
 import '../../core/models/pengantaran_model.dart';
 import '../../core/services/pengantaran_service.dart';
+import '../../core/network/api_client.dart';
 import '../../core/widgets/global_appbar_kurir.dart';
 import '../orders/detail_pengantaran_kurir.dart';
 
@@ -78,8 +79,25 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
               setState(() {
                 _currentPosition = position;
               });
+              _updateLokasiKeBackend(position.latitude, position.longitude);
             }
           });
+    }
+  }
+
+  Future<void> _updateLokasiKeBackend(double lat, double lng) async {
+    try {
+      final dio = ApiClient().dio;
+      await dio.patch(
+        '/kurir/pengantaran/${widget.idPengantaran}/lokasi',
+        data: {
+          'latitude': lat,
+          'longitude': lng,
+        },
+      );
+      debugPrint("✓ Berhasil memperbarui lokasi kurir ke backend: $lat, $lng");
+    } catch (e) {
+      debugPrint("❌ Gagal memperbarui lokasi kurir ke backend: $e");
     }
   }
 

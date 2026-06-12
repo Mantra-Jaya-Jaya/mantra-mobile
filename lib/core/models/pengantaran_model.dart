@@ -76,6 +76,32 @@ class Tujuan {
   }
 }
 
+class ItemPengantaran {
+  final String namaBarang;
+  final String variasi;
+  final int jumlahBeli;
+  final int hargaSatuan;
+  final int subtotalItem;
+
+  ItemPengantaran({
+    required this.namaBarang,
+    required this.variasi,
+    required this.jumlahBeli,
+    required this.hargaSatuan,
+    required this.subtotalItem,
+  });
+
+  factory ItemPengantaran.fromJson(Map<String, dynamic> json) {
+    return ItemPengantaran(
+      namaBarang: json['nama_barang'] ?? '',
+      variasi: json['variasi'] ?? 'Default',
+      jumlahBeli: json['jumlah_beli'] ?? 0,
+      hargaSatuan: json['harga_satuan'] ?? 0,
+      subtotalItem: json['subtotal_item'] ?? 0,
+    );
+  }
+}
+
 class DetailPengantaranModel {
   final String idPengantaran;
   final String statusPengantaran;
@@ -83,6 +109,8 @@ class DetailPengantaranModel {
   final String? waktuSampai;
   final Penerima penerima;
   final Tujuan tujuan;
+  final int totalPembayaran;
+  final List<ItemPengantaran> daftarBarang;
 
   DetailPengantaranModel({
     required this.idPengantaran,
@@ -91,17 +119,25 @@ class DetailPengantaranModel {
     this.waktuSampai,
     required this.penerima,
     required this.tujuan,
+    required this.totalPembayaran,
+    required this.daftarBarang,
   });
 
   factory DetailPengantaranModel.fromJson(Map<String, dynamic> json) {
+    var list = json['daftar_barang'] as List?;
+    List<ItemPengantaran> itemsList = list != null
+        ? list.map((i) => ItemPengantaran.fromJson(i)).toList()
+        : [];
+
     return DetailPengantaranModel(
       idPengantaran: json['id_pengantaran'] ?? '',
       statusPengantaran: json['status_pengantaran'] ?? 'Menunggu',
       waktuPickup: json['waktu_pickup'],
       waktuSampai: json['waktu_sampai'],
-      // Manggil class anaknya buat mecah JSON yang di dalem
       penerima: Penerima.fromJson(json['penerima'] ?? {}),
       tujuan: Tujuan.fromJson(json['tujuan'] ?? {}),
+      totalPembayaran: json['total_pembayaran'] ?? 0,
+      daftarBarang: itemsList,
     );
   }
 }

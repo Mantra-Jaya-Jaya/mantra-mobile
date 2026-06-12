@@ -5,6 +5,7 @@ class GlobalAppBarKurir extends StatelessWidget implements PreferredSizeWidget {
   final bool showBackButton;
   final PreferredSizeWidget? bottom;
   final VoidCallback? onBackPressed;
+  final List<Widget>? actions;
 
   const GlobalAppBarKurir({
     super.key,
@@ -12,6 +13,7 @@ class GlobalAppBarKurir extends StatelessWidget implements PreferredSizeWidget {
     this.showBackButton = false,
     this.bottom,
     this.onBackPressed,
+    this.actions,
   });
 
   @override
@@ -39,6 +41,7 @@ class GlobalAppBarKurir extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       centerTitle: false,
+      actions: actions,
       bottom: bottom, 
     );
   }

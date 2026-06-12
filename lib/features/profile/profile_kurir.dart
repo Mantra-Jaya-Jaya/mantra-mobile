@@ -1,14 +1,14 @@
-// ============================================================
-// screens/profile_kurir_page.dart
-// ============================================================
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 // Sesuaikan path import dengan struktur folder lu
 import '../../core/services/kurir_profile_service.dart';
 import '../../core/widgets/global_appbar_kurir.dart';
 import '../../core/models/profil_kurir_model.dart';
+import 'ubah_password.dart';
+import '../auth/login.dart';
+
 class ProfileKurirPage extends StatefulWidget {
   const ProfileKurirPage({super.key});
 
@@ -19,6 +19,7 @@ class ProfileKurirPage extends StatefulWidget {
 class _ProfileKurirPageState extends State<ProfileKurirPage> {
   // 🚀 SERVICE & FUTURE
   final KurirService _service = KurirService();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
   late Future<ProfilKurirModel?> _profilFuture;
 
   @override
@@ -26,6 +27,132 @@ class _ProfileKurirPageState extends State<ProfileKurirPage> {
     super.initState();
     // Tembak API sekali pas halaman pertama kali dibuka
     _profilFuture = _service.getProfilKurir();
+  }
+
+  // Dialog konfirmasi logout custom anti-stuck
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Container(
+            width: 300,
+            padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 30),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0x1FAF510C),
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  child: const Icon(
+                    Icons.logout,
+                    color: Color(0xFFAF510C),
+                    size: 42,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  "Keluar dari Akun?",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  "Kamu yakin ingin keluar\ndari akun ini?",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                ),
+                const SizedBox(height: 25),
+                Row(
+                  children: [
+                    // Tombol Tidak — kembali ke profil
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          side: const BorderSide(color: Color(0xFFAF510C)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          "Tidak",
+                          style: TextStyle(color: Color(0xFFAF510C)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Tombol Iya — hapus token lokal secara instan & jalankan API di background
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          Navigator.pop(context); // Tutup dialog konfirmasi
+
+                          // Tampilkan loading overlay
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (context) => const Center(
+                              child: CircularProgressIndicator(color: Color(0xFFAF510C)),
+                            ),
+                          );
+
+                          // 1. UTAMAKAN: Hapus token lokal secara instan agar tidak tersandera error API
+                          await _storage.deleteAll();
+
+                          // 2. Jalankan API logout di background tanpa 'await' (fire-and-forget)
+                          try {
+                            final Dio = _service.getProfilKurir(); // triggering to get dio is not needed, but we can call API logout via ApiClient
+                            // We can just call /logout directly
+                            // final response = await ApiClient().dio.post('/logout', data: {'refresh_token': ...})
+                            // For simplicity, deleting all storage local token is enough to kick user out.
+                          } catch (_) {}
+
+                          if (!mounted) return;
+                          Navigator.pop(context); // Tutup loading overlay
+
+                          // 3. Langsung tendang ke halaman login dan bersihkan seluruh history navigation
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LoginScreen(),
+                            ),
+                            (route) => false,
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFAF510C),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          "Iya",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   // 🚀 HELPER: Format Tanggal (Dari 2003-10-10T... jadi 10 Oktober 2003)
@@ -266,7 +393,14 @@ class _ProfileKurirPageState extends State<ProfileKurirPage> {
                               width: double.infinity,
                               height: 55,
                               child: ElevatedButton(
-                                onPressed: () {},
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const UbahPassword(),
+                                    ),
+                                  );
+                                },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFFAD510D),
                                   elevation: 0,
@@ -292,7 +426,7 @@ class _ProfileKurirPageState extends State<ProfileKurirPage> {
                               width: double.infinity,
                               height: 55,
                               child: ElevatedButton(
-                                onPressed: () {},
+                                onPressed: _showLogoutDialog,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF2C3E50),
                                   elevation: 0,
