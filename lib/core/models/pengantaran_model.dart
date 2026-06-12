@@ -83,6 +83,7 @@ class DetailPengantaranModel {
   final String? waktuSampai;
   final Penerima penerima;
   final Tujuan tujuan;
+  final String? fotoBukti;
 
   DetailPengantaranModel({
     required this.idPengantaran,
@@ -91,6 +92,7 @@ class DetailPengantaranModel {
     this.waktuSampai,
     required this.penerima,
     required this.tujuan,
+    this.fotoBukti,
   });
 
   factory DetailPengantaranModel.fromJson(Map<String, dynamic> json) {
@@ -102,6 +104,25 @@ class DetailPengantaranModel {
       // Manggil class anaknya buat mecah JSON yang di dalem
       penerima: Penerima.fromJson(json['penerima'] ?? {}),
       tujuan: Tujuan.fromJson(json['tujuan'] ?? {}),
+      fotoBukti: json['foto_bukti'],
+    );
+  }
+}
+
+class SelesaikanPengantaranModel {
+  final String urlBukti;
+  final DateTime waktuSampai;
+
+  SelesaikanPengantaranModel({
+    required this.urlBukti,
+    required this.waktuSampai,
+  });
+
+  factory SelesaikanPengantaranModel.fromJson(Map<String, dynamic> json) {
+    return SelesaikanPengantaranModel(
+      urlBukti: json['url_bukti'] ?? '',
+      // Parsing string waktu dari Golang jadi objek DateTime di Dart
+      waktuSampai: DateTime.parse(json['waktu_sampai']),
     );
   }
 }

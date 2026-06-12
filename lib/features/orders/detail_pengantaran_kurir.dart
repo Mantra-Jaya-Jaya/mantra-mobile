@@ -1,18 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../core/models/pesanan_kurir_model.dart'; // Sesuaikan path model lu yang bener (DetailPesananModel)
+import '../../core/services/pengantaran_service.dart';
 import '../../core/services/pesanan_kurir_service.dart'; // Sesuaikan path service lu
 import '../../core/widgets/card_item_pemesanan_kurir.dart';
 import '../../core/widgets/global_appbar_kurir.dart';
+import '../pengantaran/ambil_bukti_page.dart';
 import '../pengantaran/rute_pengantaran_page.dart';
+
 
 class DetailPesananPage extends StatefulWidget {
   final String idPengantaran;
   final bool isSedangDiantar;
+  final bool isDariPeta;
+  final bool isSelesai;
 
   const DetailPesananPage({
     super.key,
     required this.idPengantaran,
     this.isSedangDiantar = false,
+    this.isDariPeta = false,
+    this.isSelesai = false,
   });
 
   @override
@@ -408,171 +416,317 @@ class _DetailPesananPageState extends State<DetailPesananPage> {
       ),
 
       // 🚀 BOTTOM NAVIGATION BAR SAKTI
-      bottomNavigationBar: Container(
-        color: Colors.white,
-        padding: const EdgeInsets.all(24),
-        child: SizedBox(
-          width: double.infinity,
-          height: 55,
-          child: widget.isSedangDiantar
-              ? ElevatedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Fitur selesaikan pesanan segera hadir!'),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFAD510D),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Text(
-                    'Selesaikan Pesanan',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                )
-              : ElevatedButton(
-                  onPressed: () async {
-                    // 1. Tembak Service-nya
-                    final newPengantaranId = await _service.terimaPesanan(widget.idPengantaran);
+      bottomNavigationBar: FutureBuilder<DetailPesananModel?>(
+        future: _detailFuture,
+        builder: (context, snapshot) {
+          // Kalau API Detail Pesanan belum selesai loading, sembunyiin dulu tombolnya
+          if (!snapshot.hasData || snapshot.data == null) {
+            return const SizedBox.shrink();
+          }
 
-                    // 2. Cek apakah berhasil dapet ID baru dari backend
-                    if (newPengantaranId != null) {
-                      // Sukses! Tampilin dialog izin lokasi, dan lempar 'newPengantaranId' ke dialognya
-                      // Biar pas dialog sukses, dia pindah ke halaman Peta bawa ID yang baru ini!
-                      _showLocationPermissionDialog(context, newPengantaranId);
-                    } else {
-                      // Gagal (Mungkin keduluan kurir lain)
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Gagal! Pesanan mungkin sudah diambil kurir lain.')),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFAD510D),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+          return Container(
+            color: Colors.white,
+            padding: const EdgeInsets.all(24),
+            child: SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: widget.isSelesai
+                  // 🚀 STAGE 1: DARI TAB SELESAI -> Lihat Bukti
+                  ? ElevatedButton(
+                      onPressed: () async {
+                        // 1. Kasih feedback loading ke kurir
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Mengambil foto bukti...'),
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+
+                        // 🚀 2. TEMBAKAN SNIPER: Tarik data dari Model Pengantaran!
+                        final detailPengantaran =
+                            await DetailPengantaranService()
+                                .getDetailPengantaran(widget.idPengantaran);
+
+                        // 3. Cek hasil tembakannya, apakah fotoBukti-nya ada isinya?
+                        if (detailPengantaran != null &&
+                            detailPengantaran.fotoBukti != null &&
+                            detailPengantaran.fotoBukti!.isNotEmpty) {
+                          // Buka dialog dan lempar URL fotonya
+                          _showBuktiDialog(
+                            context,
+                            detailPengantaran.fotoBukti!,
+                          );
+                        } else {
+                          // Kalau null atau kosong
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Bukti foto belum ada atau gagal dimuat!',
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFAD510D),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text(
+                        'Lihat Bukti Pengiriman',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    )
+                  : widget.isDariPeta
+                  // 🚀 STAGE 2: DARI PETA -> Upload Bukti
+                  ? ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                AmbilBuktiPage(publicId: widget.idPengantaran),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFAD510D),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text(
+                        'Upload Bukti Pengiriman',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    )
+                  : widget.isSedangDiantar
+                  // 🚀 STAGE 3: DARI DAFTAR TUGAS -> Lihat Rute Peta
+                  ? ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => RutePengantaranPage(
+                              idPengantaran: widget.idPengantaran,
+                            ),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFAD510D),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text(
+                        'Lihat Rute Pengantaran',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    )
+                  // 🚀 STAGE 4: DARI BERANDA -> Terima Pesanan
+                  : ElevatedButton(
+                      onPressed: () => _showLocationPermissionDialog(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFAD510D),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text(
+                        'Terima Pesanan',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
-                  ),
-                  child: const Text(
-                    'Terima Pesanan',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
 
   // 🚀 HELPER FUNCTIONS DIALOG (Sama seperti sebelumnya)
-  void _showLocationPermissionDialog(BuildContext context, String newId) {
+  void _showLocationPermissionDialog(BuildContext context) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          backgroundColor: Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.location_on_outlined,
-                  size: 50,
-                  color: Color(0xFFAD510D),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Aplikasi perlu mengetahui\nlokasimu',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF301905),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Izinkan akses lokasi untuk pemantauan\nproses pengantaran',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
+      builder: (dialogContext) {
+        bool isDialogLoading = false; 
+
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              backgroundColor: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(
-                            color: Color(0xFFAD510D),
-                            width: 2,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text(
-                          'Tolak',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFAD510D),
-                          ),
-                        ),
+                    const Icon(
+                      Icons.location_on_outlined,
+                      size: 50,
+                      color: Color(0xFFAD510D),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Aplikasi perlu mengetahui\nlokasimu',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF301905),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          // 🚀 PERBAIKAN 1: Oper newId ke dialog sukses!
-                          _showSuccessDialog(context, newId);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFAD510D),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text(
-                          'Izinkan',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Izinkan akses lokasi untuk pemantauan\nproses pengantaran',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                        height: 1.5,
                       ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: isDialogLoading
+                                ? null
+                                : () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(
+                                color: Color(0xFFAD510D),
+                                width: 2,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text(
+                              'Tolak',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFAD510D),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            // 🚀 LOGIKA PINTAR DIMULAI DI SINI
+                            onPressed: isDialogLoading
+                                ? null
+                                : () async {
+                                    setStateDialog(
+                                      () => isDialogLoading = true,
+                                    );
+
+                                    // 1. Minta Izin GPS ke Sistem HP
+                                    LocationPermission permission =
+                                        await Geolocator.checkPermission();
+                                    if (permission ==
+                                        LocationPermission.denied) {
+                                      permission =
+                                          await Geolocator.requestPermission();
+                                      if (permission ==
+                                          LocationPermission.denied) {
+                                        setStateDialog(
+                                          () => isDialogLoading = false,
+                                        );
+                                        return; // Berhenti kalau user nolak
+                                      }
+                                    }
+
+                                    // 2. Tembak API Terima Pesanan ke Backend
+                                    final newPengantaranId = await _service
+                                        .terimaPesanan(widget.idPengantaran);
+
+                                    setStateDialog(
+                                      () => isDialogLoading = false,
+                                    );
+
+                                    // 3. Cek Hasilnya
+                                    if (newPengantaranId != null) {
+                                      Navigator.pop(
+                                        context,
+                                      ); // Tutup dialog Izin
+                                      _showSuccessDialog(
+                                        context,
+                                        newPengantaranId,
+                                      ); // Buka dialog Sukses
+                                    } else {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Gagal! Pesanan mungkin sudah diambil kurir lain.',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFAD510D),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: isDialogLoading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Izinkan',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -636,6 +790,55 @@ class _DetailPesananPageState extends State<DetailPesananPage> {
                 ),
               ],
             ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showBuktiDialog(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(16),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                // 🚀 Panggil URL MinIO secara ajaib pakai Image.network
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      padding: const EdgeInsets.all(20),
+                      color: Colors.white,
+                      child: const Text(
+                        'Gagal memuat gambar',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              Positioned(
+                top: 10,
+                right: 10,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+            ],
           ),
         );
       },

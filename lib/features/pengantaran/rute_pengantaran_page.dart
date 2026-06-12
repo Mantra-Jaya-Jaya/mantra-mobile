@@ -30,6 +30,8 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
   Position? _currentPosition;
   StreamSubscription<Position>? _positionStream;
 
+  Timer? _timerLokasi;
+
   // 🚀 PENAMPUNG GARIS RUTE
   List<LatLng> _routePoints = [];
 
@@ -80,7 +82,30 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
               });
             }
           });
+
+          _mulaiRadarGPS();
     }
+  }
+
+  // 🚀 2. FUNGSI RADAR REALTIME KE BACKEND
+  void _mulaiRadarGPS() {
+    _timerLokasi = Timer.periodic(const Duration(seconds: 10), (timer) async {
+      // Pastiin lokasinya gak kosong sebelum dikirim
+      if (_currentPosition != null) {
+        try {
+          await _service.updateLokasiKurir(
+            widget.idPengantaran,
+            _currentPosition!.latitude,
+            _currentPosition!.longitude,
+          );
+          debugPrint(
+            '✅ Radar Backend Update: ${_currentPosition!.latitude}, ${_currentPosition!.longitude}',
+          );
+        } catch (e) {
+          debugPrint('❌ Gagal update radar: $e');
+        }
+      }
+    });
   }
 
   // 🚀 FUNGSI SAKTI: Nembak API OSRM Buat Dapetin Titik-Titik Garis
@@ -112,6 +137,7 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
 
   @override
   void dispose() {
+    _timerLokasi?.cancel();
     _positionStream?.cancel();
     _mapController.dispose();
     super.dispose();
@@ -163,7 +189,6 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
                                 ),
 
                                 // 🚀 LAYER GARIS RUTE (Polyline)
-// 🚀 LAYER GARIS RUTE (Polyline)
                                 PolylineLayer(
                                   polylines: [
                                     // 🚀 TAMBAHIN BARIS INI: Cek dulu rutenya udah ada isinya belum!
@@ -366,8 +391,9 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
                                                   MaterialPageRoute(
                                                     builder: (context) =>
                                                         DetailPesananPage(
-                                                          idPengantaran: widget
-                                                              .idPengantaran,
+                                                          idPengantaran: widget.idPengantaran,
+                                                          isSedangDiantar: true, 
+                                                          isDariPeta: true,
                                                         ),
                                                   ),
                                                 );

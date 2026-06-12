@@ -116,7 +116,8 @@ class DeliveryCard extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (context) => DetailPesananPage(
                       idPengantaran: idPengantaran,
-                      isSedangDiantar: true,
+                      isSedangDiantar: variant == CardVariant.history,
+                      isSelesai: variant == CardVariant.done,
                     ),
                   ),
                 );
