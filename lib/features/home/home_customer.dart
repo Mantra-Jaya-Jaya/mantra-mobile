@@ -17,14 +17,21 @@ import 'package:intl/intl.dart';
 final RouteObserver<Route> routeObserver = RouteObserver<Route>();
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final int initialIndex;
+  const HomeScreen({super.key, this.initialIndex = 0});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 0;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+  }
 
   final List<Widget> _pages = [
     const HomeContent(),
@@ -568,6 +575,7 @@ class _HomeContentState extends State<HomeContent> {
         );
       },
       child: Card(
+        color: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         elevation: 2,
         child: Column(
@@ -613,7 +621,10 @@ class _HomeContentState extends State<HomeContent> {
                     barang.namaBarang,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: const Color(0xFFAD510D),
+                    ),
                   ),
                   const SizedBox(height: 2),
                   if (barang.punyaDiskon) ...[
@@ -628,7 +639,7 @@ class _HomeContentState extends State<HomeContent> {
                     Text(
                       _currencyFormat.format(barang.hargaDiskon),
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w800,
                         color: Color(0xFFAD510D),
                         fontSize: 13,
                       ),
@@ -637,8 +648,9 @@ class _HomeContentState extends State<HomeContent> {
                     Text(
                       _currencyFormat.format(barang.hargaTerendah),
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w800,
                         fontSize: 13,
+                        color: const Color(0xFFAD510D),
                       ),
                     ),
                   ],

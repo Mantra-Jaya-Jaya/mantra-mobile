@@ -20,23 +20,19 @@ class CartService {
   /// 2. TAMBAH KE KERANJANG (POST)
   /// Endpoint: POST /customer/keranjang
   Future<void> addToCart({
-    required String idBarang, // Dari DetailBarangPage nilainya bertipe String
+    required String idBarang, // Bisa berisi id_barang atau public_id
     required int quantity,
-    int? idVarian,
+    int? idVarian, // Ini yang seharusnya dikirim sebagai id_spesifikasi_barang
   }) async {
-    // Lakukan parsing dari String ke int agar cocok dengan tipe data di Golang
-    final int parsedIdBarang = int.parse(idBarang);
-
     final Map<String, dynamic> requestBody = {
-      'id_barang':
-          parsedIdBarang, // Sekarang tipenya sudah int (misal: 12, bukan "12")
+      'id_spesifikasi_barang':
+          idVarian, // Backend menunggu id_spesifikasi_barang
       'quantity': quantity,
     };
 
-    // Jangan kirim key id_varian ke Golang jika nilainya null (menghindari error binding map)
-    if (idVarian != null) {
-      requestBody['id_varian'] = idVarian;
-    }
+    // Jika idVarian null (misal dari detail_barang), kita harus berhati-hati
+    // karena backend mewajibkan id_spesifikasi_barang (binding:"required").
+    // Untuk saat ini, kita kirim apa adanya sesuai parameter.
 
     await _client.dio.post('/customer/keranjang', data: requestBody);
   }

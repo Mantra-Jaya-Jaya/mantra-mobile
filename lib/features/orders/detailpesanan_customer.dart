@@ -5,6 +5,7 @@ import '../../core/widgets/base_header_widget.dart';
 
 class OrderDetailPage extends StatefulWidget {
   final String noPesanan;
+  final String? tampilanNoPesanan;
   final String namaProduk;
   final String statusLabel;
   final Color warnaStatus;
@@ -13,6 +14,7 @@ class OrderDetailPage extends StatefulWidget {
   const OrderDetailPage({
     super.key,
     required this.noPesanan,
+    this.tampilanNoPesanan,
     required this.namaProduk,
     required this.statusLabel,
     required this.warnaStatus,
@@ -139,7 +141,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      widget.noPesanan,
+                      widget.tampilanNoPesanan ?? widget.noPesanan,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,

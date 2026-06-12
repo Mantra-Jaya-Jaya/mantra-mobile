@@ -29,6 +29,14 @@ class _CartCustomerPageState extends State<CartCustomerPage> {
         // Pastikan setiap item memiliki field 'isSelected' secara lokal untuk melacak centang UI
         cartItems = data.map((item) {
           item['isSelected'] = item['isSelected'] ?? false;
+          // 🔥 Mapping field backend Golang ke field UI Flutter
+          item['id'] = item['id_spesifikasi_barang']; // ID varian unik
+          item['title'] = item['nama_barang'] ?? 'Nama Produk';
+          item['subtitle'] = item['varian'] ?? 'Detail Pemesanan';
+          item['price'] = item['harga_diskon'] ?? item['harga_barang'] ?? 0;
+          item['image'] =
+              item['gambar_barang'] ??
+              'assets/images/produk.png'; // Menggunakan key 'image'
           return item;
         }).toList();
         _isLoading = false;
@@ -94,7 +102,6 @@ class _CartCustomerPageState extends State<CartCustomerPage> {
     int total = 0;
     for (var item in cartItems) {
       if (item['isSelected'] == true) {
-        // Pastikan konversi tipe data aman (int/double dari json backend)
         final price = item['price'] ?? 0;
         final qty = item['quantity'] ?? 0;
         total += (price as int) * (qty as int);
@@ -122,7 +129,8 @@ class _CartCustomerPageState extends State<CartCustomerPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
         ),
       ),
-      // Kondisi Alur State Tampilan (Loading -> Kosong -> Tampil List)
+
+      // FIX 1: Body sekarang fokus hanya menampilkan state Loading, Kosong, atau List Data.
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(color: Color(0xFFAD510D)),
@@ -134,103 +142,101 @@ class _CartCustomerPageState extends State<CartCustomerPage> {
                 style: TextStyle(color: Colors.grey, fontSize: 16),
               ),
             )
-          : Column(
-              children: [
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.all(20),
-                    children: [
-                      ...List.generate(cartItems.length, (index) {
-                        return _buildCartItem(index);
-                      }),
-                      const SizedBox(height: 20),
+          : ListView.builder(
+              padding: const EdgeInsets.all(20),
+              itemCount: cartItems.length,
+              itemBuilder: (context, index) {
+                return _buildCartItem(index);
+              },
+            ),
 
-                      // Total Pesanan Box
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
-                              blurRadius: 12,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
+      // FIX 2: bottomNavigationBar diletakkan sejajar dengan body (di bawah naungan langsung Scaffold)
+      bottomNavigationBar: cartItems.isEmpty || _isLoading
+          ? null // Sembunyikan total pesanan jika data kosong/loading
+          : Container(
+              padding: const EdgeInsets.only(
+                left: 16,
+                right: 16,
+                bottom: 24, // Aman untuk HP ber-notch bawah
+                top: 12,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 12,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min, // Sesuai tinggi konten
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Total Pesanan',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _formatRupiah(totalHargaCentang),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: isAnyItemSelected
+                          ? () {
+                              List<Map<String, dynamic>> selectedItems =
+                                  cartItems
+                                      .where(
+                                        (item) => item['isSelected'] == true,
+                                      )
+                                      .toList();
+
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      Checkout(selectedProducts: selectedItems),
+                                ),
+                              );
+                            }
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFAD510D),
+                        disabledBackgroundColor: Colors.grey.shade300,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Total Pesanan',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _formatRupiah(totalHargaCentang),
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: isAnyItemSelected
-                                    ? () {
-                                        List<Map<String, dynamic>>
-                                        selectedItems = cartItems
-                                            .where(
-                                              (item) =>
-                                                  item['isSelected'] == true,
-                                            )
-                                            .toList();
-
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => Checkout(
-                                              selectedProducts: selectedItems,
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    : null,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFAD510D),
-                                  disabledBackgroundColor: Colors.grey.shade300,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 16,
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Lanjut ke Checkout',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: const Text(
+                        'Lanjut ke Checkout',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
     );
   }
 
   Widget _buildCartItem(int index) {
     var item = cartItems[index];
+    // FIX 3: Ambil value gambar dari key 'image' yang sudah di-mapping di atas (bukan imagePath)
+    String imagePath = item['image'] ?? 'assets/images/produk.png';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(14),
@@ -272,7 +278,7 @@ class _CartCustomerPageState extends State<CartCustomerPage> {
                 ),
               ),
               const SizedBox(width: 12),
-              // Render Gambar (Mendukung URL Network maupun Asset lokal)
+              // Render Gambar
               Container(
                 width: 60,
                 height: 60,
@@ -282,14 +288,9 @@ class _CartCustomerPageState extends State<CartCustomerPage> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child:
-                      item['imagePath'] != null &&
-                          item['imagePath'].toString().startsWith('http')
-                      ? Image.network(item['imagePath'], fit: BoxFit.cover)
-                      : Image.asset(
-                          item['imagePath'] ?? 'assets/images/produk.png',
-                          fit: BoxFit.cover,
-                        ),
+                  child: imagePath.startsWith('http')
+                      ? Image.network(imagePath, fit: BoxFit.cover)
+                      : Image.asset(imagePath, fit: BoxFit.cover),
                 ),
               ),
               const SizedBox(width: 12),
@@ -359,7 +360,7 @@ class _CartCustomerPageState extends State<CartCustomerPage> {
                   ),
                 ],
               ),
-              // Tombol Hapus Item (DELETE) dibungkus GestureDetector
+              // Tombol Hapus Item (DELETE)
               GestureDetector(
                 onTap: () => _deleteItem(index),
                 child: const Icon(

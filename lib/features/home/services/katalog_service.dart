@@ -45,6 +45,36 @@ class KategoriModel {
   }
 }
 
+// Model Varian/Spesifikasi
+class VarianModel {
+  final int idVarian;
+  final String namaSpesifikasi;
+  final String namaDetail;
+  final int hargaBarang;
+  final int hargaDiskon;
+  final int stok;
+
+  VarianModel({
+    required this.idVarian,
+    required this.namaSpesifikasi,
+    required this.namaDetail,
+    required this.hargaBarang,
+    required this.hargaDiskon,
+    required this.stok,
+  });
+
+  factory VarianModel.fromJson(Map<String, dynamic> json) {
+    return VarianModel(
+      idVarian: json['id_spesifikasi_barang'] ?? 0,
+      namaSpesifikasi: json['nama_spesifikasi'] ?? '',
+      namaDetail: json['nama_detail'] ?? '',
+      hargaBarang: json['harga_barang'] ?? 0,
+      hargaDiskon: json['harga_diskon'] ?? 0,
+      stok: json['stok'] ?? 0,
+    );
+  }
+}
+
 // Model Barang (ringkasan untuk list)
 class BarangModel {
   final String idBarang;
@@ -55,6 +85,8 @@ class BarangModel {
   final bool punyaDiskon;
   final String gambarBarang;
   final String deskripsi;
+  final String stok;
+  final List<VarianModel> varian;
 
   BarangModel({
     required this.idBarang,
@@ -65,18 +97,44 @@ class BarangModel {
     required this.punyaDiskon,
     required this.gambarBarang,
     required this.deskripsi,
+    required this.stok,
+    this.varian = const [],
   });
 
   factory BarangModel.fromJson(Map<String, dynamic> json) {
+    // 1. Ambil list varian jika ada (biasanya di response detail)
+    final List? variansJson = json['varian'] as List?;
+    final List<VarianModel> varianList = variansJson != null
+        ? variansJson.map((v) => VarianModel.fromJson(v)).toList()
+        : [];
+
+    // 2. Hitung harga terendah dari varian jika field harga_terendah tidak ada
+    int hTerendah = json['harga_terendah'] ?? 0;
+    if (hTerendah == 0 && varianList.isNotEmpty) {
+      hTerendah = varianList
+          .map((v) => v.hargaBarang)
+          .reduce((a, b) => a < b ? a : b);
+    }
+
+    // 3. Hitung total stok dari varian jika field stok tidak ada
+    String totalStok = (json['stok'] ?? '').toString();
+    if ((totalStok == '' || totalStok == '0') && varianList.isNotEmpty) {
+      int sumStok = varianList.map((v) => v.stok).reduce((a, b) => a + b);
+      totalStok = sumStok.toString();
+    }
+
     return BarangModel(
-      idBarang: (json['id_barang'] ?? json['public_id'] ?? '').toString(),
+      // 🔥 Prioritaskan public_id (UUID) agar API detail tidak error syntax
+      idBarang: (json['public_id'] ?? json['id_barang'] ?? '').toString(),
       namaBarang: json['nama_barang'] ?? '',
-      hargaTerendah: json['harga_terendah'] ?? 0,
+      hargaTerendah: hTerendah,
       hargaTertinggi: json['harga_tertinggi'] ?? 0,
       hargaDiskon: json['harga_diskon'] ?? 0,
-      punyaDiskon: json['punya_diskon'] ?? false,
+      punyaDiskon: json['punya_diskon'] ?? (json['diskon'] != null),
       gambarBarang: json['gambar_barang'] ?? '',
       deskripsi: json['deskripsi'] ?? '',
+      stok: totalStok,
+      varian: varianList,
     );
   }
 }
@@ -117,5 +175,17 @@ class KatalogService {
     );
     final List data = response.data['data'] ?? [];
     return data.map((e) => BarangModel.fromJson(e)).toList();
+  }
+
+  /// Ambil detail lengkap satu barang berdasarkan ID.
+  /// Endpoint: GET /customer/barang/detail/:public_id
+  Future<BarangModel> getDetailBarang(String idBarang) async {
+    final response = await _client.dio.get('/customer/barang/detail/$idBarang');
+
+    // Karena response detail biasanya mengembalikan satu objek tunggal (bukan List)
+    final Map<String, dynamic> data = response.data['data'];
+
+    // Langsung konversi Map JSON menjadi satu objek BarangModel
+    return BarangModel.fromJson(data);
   }
 }

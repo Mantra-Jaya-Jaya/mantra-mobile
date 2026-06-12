@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/base_header_widget.dart';
 
 class PilihPembayaranPage extends StatefulWidget {
   final Map<String, dynamic>? pembayaranSekarang;
@@ -12,7 +13,7 @@ class PilihPembayaranPage extends StatefulWidget {
 class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
   // Variabel untuk melacak kategori utama mana yang sedang di-expand (membentang)
   String? _kategoriExpanded;
-  
+
   // Variabel penampung sub-pilihan atau pilihan final
   Map<String, dynamic>? _pembayaranTerpilih;
 
@@ -20,7 +21,7 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
   void initState() {
     super.initState();
     _pembayaranTerpilih = widget.pembayaranSekarang;
-    
+
     // Jika sebelumnya sudah ada pilihan, sesuaikan status expand kategori utamanya
     if (_pembayaranTerpilih != null) {
       _kategoriExpanded = _pembayaranTerpilih!['kategori'];
@@ -36,18 +37,12 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F7),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFAD510D),
-        elevation: 0,
+      appBar: BaseHeaderWidget(
+        title: 'Metode Pembayaran',
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
           onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
         ),
-        title: const Text(
-          'Metode Pembayaran',
-          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: false,
       ),
       body: SafeArea(
         child: Column(
@@ -87,7 +82,9 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
                     onTap: () {
                       setState(() {
                         // Toggle expand/collapse
-                        _kategoriExpanded = _kategoriExpanded == 'va' ? null : 'va';
+                        _kategoriExpanded = _kategoriExpanded == 'va'
+                            ? null
+                            : 'va';
                       });
                     },
                   ),
@@ -95,10 +92,30 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
                   if (_kategoriExpanded == 'va')
                     _buildSubDropdownContainer(
                       children: [
-                        _buildSubMetodeTile(idKategori: 'va', idMetode: 'va_bni', nama: 'BNI Virtual Account', sub: 'Dicek otomatis'),
-                        _buildSubMetodeTile(idKategori: 'va', idMetode: 'va_bri', nama: 'BRI Virtual Account', sub: 'Dicek otomatis'),
-                        _buildSubMetodeTile(idKategori: 'va', idMetode: 'va_mandiri', nama: 'Mandiri Virtual Account', sub: 'Dicek otomatis'),
-                        _buildSubMetodeTile(idKategori: 'va', idMetode: 'va_bca', nama: 'BCA Virtual Account', sub: 'Dicek otomatis'),
+                        _buildSubMetodeTile(
+                          idKategori: 'va',
+                          idMetode: 'va_bni',
+                          nama: 'BNI Virtual Account',
+                          sub: 'Dicek otomatis',
+                        ),
+                        _buildSubMetodeTile(
+                          idKategori: 'va',
+                          idMetode: 'va_bri',
+                          nama: 'BRI Virtual Account',
+                          sub: 'Dicek otomatis',
+                        ),
+                        _buildSubMetodeTile(
+                          idKategori: 'va',
+                          idMetode: 'va_mandiri',
+                          nama: 'Mandiri Virtual Account',
+                          sub: 'Dicek otomatis',
+                        ),
+                        _buildSubMetodeTile(
+                          idKategori: 'va',
+                          idMetode: 'va_bca',
+                          nama: 'BCA Virtual Account',
+                          sub: 'Dicek otomatis',
+                        ),
                       ],
                     ),
 
@@ -111,7 +128,9 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
                     hasDropdown: true,
                     onTap: () {
                       setState(() {
-                        _kategoriExpanded = _kategoriExpanded == 'ewallet' ? null : 'ewallet';
+                        _kategoriExpanded = _kategoriExpanded == 'ewallet'
+                            ? null
+                            : 'ewallet';
                       });
                     },
                   ),
@@ -119,9 +138,24 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
                   if (_kategoriExpanded == 'ewallet')
                     _buildSubDropdownContainer(
                       children: [
-                        _buildSubMetodeTile(idKategori: 'ewallet', idMetode: 'ew_dana', nama: 'DANA', sub: 'Hubungkan akun DANA Anda'),
-                        _buildSubMetodeTile(idKategori: 'ewallet', idMetode: 'ew_spay', nama: 'ShopeePay', sub: 'Instan menggunakan ShopeePay'),
-                        _buildSubMetodeTile(idKategori: 'ewallet', idMetode: 'ew_ovo', nama: 'OVO', sub: 'Dicek instan'),
+                        _buildSubMetodeTile(
+                          idKategori: 'ewallet',
+                          idMetode: 'ew_dana',
+                          nama: 'DANA',
+                          sub: 'Hubungkan akun DANA Anda',
+                        ),
+                        _buildSubMetodeTile(
+                          idKategori: 'ewallet',
+                          idMetode: 'ew_spay',
+                          nama: 'ShopeePay',
+                          sub: 'Instan menggunakan ShopeePay',
+                        ),
+                        _buildSubMetodeTile(
+                          idKategori: 'ewallet',
+                          idMetode: 'ew_ovo',
+                          nama: 'OVO',
+                          sub: 'Dicek instan',
+                        ),
                       ],
                     ),
 
@@ -169,7 +203,7 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
                 ],
               ),
             ),
-            
+
             // Tombol Konfirmasi Pembayaran di Bagian Bawah
             if (_pembayaranTerpilih != null)
               Container(
@@ -183,12 +217,18 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFAD510D),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   child: const Text(
                     'Konfirmasi Pembayaran',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -209,7 +249,8 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
   }) {
     final isCategoryActive = _kategoriExpanded == idKategori;
     // Check apakah ini pembayaran final (untuk yang non-dropdown seperti Mantra-pay, QRIS, COD)
-    final isChecked = _pembayaranTerpilih?['kategori'] == idKategori && !hasDropdown;
+    final isChecked =
+        _pembayaranTerpilih?['kategori'] == idKategori && !hasDropdown;
 
     return GestureDetector(
       onTap: onTap,
@@ -220,7 +261,9 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: (isCategoryActive || isChecked) ? const Color(0xFFAD510D) : Colors.grey.shade200,
+            color: (isCategoryActive || isChecked)
+                ? const Color(0xFFAD510D)
+                : Colors.grey.shade200,
             width: (isCategoryActive || isChecked) ? 1.5 : 1.0,
           ),
         ),
@@ -239,16 +282,27 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(nama, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  Text(
+                    nama,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text(sub, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  Text(
+                    sub,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
                 ],
               ),
             ),
             // Indikator Kanan: Dropdown Arrow atau Checkbox Bulat
             if (hasDropdown)
               Icon(
-                isCategoryActive ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                isCategoryActive
+                    ? Icons.keyboard_arrow_up_rounded
+                    : Icons.keyboard_arrow_down_rounded,
                 color: isCategoryActive ? const Color(0xFFAD510D) : Colors.grey,
               )
             else
@@ -259,11 +313,15 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
                   shape: BoxShape.circle,
                   color: isChecked ? const Color(0xFFAD510D) : Colors.white,
                   border: Border.all(
-                    color: isChecked ? const Color(0xFFAD510D) : Colors.grey.shade400,
+                    color: isChecked
+                        ? const Color(0xFFAD510D)
+                        : Colors.grey.shade400,
                     width: 1.5,
                   ),
                 ),
-                child: isChecked ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
+                child: isChecked
+                    ? const Icon(Icons.check, size: 14, color: Colors.white)
+                    : null,
               ),
           ],
         ),
@@ -302,7 +360,9 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
             'nama': nama,
             'sub': sub,
             // Tentukan icon kustom saat tampil kembali di halaman Checkout
-            'icon': idKategori == 'va' ? Icons.account_balance_rounded : Icons.phone_android_rounded,
+            'icon': idKategori == 'va'
+                ? Icons.account_balance_rounded
+                : Icons.phone_android_rounded,
           };
         });
       },
@@ -314,8 +374,19 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(nama, style: TextStyle(fontWeight: isChecked ? FontWeight.bold : FontWeight.normal, fontSize: 14)),
-                  Text(sub, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                  Text(
+                    nama,
+                    style: TextStyle(
+                      fontWeight: isChecked
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      fontSize: 14,
+                    ),
+                  ),
+                  Text(
+                    sub,
+                    style: const TextStyle(color: Colors.grey, fontSize: 11),
+                  ),
                 ],
               ),
             ),
@@ -327,11 +398,15 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
                 shape: BoxShape.circle,
                 color: isChecked ? const Color(0xFFAD510D) : Colors.white,
                 border: Border.all(
-                  color: isChecked ? const Color(0xFFAD510D) : Colors.grey.shade400,
+                  color: isChecked
+                      ? const Color(0xFFAD510D)
+                      : Colors.grey.shade400,
                   width: 1.5,
                 ),
               ),
-              child: isChecked ? const Icon(Icons.check, size: 12, color: Colors.white) : null,
+              child: isChecked
+                  ? const Icon(Icons.check, size: 12, color: Colors.white)
+                  : null,
             ),
           ],
         ),
