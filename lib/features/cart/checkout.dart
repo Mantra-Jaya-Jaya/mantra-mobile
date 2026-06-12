@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../core/services/profile_service.dart';
 import '../../core/services/customer_checkout_service.dart';
 import '../../core/models/metode_pembayaran_model.dart';
+import '../../core/widgets/base_header_widget.dart';
+import '../payment/bayarnontunai.dart';
 import 'pilih_alamat.dart';
 import 'pilih_pembayaran.dart';
 
@@ -175,10 +177,30 @@ class _CheckoutState extends State<Checkout> {
 
       if (midtransToken != null && midtransToken.toString().isNotEmpty) {
         print("Midtrans Token: $midtransToken");
+        int pesananId = 0;
+        if (idPesanan is int) {
+          pesananId = idPesanan;
+        } else if (idPesanan != null) {
+          pesananId = int.tryParse(idPesanan.toString()) ?? 0;
+        }
+
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BayarNonTunaiScreen(
+                snapToken: midtransToken.toString(),
+                idPesanan: pesananId,
+                totalAkhir: totalPembayaran,
+              ),
+            ),
+          );
+        }
+        return;
       }
 
       if (mounted) {
-        _showSnackBar('Pesanan berhasil dibuat! ID: $idPesanan');
+        _showSnackBar('Pesanan berhasil dibuat!');
         Navigator.pop(context);
       }
     } catch (e) {
@@ -625,16 +647,239 @@ class _CheckoutState extends State<Checkout> {
     );
   }
 
+  void _tampilkanPilihEkspedisiBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      backgroundColor: Colors.white,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Container(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Pilih Ekspedisi',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  if (_daftarEkspedisi.isEmpty)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Text(
+                          'Tidak ada ekspedisi/layanan tersedia.',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ),
+                    )
+                  else
+                    Flexible(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _daftarEkspedisi.length,
+                        itemBuilder: (context, index) {
+                          final eks = _daftarEkspedisi[index];
+                          final layanans = eks['layanan'] as List<dynamic>? ?? [];
+                          
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text(
+                                  eks['nama_ekspedisi'] ?? 'Ekspedisi',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: Color(0xFFAD510D),
+                                  ),
+                                ),
+                              ),
+                              ...layanans.map((lay) {
+                                final isSelected = _layananDipilih != null &&
+                                    _layananDipilih!['id_layanan_ekspedisi'] == lay['id_layanan_ekspedisi'];
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    side: BorderSide(
+                                      color: isSelected ? const Color(0xFFAD510D) : Colors.grey.shade200,
+                                      width: isSelected ? 2 : 1,
+                                    ),
+                                  ),
+                                  elevation: 0,
+                                  color: isSelected ? const Color(0xFFAD510D).withOpacity(0.05) : Colors.white,
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                    title: Text(
+                                      lay['nama_layanan'] ?? 'Layanan',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      '${lay['deskripsi'] ?? '-'} (${lay['durasi'] ?? '${lay['estimasi_min']}-${lay['estimasi_max']} hari'})',
+                                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                                    ),
+                                    trailing: Text(
+                                      _formatRupiah(lay['harga'] ?? 0),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFFAD510D),
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      setState(() {
+                                        _ekspedisiDipilih = eks;
+                                        _layananDipilih = lay;
+                                      });
+                                      Navigator.pop(context);
+                                    },
+                                  ),
+                                );
+                              }).toList(),
+                              const SizedBox(height: 12),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildPilihEkspedisiCard() {
+    if (_alamatDipilih == null || _alamatDipilih!.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(color: const Color(0xFFEEF3F4), borderRadius: BorderRadius.circular(20)),
+        child: const Center(
+          child: Text(
+            'Silakan pilih alamat pengiriman terlebih dahulu',
+            style: TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+    }
+
+    if (_isLoadingOngkir) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(color: const Color(0xFFEEF3F4), borderRadius: BorderRadius.circular(20)),
+        child: const Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFAD510D)),
+              ),
+              SizedBox(width: 8),
+              Text(
+                'Mengecek ongkir...',
+                style: TextStyle(color: Color(0xFFAD510D), fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: const Color(0xFFEEF3F4), borderRadius: BorderRadius.circular(20)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-      ),
+      child: _ekspedisiDipilih != null && _layananDipilih != null
+          ? Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFAD510D),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.local_shipping, color: Colors.white, size: 20),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '${_ekspedisiDipilih!['nama_ekspedisi']} - ${_layananDipilih!['nama_layanan']}',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              'Estimasi: ${_layananDipilih!['durasi'] ?? '${_layananDipilih!['estimasi_min']}-${_layananDipilih!['estimasi_max']} hari'}',
+                              style: const TextStyle(color: Colors.grey, fontSize: 12),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _formatRupiah(_layananDipilih!['harga']),
+                              style: const TextStyle(color: Color(0xFFAD510D), fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: _tampilkanPilihEkspedisiBottomSheet,
+                  child: const Text(
+                    'Ubah',
+                    style: TextStyle(color: Color(0xFFAD510D), fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            )
+          : GestureDetector(
+              onTap: _tampilkanPilihEkspedisiBottomSheet,
+              child: const Row(
+                children: [
+                  Icon(Icons.add_location_alt_outlined, color: Color(0xFFAD510D), size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'Pilih Jasa Pengiriman',
+                    style: TextStyle(color: Color(0xFFAD510D), fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 

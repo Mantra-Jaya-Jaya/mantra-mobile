@@ -39,4 +39,17 @@ class NotifikasiService {
       throw Exception('Gagal memuat notifikasi: $e');
     }
   }
+
+  Future<List<NotifikasiModel>> getNotifikasiKurir() async {
+    try {
+      final response = await _apiClient.dio.get('/kurir/notifikasi');
+      if (response.statusCode == 200) {
+        List<dynamic> data = response.data['data'];
+        return data.map((json) => NotifikasiModel.fromJson(json)).toList();
+      }
+      return [];
+    } catch (e) {
+      throw Exception('Gagal memuat notifikasi: $e');
+    }
+  }
 }

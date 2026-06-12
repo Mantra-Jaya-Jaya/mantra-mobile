@@ -91,42 +91,6 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
                       metode: mantrapayList.first,
                     ),
 
-                  _buildKategoriUtamaCard(
-                    idKategori: 'va',
-                    nama: 'Transfer Bank (VA)',
-                    sub: 'Format otomatis & dicek otomatis',
-                    icon: Icons.account_balance_rounded,
-                    hasDropdown: true,
-                    onTap: () {
-                      setState(() {
-                        // Toggle expand/collapse
-                        _kategoriExpanded = _kategoriExpanded == 'va'
-                            ? null
-                            : 'va';
-                      });
-                    },
-                  ),
-                  // Dropdown list bank jika kategori 'va' di-expand
-                  if (_kategoriExpanded == 'va')
-                    _buildSubDropdownContainer(
-                      children: vaList.map((m) =>
-                        _buildSubMetodeTile(metode: m)
-                      ).toList(),
-                    ),
-
-                  if (ewalletList.isNotEmpty)
-                    _buildKategoriUtamaCard(
-                      idKategori: 'ewallet',
-                      nama: 'E-Wallet',
-                      sub: 'DANA, ShopeePay, OVO, dll',
-                      icon: Icons.phone_android_rounded,
-                      hasDropdown: true,
-                    ),
-                  if (_kategoriExpanded == 'ewallet')
-                    _buildSubDropdownContainer(
-                      children: ewalletList.map((m) =>
-                        _buildSubMetodeTile(metode: m)
-                      ).toList(),
                   if (vaList.isNotEmpty)
                     _buildKategoriUtamaCard(
                       idKategori: 'va',

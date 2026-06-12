@@ -40,4 +40,16 @@ class CustomerOrderService {
   Future<void> cancelOrder(String publicId) async {
     await _client.dio.patch('/customer/pesanan/$publicId/batal');
   }
+
+  /// Mengambil detail pesanan customer
+  Future<Map<String, dynamic>> getOrderDetail(String publicId) async {
+    final response = await _client.dio.get('/customer/pesanan/$publicId');
+    return Map<String, dynamic>.from(response.data['data']);
+  }
+
+  /// Mengambil data pelacakan pesanan customer
+  Future<Map<String, dynamic>> getTracking(String publicId) async {
+    final response = await _client.dio.get('/customer/pesanan/$publicId/lacak');
+    return Map<String, dynamic>.from(response.data['data']);
+  }
 }
