@@ -10,20 +10,28 @@ import 'package:frontend/features/home/kategori_barang_customer.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:frontend/features/home/search_page.dart';
 import 'package:frontend/features/home/detail_barang.dart';
+import 'package:frontend/features/home/kategori_page.dart';
 import 'package:intl/intl.dart';
 
 // ✅ Deklarasi RouteObserver global untuk mendeteksi navigasi halaman
 final RouteObserver<Route> routeObserver = RouteObserver<Route>();
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final int initialIndex;
+  const HomeScreen({super.key, this.initialIndex = 0});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 0;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+  }
 
   final List<Widget> _pages = [
     const HomeContent(),
@@ -260,11 +268,36 @@ class _HomeContentState extends State<HomeContent> {
                 ],
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
-              child: Text(
-                'Kategori',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Kategori',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      // Navigasi ke halaman semua kategori dengan membawa data list awal dari API
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              AllKategoriPage(initialCategories: _kategoriList),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Lihat Semua',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFAD510D),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             _buildKategoriSection(),
@@ -542,6 +575,7 @@ class _HomeContentState extends State<HomeContent> {
         );
       },
       child: Card(
+        color: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         elevation: 2,
         child: Column(
@@ -587,7 +621,10 @@ class _HomeContentState extends State<HomeContent> {
                     barang.namaBarang,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: const Color(0xFFAD510D),
+                    ),
                   ),
                   const SizedBox(height: 2),
                   if (barang.punyaDiskon) ...[
@@ -602,7 +639,7 @@ class _HomeContentState extends State<HomeContent> {
                     Text(
                       _currencyFormat.format(barang.hargaDiskon),
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w800,
                         color: Color(0xFFAD510D),
                         fontSize: 13,
                       ),
@@ -611,8 +648,9 @@ class _HomeContentState extends State<HomeContent> {
                     Text(
                       _currencyFormat.format(barang.hargaTerendah),
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w800,
                         fontSize: 13,
+                        color: const Color(0xFFAD510D),
                       ),
                     ),
                   ],

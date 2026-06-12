@@ -4,7 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class ApiClient {
   static const String baseUrl = String.fromEnvironment(
     'BASE_URL',
-    defaultValue: 'http://172.16.177.91:8080/api/v1', // emulator Android
+    defaultValue: 'http://172.16.95.155:8080/api/v1', // emulator Android
   );
 
   final Dio _dio;
