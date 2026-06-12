@@ -21,22 +21,19 @@ class _CartCustomerPageState extends State<CartCustomerPage> {
     _loadCartData();
   }
 
-  // Fungsi mengambil data dari server Golang
   Future<void> _loadCartData() async {
     try {
       final data = await _cartService.getCartItems();
       setState(() {
-        // Pastikan setiap item memiliki field 'isSelected' secara lokal untuk melacak centang UI
         cartItems = data.map((item) {
           item['isSelected'] = item['isSelected'] ?? false;
-          // 🔥 Mapping field backend Golang ke field UI Flutter
-          item['id'] = item['id_spesifikasi_barang']; // ID varian unik
+          item['id'] = item['id_spesifikasi_barang'];
           item['title'] = item['nama_barang'] ?? 'Nama Produk';
           item['subtitle'] = item['varian'] ?? 'Detail Pemesanan';
           item['price'] = item['harga_diskon'] ?? item['harga_barang'] ?? 0;
           item['image'] =
               item['gambar_barang'] ??
-              'assets/images/produk.png'; // Menggunakan key 'image'
+              'assets/images/produk.png';
           return item;
         }).toList();
         _isLoading = false;
@@ -51,7 +48,6 @@ class _CartCustomerPageState extends State<CartCustomerPage> {
     }
   }
 
-  // Fungsi memperbarui kuantitas ke database (PATCH)
   Future<void> _changeQuantity(int index, int newQuantity) async {
     final item = cartItems[index];
     final idKeranjang = item['id_keranjang'].toString();
@@ -73,7 +69,6 @@ class _CartCustomerPageState extends State<CartCustomerPage> {
     }
   }
 
-  // Fungsi menghapus barang dari database (DELETE)
   Future<void> _deleteItem(int index) async {
     final idKeranjang = cartItems[index]['id_keranjang'].toString();
     try {
