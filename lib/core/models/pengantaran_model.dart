@@ -111,6 +111,7 @@ class DetailPengantaranModel {
   final Tujuan tujuan;
   final int totalPembayaran;
   final List<ItemPengantaran> daftarBarang;
+  final String? fotoBukti;
 
   DetailPengantaranModel({
     required this.idPengantaran,
@@ -121,6 +122,7 @@ class DetailPengantaranModel {
     required this.tujuan,
     required this.totalPembayaran,
     required this.daftarBarang,
+    this.fotoBukti,
   });
 
   factory DetailPengantaranModel.fromJson(Map<String, dynamic> json) {
@@ -138,6 +140,25 @@ class DetailPengantaranModel {
       tujuan: Tujuan.fromJson(json['tujuan'] ?? {}),
       totalPembayaran: json['total_pembayaran'] ?? 0,
       daftarBarang: itemsList,
+      fotoBukti: json['foto_bukti'],
+    );
+  }
+}
+
+class SelesaikanPengantaranModel {
+  final String urlBukti;
+  final DateTime waktuSampai;
+
+  SelesaikanPengantaranModel({
+    required this.urlBukti,
+    required this.waktuSampai,
+  });
+
+  factory SelesaikanPengantaranModel.fromJson(Map<String, dynamic> json) {
+    return SelesaikanPengantaranModel(
+      urlBukti: json['url_bukti'] ?? '',
+      // Parsing string waktu dari Golang jadi objek DateTime di Dart
+      waktuSampai: DateTime.parse(json['waktu_sampai']),
     );
   }
 }

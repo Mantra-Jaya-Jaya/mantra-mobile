@@ -2,27 +2,77 @@
 import 'package:flutter/material.dart';
 
 class ProductModel {
-  final int idProduk;
+  final String idProduk;
   final String nama;
-  final String deskripsi;
+  final String? deskripsi;
   final int terjual;
   final String imageUrl;
+  final String? kategori;
 
   ProductModel({
     required this.idProduk,
     required this.nama,
-    required this.deskripsi,
+    this.deskripsi,
     required this.terjual,
     required this.imageUrl,
+    this.kategori,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
     return ProductModel(
-      idProduk: json['id_produk'] ?? 0,
-      nama: json['nama_produk'] ?? '',
+      idProduk: (json['public_id'] ?? json['id_produk'] ?? '').toString(),
+      nama: json['nama_produk'] ?? json['nama'] ?? 'Tanpa Nama',
       deskripsi: json['deskripsi'] ?? '',
-      terjual: json['jumlah_terjual'] ?? 0,
+      terjual: (json['jumlah_terjual'] ?? 0).toInt(),
       imageUrl: json['gambar'] ?? '',
+      kategori: json['kategori'] ?? 'Umum',
+    );
+  }
+}
+
+class TransactionHistoryModel {
+  final int idTransaksi;
+  final String nomorInvoice;
+  final String tanggalWaktu;
+  final int subtotal;
+  final int quantity;
+
+  TransactionHistoryModel({
+    required this.idTransaksi,
+    required this.nomorInvoice,
+    required this.tanggalWaktu,
+    required this.subtotal,
+    required this.quantity,
+  });
+
+  factory TransactionHistoryModel.fromJson(Map<String, dynamic> json) {
+    return TransactionHistoryModel(
+      idTransaksi: (json['id_transaksi'] ?? 0).toInt(),
+      nomorInvoice: json['nomor_invoice'] ?? '-',
+      tanggalWaktu: json['tanggal_waktu'] ?? '',
+      subtotal: (json['subtotal'] ?? 0).toInt(),
+      quantity: (json['quantity'] ?? 0).toInt(),
+    );
+  }
+}
+
+class DetailLaporanModel {
+  final ProductModel produk;
+  final int totalTerjual;
+  final List<TransactionHistoryModel> riwayatTransaksi;
+
+  DetailLaporanModel({required this.produk, required this.totalTerjual, required this.riwayatTransaksi});
+
+  factory DetailLaporanModel.fromJson(Map<String, dynamic> json) {
+    // 1. Ambil objek statistik_produk terlebih dahulu
+    final statistik = json['statistik_produk'] ?? {};
+    final riwayatRaw = json['riwayat_transaksi'] as List? ?? [];
+    
+    return DetailLaporanModel(
+      produk: ProductModel.fromJson(json['produk']),
+      // 2. Ambil total_terjual dari dalam objek statistik
+      totalTerjual: (statistik['total_terjual'] ?? 0), 
+      riwayatTransaksi: riwayatRaw.map((tx) => TransactionHistoryModel.fromJson(tx)).toList(),
     );
   }
 }
@@ -65,7 +115,7 @@ class SummaryData {
     return SummaryData(
       totalPendapatan: (header['total_pendapatan'] ?? 0).toDouble(),
       persentasePendapatan: (header['persentase_kenaikan_pendapatan'] ?? 0).toDouble(),
-      totalTransaksi: header['total_transaksi'] ?? 0,
+      totalTransaksi: (header['total_transaksi'] ?? 0).toInt(),
       persentaseTransaksi: (header['persentase_kenaikan_transaksi'] ?? 0).toInt(),
       rataRataPesanan: (header['rata_rata_pesanan'] ?? 0).toDouble(),
       statusRataRata: header['status_rata_rata'] ?? 'stabil',

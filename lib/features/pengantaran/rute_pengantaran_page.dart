@@ -9,7 +9,6 @@ import 'package:dio/dio.dart'; // 🚀 WAJIB ADA: Buat nembak API Rute OSRM
 // 🚀 IMPORT DIKEMBALIKAN SESUAI FILE ASLI LU
 import '../../core/models/pengantaran_model.dart';
 import '../../core/services/pengantaran_service.dart';
-import '../../core/network/api_client.dart';
 import '../../core/widgets/global_appbar_kurir.dart';
 import '../orders/detail_pengantaran_kurir.dart';
 
@@ -30,6 +29,8 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
   final MapController _mapController = MapController();
   Position? _currentPosition;
   StreamSubscription<Position>? _positionStream;
+
+  Timer? _timerLokasi;
 
   // 🚀 PENAMPUNG GARIS RUTE
   List<LatLng> _routePoints = [];
@@ -79,26 +80,32 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
               setState(() {
                 _currentPosition = position;
               });
-              _updateLokasiKeBackend(position.latitude, position.longitude);
             }
           });
+
+          _mulaiRadarGPS();
     }
   }
 
-  Future<void> _updateLokasiKeBackend(double lat, double lng) async {
-    try {
-      final dio = ApiClient().dio;
-      await dio.patch(
-        '/kurir/pengantaran/${widget.idPengantaran}/lokasi',
-        data: {
-          'latitude': lat,
-          'longitude': lng,
-        },
-      );
-      debugPrint("✓ Berhasil memperbarui lokasi kurir ke backend: $lat, $lng");
-    } catch (e) {
-      debugPrint("❌ Gagal memperbarui lokasi kurir ke backend: $e");
-    }
+  // 🚀 2. FUNGSI RADAR REALTIME KE BACKEND
+  void _mulaiRadarGPS() {
+    _timerLokasi = Timer.periodic(const Duration(seconds: 10), (timer) async {
+      // Pastiin lokasinya gak kosong sebelum dikirim
+      if (_currentPosition != null) {
+        try {
+          await _service.updateLokasiKurir(
+            widget.idPengantaran,
+            _currentPosition!.latitude,
+            _currentPosition!.longitude,
+          );
+          debugPrint(
+            '✅ Radar Backend Update: ${_currentPosition!.latitude}, ${_currentPosition!.longitude}',
+          );
+        } catch (e) {
+          debugPrint('❌ Gagal update radar: $e');
+        }
+      }
+    });
   }
 
   // 🚀 FUNGSI SAKTI: Nembak API OSRM Buat Dapetin Titik-Titik Garis
@@ -130,6 +137,7 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
 
   @override
   void dispose() {
+    _timerLokasi?.cancel();
     _positionStream?.cancel();
     _mapController.dispose();
     super.dispose();
@@ -181,7 +189,6 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
                                 ),
 
                                 // 🚀 LAYER GARIS RUTE (Polyline)
-// 🚀 LAYER GARIS RUTE (Polyline)
                                 PolylineLayer(
                                   polylines: [
                                     // 🚀 TAMBAHIN BARIS INI: Cek dulu rutenya udah ada isinya belum!
@@ -384,8 +391,9 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
                                                   MaterialPageRoute(
                                                     builder: (context) =>
                                                         DetailPesananPage(
-                                                          idPengantaran: widget
-                                                              .idPengantaran,
+                                                          idPengantaran: widget.idPengantaran,
+                                                          isSedangDiantar: true, 
+                                                          isDariPeta: true,
                                                         ),
                                                   ),
                                                 );

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../features/orders/detail_pengantaran_kurir.dart';
+import '../../features/pengantaran/rute_pengantaran_page.dart';
 import '../models/pesanan_kurir_model.dart';
+import 'package:geolocator/geolocator.dart';
+
+import '../services/pesanan_kurir_service.dart';
 
 class PesananCard extends StatelessWidget {
   final PesananRingkasModel data;
@@ -187,7 +191,10 @@ class PesananCard extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      // 🚀 PANGGIL FUNGSI DIALOG SAKTI DI SINI
+                      _showLocationPermissionDialog(context, idPengantaran);
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFAD510D),
                       elevation: 0,
@@ -238,6 +245,237 @@ class PesananCard extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+  void _showLocationPermissionDialog(
+    BuildContext mainContext,
+    String idPengantaran,
+  ) {
+    showDialog(
+      context: mainContext,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        bool isDialogLoading = false;
+        // 🚀 Pakai service yang sama persis kayak di halaman detail
+        final service = DetailPesananService();
+
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              backgroundColor: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.location_on_outlined,
+                      size: 50,
+                      color: Color(0xFFAD510D),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Aplikasi perlu mengetahui\nlokasimu',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF301905),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Izinkan akses lokasi untuk pemantauan\nproses pengantaran',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: isDialogLoading
+                                ? null
+                                : () => Navigator.pop(dialogContext),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(
+                                color: Color(0xFFAD510D),
+                                width: 2,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text(
+                              'Tolak',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFAD510D),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: isDialogLoading
+                                ? null
+                                : () async {
+                                    setStateDialog(
+                                      () => isDialogLoading = true,
+                                    );
+
+                                    // 1. Minta Izin GPS ke Sistem HP
+                                    LocationPermission permission =
+                                        await Geolocator.checkPermission();
+                                    if (permission ==
+                                        LocationPermission.denied) {
+                                      permission =
+                                          await Geolocator.requestPermission();
+                                      if (permission ==
+                                          LocationPermission.denied) {
+                                        setStateDialog(
+                                          () => isDialogLoading = false,
+                                        );
+                                        return; // Berhenti kalau user nolak
+                                      }
+                                    }
+
+                                    // 2. Tembak API Terima Pesanan ke Backend
+                                    final newPengantaranId = await service
+                                        .terimaPesanan(idPengantaran);
+
+                                    setStateDialog(
+                                      () => isDialogLoading = false,
+                                    );
+
+                                    // 3. Cek Hasilnya
+                                    if (newPengantaranId != null) {
+                                      Navigator.pop(
+                                        dialogContext,
+                                      ); // Tutup dialog Izin
+                                      // 🚀 Buka dialog Sukses (Oper mainContext biar navigasinya aman)
+                                      _showSuccessDialog(
+                                        mainContext,
+                                        newPengantaranId,
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(
+                                        mainContext,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Gagal! Pesanan mungkin sudah diambil kurir lain.',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFAD510D),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: isDialogLoading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Izinkan',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showSuccessDialog(BuildContext mainContext, String newId) {
+    showDialog(
+      context: mainContext,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        // 🚀 Kopi Paste Auto-Redirect Lu! Otomatis pindah setelah 2 detik!
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mainContext.mounted) {
+            Navigator.pop(dialogContext); // Tutup dialog
+            Navigator.push(
+              mainContext, // Push pakai context utama
+              MaterialPageRoute(
+                builder: (context) => RutePengantaranPage(idPengantaran: newId),
+              ),
+            );
+          }
+        });
+
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.two_wheeler,
+                  size: 60,
+                  color: Color(0xFFAD510D),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Pesanan diterima!\nPelacakan lokasi aktif',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFAD510D),
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Mari mengantar pesanan ini dengan selamat.\nSemangat!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

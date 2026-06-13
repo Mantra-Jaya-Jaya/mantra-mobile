@@ -227,14 +227,17 @@ class OrderKasirState extends State<OrderKasir> {
   Widget _buildOrderItem(OrderModel order) {
     return GestureDetector(
       onTap: () {
+        // 1. Ambil ID-nya (contoh: #ORD-AF7C0671)
+        // 2. Kirim ke halaman DetailPesanan
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => DetailPesanan(pesanan: order),
+            // KODE BARU:
+            builder: (context) => DetailPesanan(publicId: order.orderId), 
           ),
         );
       },
-      child: Container(
+    child: Container(
         margin: const EdgeInsets.only(bottom: 14),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(

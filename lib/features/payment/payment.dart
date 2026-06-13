@@ -1,7 +1,3 @@
-// ============================================================
-// screens/kasir_pos_screen.dart
-// ============================================================
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -11,9 +7,21 @@ import '../../core/models/payment_model.dart';
 import '../../core/services/payment_service.dart';
 import 'metode_pembayaran.dart';
 
+// ── Design Tokens ──────────────────────────────────────────
+class _K {
+  static const orange      = Color(0xFFE8621A);
+  static const orangeLight = Color(0xFFFFF0E8);
+  static const orangeDark  = Color(0xFFC04D0F);
+  static const black       = Color(0xFF1A1A1A);
+  static const grey900     = Color(0xFF2D2D2D);
+  static const grey600     = Color(0xFF757575);
+  static const grey300     = Color(0xFFE0E0E0);
+  static const grey100     = Color(0xFFF5F5F5);
+  static const white       = Color(0xFFFFFFFF);
+}
+
 class KasirPosScreen extends StatefulWidget {
   final int idPesanan;
-
   const KasirPosScreen({super.key, required this.idPesanan});
 
   @override
@@ -21,90 +29,47 @@ class KasirPosScreen extends StatefulWidget {
 }
 
 class _KasirPosScreenState extends State<KasirPosScreen> {
-  // ── Service ──────────────────────────────────────────────
   final _service = PaymentService();
-
-  // ── Search ───────────────────────────────────────────────
   final _searchCtrl = TextEditingController();
-  List<HasilCariProduk> _hasilCari = [];
-  bool _loadingCari = false;
-  bool _showHasil = false;
-
-  // ── Keranjang ────────────────────────────────────────────
   final List<ItemKeranjang> _keranjang = [];
   bool _loadingUpdate = false;
-
-  // ── Scan ─────────────────────────────────────────────────
+  bool _loadingCari = false;
+  bool _showHasil = false;
   bool _scannerOpen = false;
+  List<HasilCariProduk> _hasilCari = [];
   MobileScannerController? _scannerCtrl;
 
-  // ── Helpers ──────────────────────────────────────────────
-  final _fmt = NumberFormat.currency(
-    locale: 'id_ID',
-    symbol: 'Rp ',
-    decimalDigits: 0,
-  );
+  late int _currentIdPesanan;
+
+  final _fmt = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
   int get _subtotal => _keranjang.fold(0, (sum, i) => sum + i.subtotal);
-  int get _pajak => (_subtotal * 0.11).round();
-  int get _total => _subtotal + _pajak;
+  int get _total => _subtotal;
 
-  // 🚀 FUNGSI BARU: PROSES BARCODE LANGSUNG KE KERANJANG
-  Future<void> _prosesBarcode(String kode) async {
-    setState(() => _loadingCari = true);
-    try {
-      final produk = await _service.scanBarcodeProduk(kode);
-
-      if (produk != null && produk.varian.isNotEmpty) {
-        // Otomatis tambah varian pertama ke keranjang
-        await _tambahItem(produk, produk.varian.first);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Berhasil ditambahkan: ${produk.namaBarang}'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } else {
-        _snackError('Barang dengan Barcode $kode tidak ditemukan');
-      }
-    } catch (e) {
-      _snackError('Gagal memproses barcode: $e');
-    } finally {
-      setState(() {
-        _loadingCari = false;
-        _searchCtrl.clear();
-      });
-    }
+  @override
+  void initState() {
+    super.initState();
+    _currentIdPesanan = widget.idPesanan;
   }
 
-  // 🚀 FUNGSI CARI PINTAR (BISA BACA KETIKAN BARCODE)
-  Future<void> _cari(String q) async {
-    final input = q.trim();
-    if (input.isEmpty) {
-      setState(() {
-        _hasilCari = [];
-        _showHasil = false;
-      });
-      return;
-    }
-
-    // Cek apakah inputan murni angka (Kasir ketik barcode manual)
-    final isNumeric = RegExp(r'^[0-9]+$').hasMatch(input);
-    if (isNumeric && input.length >= 8) {
-      await _prosesBarcode(input);
-      return;
-    }
-
-    // Kalau inputan huruf, cari berdasarkan nama produk
+  void _resetTransaksi() {
     setState(() {
-      _loadingCari = true;
-      _showHasil = true;
+      _currentIdPesanan = 0;
+      _keranjang.clear();
+      _searchCtrl.clear();
+      _hasilCari = [];
+      _showHasil = false;
     });
+  }
 
+  Future<void> _cari(String q) async {
+    if (q.trim().isEmpty) {
+      setState(() { _hasilCari = []; _showHasil = false; });
+      return;
+    }
+    setState(() { _loadingCari = true; _showHasil = true; });
     try {
-      final hasil = await _service.cariProduk(input);
+      final hasil = await _service.cariProduk(q.trim());
       setState(() => _hasilCari = hasil);
     } catch (e) {
       setState(() => _hasilCari = []);
@@ -114,16 +79,10 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
     }
   }
 
-  // ── Tambah ke keranjang ──────────────────────────────────
   Future<void> _tambahItem(HasilCariProduk produk, VarianProduk varian) async {
-    if (varian.stok <= 0) {
-      _snackError('Stok habis');
-      return;
-    }
+    if (varian.stok <= 0) { _snackError('Stok habis'); return; }
 
-    final idx = _keranjang.indexWhere(
-      (i) => i.idSpesifikasiBarang == varian.idSpesifikasiBarang,
-    );
+    final idx = _keranjang.indexWhere((i) => i.idSpesifikasiBarang == varian.idSpesifikasiBarang);
 
     setState(() {
       _loadingUpdate = true;
@@ -135,31 +94,20 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
     try {
       if (idx >= 0) {
         final newQty = _keranjang[idx].jumlah + 1;
-        await _service.updateQuantityItem(
-          idPesanan: widget.idPesanan,
-          idSpesifikasiBarang: varian.idSpesifikasiBarang,
-          jumlah: newQty,
-        );
-        setState(() => _keranjang[idx].jumlah = newQty);
+        final newId = await _service.updateQuantityItem(idPesanan: _currentIdPesanan, idSpesifikasiBarang: varian.idSpesifikasiBarang, jumlah: newQty);
+        setState(() { _currentIdPesanan = newId; _keranjang[idx].jumlah = newQty; });
       } else {
-        await _service.updateQuantityItem(
-          idPesanan: widget.idPesanan,
-          idSpesifikasiBarang: varian.idSpesifikasiBarang,
-          jumlah: 1,
-        );
+        final newId = await _service.updateQuantityItem(idPesanan: _currentIdPesanan, idSpesifikasiBarang: varian.idSpesifikasiBarang, jumlah: 1);
         setState(() {
-          _keranjang.add(
-            ItemKeranjang(
-              idPesanan: widget.idPesanan,
-              idSpesifikasiBarang: varian.idSpesifikasiBarang,
-              namaProduk: produk.namaBarang,
-              labelVarian: varian.label,
-              hargaSatuan: varian.hargaDiskon > 0
-                  ? varian.hargaDiskon
-                  : varian.hargaBarang,
-              jumlah: 1,
-            ),
-          );
+          _currentIdPesanan = newId;
+          _keranjang.add(ItemKeranjang(
+            idPesanan: _currentIdPesanan,
+            idSpesifikasiBarang: varian.idSpesifikasiBarang,
+            namaProduk: produk.namaBarang,
+            labelVarian: varian.label,
+            hargaSatuan: varian.hargaDiskon > 0 ? varian.hargaDiskon : varian.hargaBarang,
+            jumlah: 1,
+          ));
         });
       }
     } catch (e) {
@@ -169,23 +117,17 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
     }
   }
 
-  // ── Update qty dari keranjang ────────────────────────────
   Future<void> _updateQty(int idx, int delta) async {
     final item = _keranjang[idx];
     final newQty = item.jumlah + delta;
-
     setState(() => _loadingUpdate = true);
-
     try {
-      await _service.updateQuantityItem(
-        idPesanan: widget.idPesanan,
-        idSpesifikasiBarang: item.idSpesifikasiBarang,
-        jumlah: newQty,
-      );
-
+      final newId = await _service.updateQuantityItem(idPesanan: _currentIdPesanan, idSpesifikasiBarang: item.idSpesifikasiBarang, jumlah: newQty);
       setState(() {
+        _currentIdPesanan = newId;
         if (newQty <= 0) {
           _keranjang.removeAt(idx);
+          if (_keranjang.isEmpty) _currentIdPesanan = 0;
         } else {
           _keranjang[idx].jumlah = newQty;
         }
@@ -197,40 +139,37 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
     }
   }
 
-  // ── Scanner ──────────────────────────────────────────────
   void _bukaScanner() {
-    _scannerCtrl = MobileScannerController(
-      detectionSpeed: DetectionSpeed.noDuplicates,
-      facing: CameraFacing.back,
-      formats: [BarcodeFormat.all], // 🚀 PASTIKAN BISA BACA SEMUA FORMAT
-    );
+    _scannerCtrl = MobileScannerController(detectionSpeed: DetectionSpeed.noDuplicates, facing: CameraFacing.back);
     setState(() => _scannerOpen = true);
   }
 
   void _tutupScanner() {
-    _scannerCtrl?.stop();
+    _scannerCtrl?.dispose();
+    _scannerCtrl = null;
     setState(() => _scannerOpen = false);
   }
 
   void _onBarcodeDetected(BarcodeCapture capture) {
     final barcode = capture.barcodes.firstOrNull;
     if (barcode?.rawValue == null) return;
-
-    final kode = barcode!.rawValue!;
     HapticFeedback.mediumImpact();
     _tutupScanner();
-
-    // 🚀 LANGSUNG LEMPAR KE PROSES BARCODE
-    _prosesBarcode(kode);
+    _cari(barcode!.rawValue!);
   }
 
-  // ── Helpers ──────────────────────────────────────────────
   void _snackError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(msg),
-        backgroundColor: Colors.red.shade700,
+        content: Row(children: [
+          const Icon(Icons.error_outline, color: Colors.white, size: 18),
+          const SizedBox(width: 8),
+          Expanded(child: Text(msg, style: const TextStyle(color: Colors.white))),
+        ]),
+        backgroundColor: Color(0xFFAF510C),
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(12),
       ),
     );
   }
@@ -242,81 +181,99 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
     super.dispose();
   }
 
-  // ── Build ─────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    if (_scannerOpen) {
-      return _buildScannerView();
-    }
+    if (_scannerOpen) return _buildScannerView();
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF8B4513),
-        foregroundColor: Colors.white,
-        title: const Text(
-          'Kasir POS',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        elevation: 0,
-      ),
-      body: Column(
+      backgroundColor: _K.grey100,
+      appBar: _buildAppBar(),
+      body: Stack(
         children: [
-          _buildSearchBar(),
-          if (_showHasil) _buildHasilCari(),
-          Expanded(
-            child: _keranjang.isEmpty ? _buildEmptyState() : _buildKeranjang(),
+          Column(
+            children: [
+              _buildSearchBar(),
+              if (_showHasil) _buildHasilCari(),
+              Expanded(
+                child: _keranjang.isEmpty ? _buildEmptyState() : _buildKeranjang(),
+              ),
+              if (_keranjang.isNotEmpty) _buildFooter(),
+            ],
           ),
-          if (_keranjang.isNotEmpty) _buildFooter(),
+          if (_loadingUpdate)
+            Container(
+              color: Colors.black.withOpacity(0.18),
+              child: const Center(
+                child: CircularProgressIndicator(color: Color(0xFFAF510C)),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  // ── Search Bar ────────────────────────────────────────────
+//App Bar
+PreferredSizeWidget _buildAppBar() {
+  return AppBar(
+    backgroundColor: const Color(0xFFAF510C), // Warna solid
+    elevation: 0,
+    automaticallyImplyLeading: false, // Menghilangkan tombol back
+    titleSpacing: 16, // Memberi jarak yang pas dari kiri
+    title: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Daftar Pesanan",
+          style: TextStyle(
+            color: Colors.white, 
+            fontWeight: FontWeight.bold,
+            fontSize: 18, // Ditingkatkan sedikit
+          ),
+        ),
+      ],
+    ),
+    // Menambahkan shape: null atau zero untuk memastikan tidak ada rounded di bawah
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.zero,
+    ),
+  );
+}
+
+  // ── Search Bar ─────────────────────────────────────────
   Widget _buildSearchBar() {
     return Container(
-      color: const Color(0xFF8B4513),
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      decoration: BoxDecoration(
+        color: Color(0xFFAF510C),
+        borderRadius: BorderRadius.zero,
+        boxShadow: [
+          BoxShadow(color: Color(0xFFAF510C).withOpacity(0.25), blurRadius: 12, offset: const Offset(0, 4)),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
       child: Row(
         children: [
           Expanded(
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 2))],
               ),
               child: TextField(
                 controller: _searchCtrl,
                 onSubmitted: _cari,
-                textInputAction: TextInputAction.search,
+                style: const TextStyle(fontSize: 14, color: _K.black),
                 decoration: InputDecoration(
-                  hintText: 'Cari barang / Ketik Barcode...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400),
-                  prefixIcon: Icon(Icons.search, color: Colors.grey.shade500),
-                  suffixIcon: _loadingCari
+                  hintText: 'Cari nama atau kode barang…',
+                  hintStyle: TextStyle(color: _K.grey600.withOpacity(0.7), fontSize: 14),
+                  prefixIcon: _loadingCari
                       ? const Padding(
                           padding: EdgeInsets.all(12),
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
+                          child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: _K.orange)),
                         )
-                      : _searchCtrl.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchCtrl.clear();
-                            setState(() {
-                              _hasilCari = [];
-                              _showHasil = false;
-                            });
-                          },
-                        )
-                      : null,
+                      : Icon(Icons.search_rounded, color: _K.grey600, size: 20),
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
                 ),
               ),
             ),
@@ -325,18 +282,13 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
           GestureDetector(
             onTap: _bukaScanner,
             child: Container(
-              width: 48,
-              height: 48,
+              width: 48, height: 48,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.white.withOpacity(0.5)),
+                color: _K.orangeDark,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 6, offset: const Offset(0, 2))],
               ),
-              child: const Icon(
-                Icons.qr_code_scanner,
-                color: Colors.white,
-                size: 26,
-              ),
+              child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 24),
             ),
           ),
         ],
@@ -344,188 +296,177 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
     );
   }
 
-  // ── Hasil Pencarian ───────────────────────────────────────
+  // ── Hasil Cari ─────────────────────────────────────────
   Widget _buildHasilCari() {
-    if (_loadingCari) {
-      return const Padding(
-        padding: EdgeInsets.all(20),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-    if (_hasilCari.isEmpty) {
-      return Container(
-        color: Colors.white,
-        padding: const EdgeInsets.all(16),
-        child: const Text(
-          'Produk tidak ditemukan',
-          style: TextStyle(color: Colors.grey),
-        ),
-      );
-    }
     return Container(
-      color: Colors.white,
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.45,
+      margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+      decoration: BoxDecoration(
+        color: _K.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 16, offset: const Offset(0, 4)),
+        ],
       ),
-      child: ListView.separated(
-        shrinkWrap: true,
-        itemCount: _hasilCari.length,
-        separatorBuilder: (_, __) => const Divider(height: 1),
-        itemBuilder: (context, i) {
-          final produk = _hasilCari[i];
-          return _buildProdukTile(produk);
-        },
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.42),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: _hasilCari.isEmpty
+            ? const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: Text('Produk tidak ditemukan', style: TextStyle(color: _K.grey600))),
+              )
+            : ListView.separated(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                itemCount: _hasilCari.length,
+                separatorBuilder: (_, __) => Divider(height: 1, color: _K.grey300),
+                itemBuilder: (context, i) => _buildProdukTile(_hasilCari[i]),
+              ),
       ),
     );
   }
 
   Widget _buildProdukTile(HasilCariProduk produk) {
     final punya1Varian = produk.varian.length == 1;
-
-    return ExpansionTile(
-      leading: produk.gambarBarang != null && produk.gambarBarang!.isNotEmpty
-          ? ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: Image.network(
-                produk.gambarBarang!,
-                width: 44,
-                height: 44,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2),
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: Container(
+          width: 38, height: 38,
+          decoration: BoxDecoration(color: _K.orangeLight, borderRadius: BorderRadius.circular(8)),
+          child: const Icon(Icons.inventory_2_outlined, color: _K.orange, size: 20),
+        ),
+        title: Text(produk.namaBarang,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: _K.black)),
+        subtitle: Text('${produk.varian.length} varian',
+            style: const TextStyle(fontSize: 12, color: _K.grey600)),
+        initiallyExpanded: punya1Varian,
+        onExpansionChanged: punya1Varian ? (_) => _tambahItem(produk, produk.varian.first) : null,
+        childrenPadding: const EdgeInsets.only(bottom: 6),
+        children: produk.varian.map((v) {
+          final harga = v.hargaDiskon > 0 ? v.hargaDiskon : v.hargaBarang;
+          return InkWell(
+            onTap: () => _tambahItem(produk, v),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
+                  const SizedBox(width: 46),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(v.label, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: _K.grey900)),
+                        const SizedBox(height: 2),
+                        Text(_fmt.format(harga), style: const TextStyle(color: _K.orange, fontWeight: FontWeight.w700, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(color: _K.orange, borderRadius: BorderRadius.circular(20)),
+                    child: const Row(children: [
+                      Icon(Icons.add, color: Colors.white, size: 14),
+                      SizedBox(width: 2),
+                      Text('Tambah', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                    ]),
+                  ),
+                ],
               ),
-            )
-          : const Icon(Icons.inventory_2, color: Color(0xFF8B4513)),
-      title: Text(
-        produk.namaBarang,
-        style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          );
+        }).toList(),
       ),
-      subtitle: punya1Varian
-          ? Text(
-              _fmt.format(
-                produk.varian.first.hargaDiskon > 0
-                    ? produk.varian.first.hargaDiskon
-                    : produk.varian.first.hargaBarang,
-              ),
-            )
-          : Text('${produk.varian.length} varian'),
-      initiallyExpanded: punya1Varian,
-      onExpansionChanged: punya1Varian
-          ? (_) => _tambahItem(produk, produk.varian.first)
-          : null,
-      children: produk.varian.map((v) {
-        final harga = v.hargaDiskon > 0 ? v.hargaDiskon : v.hargaBarang;
-        return ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-          title: Text(v.label),
-          subtitle: Text(
-            _fmt.format(harga),
-            style: const TextStyle(color: Color(0xFF8B4513)),
-          ),
-          trailing: Text(
-            'Stok: ${v.stok}',
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-          ),
-          onTap: () => _tambahItem(produk, v),
-        );
-      }).toList(),
     );
   }
 
-  // ── Empty State ───────────────────────────────────────────
+  // ── Empty State ────────────────────────────────────────
   Widget _buildEmptyState() {
     return Center(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.shopping_cart_outlined,
-            size: 80,
-            color: Colors.grey.shade300,
+          Container(
+            width: 90, height: 90,
+            decoration: BoxDecoration(color: _K.orangeLight, shape: BoxShape.circle),
+            child: const Icon(Icons.shopping_cart_outlined, color: _K.orange, size: 42),
           ),
           const SizedBox(height: 16),
-          Text(
-            'Belum ada barang',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade400,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Cari barang atau scan barcode\nuntuk memulai transaksi',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey.shade400),
-          ),
+          const Text('Keranjang Kosong', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: _K.black)),
+          const SizedBox(height: 6),
+          Text('Cari barang atau scan barcode untuk\nmenambahkan ke keranjang',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: _K.grey600, height: 1.5)),
         ],
       ),
     );
   }
 
-  // ── Keranjang ─────────────────────────────────────────────
+  // ── Keranjang List ─────────────────────────────────────
   Widget _buildKeranjang() {
     return ListView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
       itemCount: _keranjang.length,
       itemBuilder: (context, i) {
         final item = _keranjang[i];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          decoration: BoxDecoration(
+            color: _K.white,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2)),
+            ],
           ),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
+                // Icon / nomor urut
+                Container(
+                  width: 40, height: 40,
+                  decoration: BoxDecoration(color: _K.orangeLight, borderRadius: BorderRadius.circular(10)),
+                  alignment: Alignment.center,
+                  child: Text('${i + 1}', style: const TextStyle(fontWeight: FontWeight.w700, color: _K.orange, fontSize: 15)),
+                ),
+                const SizedBox(width: 12),
+                // Nama & label varian
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        item.namaProduk,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      if (item.labelVarian.isNotEmpty)
-                        Text(
-                          item.labelVarian,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade500,
-                          ),
-                        ),
+                      Text(item.namaProduk,
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: _K.black),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 2),
+                      Text(item.labelVarian,
+                          style: const TextStyle(fontSize: 12, color: _K.grey600)),
                       const SizedBox(height: 4),
-                      Text(
-                        _fmt.format(item.subtotal),
-                        style: const TextStyle(
-                          color: Color(0xFF8B4513),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      Text(_fmt.format(item.subtotal),
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: _K.orange)),
                     ],
                   ),
                 ),
-                Row(
-                  children: [
-                    _qtyButton(
-                      icon: Icons.remove,
-                      onTap: _loadingUpdate ? null : () => _updateQty(i, -1),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text(
-                        '${item.jumlah}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+                // Qty control
+                Container(
+                  decoration: BoxDecoration(
+                    color: _K.grey100,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: _K.grey300),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _qtyButton(Icons.remove_rounded, () => _updateQty(i, -1)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Text('${item.jumlah}',
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: _K.black)),
                       ),
-                    ),
-                    _qtyButton(
-                      icon: Icons.add,
-                      onTap: _loadingUpdate ? null : () => _updateQty(i, 1),
-                    ),
-                  ],
+                      _qtyButton(Icons.add_rounded, () => _updateQty(i, 1), isAdd: true),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -535,186 +476,153 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
     );
   }
 
-  Widget _qtyButton({required IconData icon, VoidCallback? onTap}) {
+  Widget _qtyButton(IconData icon, VoidCallback onTap, {bool isAdd = false}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 32,
-        height: 32,
+        width: 34, height: 34,
         decoration: BoxDecoration(
-          color: onTap == null
-              ? Colors.grey.shade200
-              : const Color(0xFF8B4513).withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: onTap == null
-                ? Colors.grey.shade300
-                : const Color(0xFF8B4513),
-          ),
+          color: isAdd ? _K.orange : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
         ),
-        child: Icon(
-          icon,
-          size: 18,
-          color: onTap == null ? Colors.grey : const Color(0xFF8B4513),
-        ),
+        child: Icon(icon, size: 16, color: isAdd ? Colors.white : _K.grey900),
       ),
     );
   }
 
-  // ── Footer ────────────────────────────────────────────────
+  // ── Footer ─────────────────────────────────────────────
   Widget _buildFooter() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Subtotal', style: TextStyle(color: Colors.grey.shade600)),
-              Text(_fmt.format(_subtotal)),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Pajak (11%)',
-                style: TextStyle(color: Colors.grey.shade600),
-              ),
-              Text(_fmt.format(_pajak)),
-            ],
-          ),
-          const Divider(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Total Akhir',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              Text(
-                _fmt.format(_total),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: Color(0xFF8B4513),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ElevatedButton.icon(
-            onPressed: _loadingUpdate ? null : _kePembayaran,
-            icon: const Icon(Icons.payment),
-            label: const Text(
-              'Pilih Metode Pembayaran',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+  final itemCount = _keranjang.fold(0, (sum, i) => sum + i.jumlah);
+  return Container(
+    margin: const EdgeInsets.only(bottom: 10), // Jarak dari navbar
+    decoration: BoxDecoration(
+      color: Colors.white, // Latar belakang area pembayaran jadi putih
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      boxShadow: [
+        BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, -2)),
+      ],
+    ),
+    padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            _footerChip(Icons.shopping_bag_outlined, '$itemCount item'),
+            const SizedBox(width: 8),
+            _footerChip(Icons.layers_outlined, '${_keranjang.length} produk'),
+            const Spacer(),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                const Text('Total', style: TextStyle(fontSize: 12, color: Color(0xFF757575))),
+                Text(_fmt.format(_total),
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFF1A1A1A), letterSpacing: -0.5)),
+              ],
             ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        // Tombol Oranye
+        SizedBox(
+          height: 52,
+          child: ElevatedButton(
+            onPressed: _kePembayaran,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF8B4513),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
+              backgroundColor: const Color(0xFFAF510C), // Warna Oranye AppBar
+              foregroundColor: Colors.white, // Teks putih
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.payment_rounded, size: 20),
+                SizedBox(width: 8),
+                Text('Pilih Metode Pembayaran',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, letterSpacing: 0.2)),
+              ],
             ),
           ),
+        ),
+      ],
+    ),
+  );
+}
+
+  Widget _footerChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(color: _K.orangeLight, borderRadius: BorderRadius.circular(8)),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: _K.orange),
+          const SizedBox(width: 4),
+          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _K.orange)),
         ],
       ),
     );
   }
 
-  void _kePembayaran() {
-    Navigator.push(
+  void _kePembayaran() async {
+    print("KasirPosScreen mengirim ID Pesanan = $_currentIdPesanan");
+
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => MetodePembayaranScreen(
-          idPesanan: widget.idPesanan,
+          idPesanan: _currentIdPesanan,
           totalAkhir: _total,
           keranjang: _keranjang,
         ),
       ),
     );
+
+    _resetTransaksi();
   }
 
-  // ── Scanner View (portrait, kamera penuh layar) ──────────
   Widget _buildScannerView() {
     return Scaffold(
       backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
+            child: const Icon(Icons.close, color: Colors.white, size: 20),
+          ),
+          onPressed: _tutupScanner,
+        ),
+        title: const Text('Scan Barcode', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+      ),
       body: Stack(
         children: [
-          Positioned.fill(
-            child: MobileScanner(
-              controller: _scannerCtrl!,
-              onDetect: _onBarcodeDetected,
-              fit: BoxFit.cover,
-            ),
-          ),
-          Positioned.fill(child: CustomPaint(painter: _ScanOverlayPainter())),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: _tutupScanner,
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    ),
-                    const Expanded(
-                      child: Text(
-                        'Scan Barcode',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => _scannerCtrl?.toggleTorch(),
-                      icon: const Icon(Icons.flash_on, color: Colors.white),
-                    ),
-                  ],
-                ),
+          MobileScanner(controller: _scannerCtrl, onDetect: _onBarcodeDetected),
+          // Overlay frame
+          Center(
+            child: Container(
+              width: 240, height: 240,
+              decoration: BoxDecoration(
+                border: Border.all(color: _K.orange, width: 2.5),
+                borderRadius: BorderRadius.circular(16),
               ),
             ),
           ),
           Positioned(
-            bottom: 60,
-            left: 0,
-            right: 0,
+            bottom: 48,
+            left: 0, right: 0,
             child: Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 8,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(20),
+                  color: Colors.black.withOpacity(0.55),
+                  borderRadius: BorderRadius.circular(24),
                 ),
-                child: const Text(
-                  'Arahkan kamera ke barcode produk',
-                  style: TextStyle(color: Colors.white),
-                ),
+                child: const Text('Arahkan kamera ke barcode produk',
+                    style: TextStyle(color: Colors.white, fontSize: 13)),
               ),
             ),
           ),
@@ -722,94 +630,4 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
       ),
     );
   }
-}
-
-// ── Overlay painter untuk kotak scan ─────────────────────────
-class _ScanOverlayPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    const boxSize = 250.0;
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final boxRect = Rect.fromCenter(
-      center: Offset(cx, cy),
-      width: boxSize,
-      height: boxSize,
-    );
-    final overlay = Paint()..color = Colors.black54;
-
-    canvas.drawRect(Rect.fromLTRB(0, 0, size.width, boxRect.top), overlay);
-    canvas.drawRect(
-      Rect.fromLTRB(0, boxRect.top, boxRect.left, boxRect.bottom),
-      overlay,
-    );
-    canvas.drawRect(
-      Rect.fromLTRB(boxRect.right, boxRect.top, size.width, boxRect.bottom),
-      overlay,
-    );
-    canvas.drawRect(
-      Rect.fromLTRB(0, boxRect.bottom, size.width, size.height),
-      overlay,
-    );
-
-    final borderPaint = Paint()
-      ..color = const Color(0xFF8B4513)
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(boxRect, const Radius.circular(12)),
-      borderPaint,
-    );
-
-    const cornerLen = 28.0;
-    final cornerPaint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 4
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawLine(
-      Offset(boxRect.left, boxRect.top + cornerLen),
-      Offset(boxRect.left, boxRect.top),
-      cornerPaint,
-    );
-    canvas.drawLine(
-      Offset(boxRect.left, boxRect.top),
-      Offset(boxRect.left + cornerLen, boxRect.top),
-      cornerPaint,
-    );
-    canvas.drawLine(
-      Offset(boxRect.right - cornerLen, boxRect.top),
-      Offset(boxRect.right, boxRect.top),
-      cornerPaint,
-    );
-    canvas.drawLine(
-      Offset(boxRect.right, boxRect.top),
-      Offset(boxRect.right, boxRect.top + cornerLen),
-      cornerPaint,
-    );
-    canvas.drawLine(
-      Offset(boxRect.left, boxRect.bottom - cornerLen),
-      Offset(boxRect.left, boxRect.bottom),
-      cornerPaint,
-    );
-    canvas.drawLine(
-      Offset(boxRect.left, boxRect.bottom),
-      Offset(boxRect.left + cornerLen, boxRect.bottom),
-      cornerPaint,
-    );
-    canvas.drawLine(
-      Offset(boxRect.right, boxRect.bottom - cornerLen),
-      Offset(boxRect.right, boxRect.bottom),
-      cornerPaint,
-    );
-    canvas.drawLine(
-      Offset(boxRect.right, boxRect.bottom),
-      Offset(boxRect.right - cornerLen, boxRect.bottom),
-      cornerPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
