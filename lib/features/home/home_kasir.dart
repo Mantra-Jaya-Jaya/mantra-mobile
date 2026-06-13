@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/core/widgets/bottom_navbar.dart';
+import 'package:frontend/features/home/semua_aktivitas.dart';
 import 'package:frontend/features/home/services/dashboard_kasir_service.dart';
 import 'package:frontend/features/summary/summary.dart';
 import 'package:intl/intl.dart';
@@ -14,20 +15,27 @@ import '../notifications/notification_kasir.dart';
 import '../payment/payment.dart'; // Menuju ke file PaymentScreen baru yang mandiri
 
 class DashboardKasirPage extends StatefulWidget {
-  const DashboardKasirPage({super.key});
+  final int initialIndex;
+  const DashboardKasirPage({super.key, this.initialIndex = 0});
 
   @override
   State<DashboardKasirPage> createState() => _DashboardKasirPageState();
 }
 
 class _DashboardKasirPageState extends State<DashboardKasirPage> {
-  int _currentIndex = 0;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+  }
 
   // List halaman utama kasir — Bersih total dari pengecekan dan parameter kamera
   final List<Widget> _pages = [
     const DashboardContent(),
     const OrderKasir(),
-    const KasirPosScreen(idPesanan: 3), // <--- Sekarang langsung dipanggil kosongan!
+    const KasirPosScreen(idPesanan: 0), // <--- Sekarang langsung dipanggil kosongan!
     const SummaryPage(),
     const ProfileKasir(),
   ];
@@ -290,7 +298,14 @@ class _DashboardContentState extends State<DashboardContent> {
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SemuaAktivitasPage(),
+                        ),
+                      );
+                    },
                     child: const Text(
                       'Lihat Semua',
                       style: TextStyle(color: Color(0xFFAD510D)),
