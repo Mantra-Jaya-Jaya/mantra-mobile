@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import '../../core/models/pesanan_kurir_model.dart'; // Sesuaikan path model lu yang bener (DetailPesananModel)
+import 'package:intl/intl.dart';
+import '../../core/models/pesanan_kurir_model.dart';
+import '../../core/models/pengantaran_model.dart';
 import '../../core/services/pengantaran_service.dart';
-import '../../core/services/pesanan_kurir_service.dart'; // Sesuaikan path service lu
+import '../../core/services/pesanan_kurir_service.dart';
 import '../../core/widgets/card_item_pemesanan_kurir.dart';
 import '../../core/widgets/global_appbar_kurir.dart';
 import '../pengantaran/ambil_bukti_page.dart';
 import '../pengantaran/rute_pengantaran_page.dart';
+import 'camera_page.dart';
 
 
 class DetailPesananPage extends StatefulWidget {
@@ -50,6 +53,134 @@ class _DetailPesananPageState extends State<DetailPesananPage> {
       }
     }
     return 'Rp. $result';
+  }
+
+  // 🚀 METHOD DARI FEAT BRANCH: Terima pesanan dari tab "Tersedia"
+  Future<void> _acceptOrder() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Terima Pesanan'),
+        content: const Text('Apakah Anda yakin ingin menerima pesanan ini?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFAD510D),
+            ),
+            child: const Text('Terima'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFFAD510D)),
+      ),
+    );
+
+    try {
+      // Pakai PesananService.ambilPesanan() yang sudah ada
+      await PesananService().ambilPesanan(widget.idPengantaran);
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pesanan berhasil diterima!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.pop(context, true); // Return to previous page with refresh flag
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menerima pesanan: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // 🚀 METHOD DARI FEAT BRANCH: Selesaikan pengantaran dengan upload foto
+  Future<void> _completeOrder() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Selesaikan Pengantaran'),
+        content: const Text(
+            'Pastikan pesanan sudah sampai. Anda akan diminta mengambil foto bukti.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFAD510D),
+            ),
+            child: const Text('Lanjutkan'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    // Navigate to camera page
+    final imagePath = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (context) => const CameraPage()),
+    );
+
+    if (imagePath == null) return;
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFFAD510D)),
+      ),
+    );
+
+    try {
+      // Pakai PesananService.updateStatus() yang sudah ada
+      await PesananService().updateStatus(
+        widget.idPengantaran,
+        'Selesai',
+        filePath: imagePath,
+      );
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pengantaran berhasil diselesaikan!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.pop(context, true); // Return to previous page with refresh flag
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menyelesaikan pengantaran: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override

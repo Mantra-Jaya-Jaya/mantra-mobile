@@ -9,6 +9,7 @@ import 'package:dio/dio.dart'; // 🚀 WAJIB ADA: Buat nembak API Rute OSRM
 // 🚀 IMPORT DIKEMBALIKAN SESUAI FILE ASLI LU
 import '../../core/models/pengantaran_model.dart';
 import '../../core/services/pengantaran_service.dart';
+import '../../core/network/api_client.dart';
 import '../../core/widgets/global_appbar_kurir.dart';
 import '../orders/detail_pengantaran_kurir.dart';
 
@@ -106,6 +107,23 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
         }
       }
     });
+  }
+
+  // 🚀 3. FUNGSI UPDATE LOKASI LANGSUNG KE BACKEND (dari feat branch)
+  Future<void> _updateLokasiKeBackend(double lat, double lng) async {
+    try {
+      final dio = ApiClient().dio;
+      await dio.put(
+        '/kurir/pengantaran/${widget.idPengantaran}/lokasi',
+        data: {
+          'latitude': lat,
+          'longitude': lng,
+        },
+      );
+      debugPrint('✅ Lokasi langsung diupdate: $lat, $lng');
+    } catch (e) {
+      debugPrint('❌ Gagal update lokasi langsung: $e');
+    }
   }
 
   // 🚀 FUNGSI SAKTI: Nembak API OSRM Buat Dapetin Titik-Titik Garis
