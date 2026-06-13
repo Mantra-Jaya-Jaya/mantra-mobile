@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../home/home_kasir.dart';
 
 class SuksesBayarScreen extends StatelessWidget {
   final int kembalian;
@@ -100,7 +101,14 @@ class SuksesBayarScreen extends StatelessWidget {
               // Tombol kembali ke kasir
               ElevatedButton(
                 onPressed: () {
-                  Navigator.popUntil(context, (route) => route.isFirst);
+                  // Kembali ke dashboard kasir tab Payments (index 2)
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const DashboardKasirPage(initialIndex: 2),
+                    ),
+                    (route) => false,
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF8B4513),

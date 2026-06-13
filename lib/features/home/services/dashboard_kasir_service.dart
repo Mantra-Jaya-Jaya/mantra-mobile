@@ -65,4 +65,12 @@ class DashboardKasirService {
     final response = await _client.dio.get('/kasir/dashboard');
     return DashboardKasirData.fromJson(response.data['data']);
   }
+
+  /// Ambil semua aktivitas transaksi hari ini.
+  /// Endpoint: GET /kasir/aktivitas-hari-ini
+  Future<List<AktivitasItem>> getSemuaAktivitas() async {
+    final response = await _client.dio.get('/kasir/aktivitas-hari-ini');
+    final List data = response.data['data'] ?? [];
+    return data.map((e) => AktivitasItem.fromJson(e)).toList();
+  }
 }
