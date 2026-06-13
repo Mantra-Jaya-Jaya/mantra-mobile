@@ -20,10 +20,7 @@ class VarianProduk {
   factory VarianProduk.fromJson(Map<String, dynamic> json) {
     return VarianProduk(
       idSpesifikasiBarang: json['id_spesifikasi_barang'] ?? 0,
-      label:
-          json['nama_detail']?.toString() ??
-          json['label']?.toString() ??
-          'Default',
+      label: json['label'] ?? '',
       hargaBarang: json['harga_barang'] ?? 0,
       hargaDiskon: json['harga_diskon'] ?? 0,
       stok: json['stok'] ?? 0,
@@ -79,6 +76,7 @@ class ItemKeranjang {
 
 class RingkasanCheckout {
   final int idOrder;
+  final String publicId;
   final String nomorOrder;
   final List<ItemCheckout> items;
   final int subtotal;
@@ -87,6 +85,7 @@ class RingkasanCheckout {
 
   RingkasanCheckout({
     required this.idOrder,
+    required this.publicId,
     required this.nomorOrder,
     required this.items,
     required this.subtotal,
@@ -100,6 +99,7 @@ class RingkasanCheckout {
     final biaya = data['ringkasan_biaya'];
     return RingkasanCheckout(
       idOrder: orderInfo['id_order'] ?? 0,
+      publicId: orderInfo['public_id'] ?? '',
       nomorOrder: orderInfo['nomor_order'] ?? '',
       items: (data['item_checkout'] as List<dynamic>? ?? [])
           .map((i) => ItemCheckout.fromJson(i))
@@ -158,12 +158,17 @@ class HasilBayarTunai {
 
 class HasilBayarNonTunai {
   final String snapToken;
+  final String? nomorInvoice;
 
-  HasilBayarNonTunai({required this.snapToken});
+  HasilBayarNonTunai({required this.snapToken, this.nomorInvoice});
 
   factory HasilBayarNonTunai.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] ?? {};
+    final midtransData = data['midtrans_data'] ?? {};
+    
     return HasilBayarNonTunai(
-      snapToken: json['data']['midtrans_data']['token'] ?? '',
+      snapToken: midtransData['token'] ?? '',
+      nomorInvoice: data['nomor_invoice'],
     );
   }
 }
