@@ -157,18 +157,42 @@ class HasilBayarTunai {
 }
 
 class HasilBayarNonTunai {
-  final String snapToken;
-  final String? nomorInvoice;
+  final String orderId;
+  final String metode;
+  final String? qrUrl;
+  final String? vaNumber;
 
-  HasilBayarNonTunai({required this.snapToken, this.nomorInvoice});
+  HasilBayarNonTunai({
+    required this.orderId,
+    required this.metode,
+    this.qrUrl,
+    this.vaNumber,
+  });
 
   factory HasilBayarNonTunai.fromJson(Map<String, dynamic> json) {
     final data = json['data'] ?? {};
-    final midtransData = data['midtrans_data'] ?? {};
-    
+
     return HasilBayarNonTunai(
-      snapToken: midtransData['token'] ?? '',
-      nomorInvoice: data['nomor_invoice'],
+      orderId: data['order_id'] ?? '',
+      metode: data['metode'] ?? '',
+      qrUrl: data['qr_url'],
+      vaNumber: data['va_number'],
+    );
+  }
+}
+
+
+class HasilCekStatus {
+  final bool isLunas;
+  final String statusTransaksi;
+
+  HasilCekStatus({required this.isLunas, required this.statusTransaksi});
+
+  factory HasilCekStatus.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] ?? {};
+    return HasilCekStatus(
+      isLunas: json['is_lunas'] ?? false,
+      statusTransaksi: data['status_transaksi'] ?? 'pending',
     );
   }
 }

@@ -8,19 +8,15 @@ import 'suksesbayar.dart';
 
 // ── Design Tokens (sama dengan KasirPosScreen) ─────────────
 class _K {
-  static const orange      = Color(0xFFAF510C); // Diubah ke warna AppBar
-  static const orangeLight = Color(0xFFFFE0CC); // Disesuaikan agar lebih estetik
-  static const orangeDark  = Color(0xFF8A3D06);
-  static const black       = Color(0xFF1A1A1A);
-  static const grey900     = Color(0xFF2D2D2D);
-  static const grey600     = Color(0xFF757575);
-  static const grey300     = Color(0xFFE0E0E0);
-  static const grey100     = Color(0xFFF5F5F5);
-  static const white       = Color(0xFFFFFFFF);
-  static const green       = Color(0xFF2E7D32);
-  static const greenLight  = Color(0xFFE8F5E9);
-  static const red         = Color(0xFFC62828);
-  static const redLight    = Color(0xFFFFEBEE);
+  static const orange = Color(0xFFAF510C);
+  static const orangeLight = Color(0xFFFFE0CC);
+  static const orangeDark = Color(0xFF8A3D06);
+  static const black = Color(0xFF1A1A1A);
+  static const grey900 = Color(0xFF2D2D2D);
+  static const grey600 = Color(0xFF757575);
+  static const grey300 = Color(0xFFE0E0E0);
+  static const grey100 = Color(0xFFF5F5F5);
+  static const white = Color(0xFFFFFFFF);
 }
 
 class MetodePembayaranScreen extends StatefulWidget {
@@ -46,6 +42,7 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
   final _fmt = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
   final _uangCtrl = TextEditingController();
   bool _loadingBayar = false;
+  String _selectedMetode = 'qris';
 
   int? _backendTotal;
   String? _publicId;
@@ -109,27 +106,34 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
     if (_syncing) return;
     setState(() => _loadingBayar = true);
     try {
-      final hasil = await _service.bayarNonTunai(widget.idPesanan);
+      // 🚀 1. Kirim parameter metode ke backend
+      final hasil = await _service.bayarNonTunai(
+        idPesanan: widget.idPesanan,
+        metode: _selectedMetode,
+      );
+
       if (!mounted) return;
 
-      if (hasil.snapToken.isEmpty) {
-        throw Exception("Gagal mendapatkan token pembayaran dari Midtrans");
-      }
-
+      // 🚀 2. Lempar ke halaman QRIS/VA (yang nanti bakal kita benerin juga filenya)
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => BayarNonTunaiScreen(
-            snapToken: hasil.snapToken,
-            idPesanan: widget.idPesanan,
-            publicId: _publicId ?? "",
+            orderId: hasil.orderId,
+            metode: hasil.metode,
+            qrUrl: hasil.qrUrl,
+            vaNumber: hasil.vaNumber,
             totalAkhir: _subtotal,
+            publicId: _publicId ?? "",
           ),
         ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: _K.red),
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: _K.orangeDark,
+        ), // 🚀 Warnanya coklat gelap, bukan merah
       );
     } finally {
       if (mounted) setState(() => _loadingBayar = false);
@@ -329,24 +333,31 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
                 ),
 
                 // Tombol nominal cepat
-                //const SizedBox(height: 12),
-                //_buildNominalCepat(),
+                const SizedBox(height: 12),
+                _buildNominalCepat(),
 
                 // Status kembalian
                 const SizedBox(height: 14),
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: _uangDiterima == 0
                         ? _K.grey100
-                        : _isCukup ? _K.greenLight : _K.redLight,
+                        : _isCukup
+                        ? _K.orangeLight
+                        : _K.grey100, // 🚀 Ganti warna
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: _uangDiterima == 0
                           ? _K.grey300
-                          : _isCukup ? _K.green : _K.red,
+                          : _isCukup
+                          ? _K.orange
+                          : _K.grey600, // 🚀 Ganti warna
                     ),
                   ),
                   child: Row(
@@ -355,39 +366,70 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
                         _uangDiterima == 0
                             ? Icons.info_outline_rounded
                             : _isCukup
-                                ? Icons.check_circle_rounded
-                                : Icons.cancel_rounded,
+                            ? Icons.check_circle_rounded
+                            : Icons.error_outline_rounded,
                         color: _uangDiterima == 0
                             ? _K.grey600
-                            : _isCukup ? _K.green : _K.red,
+                            : _isCukup
+                            ? _K.orange
+                            : _K.grey600,
                         size: 20,
                       ),
                       const SizedBox(width: 10),
                       _uangDiterima == 0
-                          ? Text('Masukkan jumlah uang yang diterima',
-                              style: TextStyle(fontSize: 13, color: _K.grey600))
+                          ? const Text(
+                              'Masukkan jumlah uang yang diterima',
+                              style: TextStyle(fontSize: 13, color: _K.grey600),
+                            )
                           : _isCukup
-                              ? RichText(
-                                  text: TextSpan(
-                                    style: const TextStyle(fontSize: 13, color: _K.green),
-                                    children: [
-                                      const TextSpan(text: 'Kembalian: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                                      TextSpan(text: _fmt.format(_kembalian), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                                    ],
-                                  ),
-                                )
-                              : RichText(
-                                  text: TextSpan(
-                                    style: const TextStyle(fontSize: 13, color: _K.red),
-                                    children: [
-                                      const TextSpan(text: 'Kurang: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                                      TextSpan(
-                                        text: _fmt.format(_subtotal - _uangDiterima),
-                                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-                                      ),
-                                    ],
-                                  ),
+                          ? RichText(
+                              text: TextSpan(
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: _K.orangeDark,
                                 ),
+                                children: [
+                                  const TextSpan(
+                                    text: 'Kembalian: ',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: _fmt.format(_kembalian),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : RichText(
+                              text: TextSpan(
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: _K.grey900,
+                                ),
+                                children: [
+                                  const TextSpan(
+                                    text: 'Uang kurang: ',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: _fmt.format(
+                                      _subtotal - _uangDiterima,
+                                    ),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                     ],
                   ),
                 ),
@@ -465,67 +507,116 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildRingkasanCard(),
-          const SizedBox(height: 14),
+          const SizedBox(height: 24),
 
-          // Ilustrasi QRIS
-          Container(
-            decoration: BoxDecoration(
-              color: _K.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 3))],
+          const Text(
+            'Metode Pembayaran',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              color: _K.black,
             ),
-            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-            child: Column(
-              children: [
-                Container(
-                  width: 96, height: 96,
-                  decoration: BoxDecoration(
-                    color: _K.orangeLight,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.qr_code_2_rounded, size: 52, color: _K.orange),
-                ),
-                const SizedBox(height: 18),
-                const Text('Pembayaran QRIS / E-Wallet',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: _K.black),
-                    textAlign: TextAlign.center),
-                const SizedBox(height: 8),
-                Text(
-                  'Gunakan Midtrans untuk memproses pembayaran non-tunai secara aman dan cepat.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: _K.grey600, fontSize: 13, height: 1.5),
-                ),
-                const SizedBox(height: 24),
-                // Payment method chips
-                Wrap(
-                  spacing: 8, runSpacing: 8,
-                  alignment: WrapAlignment.center,
-                ),
-              ],
-            ),
+          ),
+          const SizedBox(height: 12),
+
+          // 🚀 List Pilihan Metode Pembayaran
+          _buildPilihanMetode(
+            value: 'qris',
+            title: 'QRIS',
+            subtitle: 'GoPay, OVO, DANA, ShopeePay',
+            icon: Icons.qr_code_scanner_rounded,
+          ),
+          const SizedBox(height: 10),
+          _buildPilihanMetode(
+            value: 'bca',
+            title: 'BCA Virtual Account',
+            subtitle: 'Transfer via ATM / m-BCA',
+            icon: Icons.account_balance_rounded,
+          ),
+          const SizedBox(height: 10),
+          _buildPilihanMetode(
+            value: 'bni',
+            title: 'BNI Virtual Account',
+            subtitle: 'Transfer via ATM / BNI Mobile',
+            icon: Icons.account_balance_rounded,
+          ),
+          const SizedBox(height: 10),
+          _buildPilihanMetode(
+            value: 'bri',
+            title: 'BRI Virtual Account',
+            subtitle: 'Transfer via ATM / BRImo',
+            icon: Icons.account_balance_rounded,
           ),
 
           const SizedBox(height: 24),
           _buildCTAButton(
-            label: 'Bayar via Midtrans',
-            icon: Icons.open_in_new_rounded,
+            label: 'Konfirmasi Pembayaran',
+            icon: Icons.check_circle_rounded,
             onPressed: _loadingBayar ? null : _prosesBayarNonTunai,
             loading: _loadingBayar,
           ),
-          const SizedBox(height: 8),
-          Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.lock_rounded, size: 12, color: _K.grey600),
-                const SizedBox(width: 4),
-                Text('Transaksi diproses aman oleh Midtrans',
-                    style: TextStyle(fontSize: 11, color: _K.grey600)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
         ],
+      ),
+    );
+  }
+
+  // 🚀 Widget kotak pilihan (Radio Button Custom)
+  Widget _buildPilihanMetode({
+    required String value,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+  }) {
+    final isSelected = _selectedMetode == value;
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        setState(() => _selectedMetode = value);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected ? _K.orangeLight.withOpacity(0.3) : _K.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? _K.orange : _K.grey300,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: isSelected ? _K.orange : _K.grey600, size: 28),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: isSelected ? _K.orangeDark : _K.black,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 12, color: _K.grey600),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              isSelected
+                  ? Icons.radio_button_checked_rounded
+                  : Icons.radio_button_off_rounded,
+              color: isSelected ? _K.orange : _K.grey300,
+            ),
+          ],
+        ),
       ),
     );
   }

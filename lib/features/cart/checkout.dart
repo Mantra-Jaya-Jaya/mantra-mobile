@@ -188,6 +188,8 @@ class _CheckoutState extends State<Checkout> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
+              // TODO: Update ke constructor baru (orderId, metode, qrUrl, vaNumber)
+              // setelah API customer checkout dimigrasi dari Snap ke Core API
               builder: (context) => BayarNonTunaiScreen(
                 snapToken: midtransToken.toString(),
                 idPesanan: pesananId,

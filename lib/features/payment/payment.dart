@@ -183,16 +183,17 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_scannerOpen) return _buildScannerView();
 
     return Scaffold(
       backgroundColor: _K.grey100,
+      resizeToAvoidBottomInset: false,
       appBar: _buildAppBar(),
       body: Stack(
         children: [
           Column(
             children: [
               _buildSearchBar(),
+              if (_scannerOpen) _buildEmbeddedScanner(),
               if (_showHasil) _buildHasilCari(),
               Expanded(
                 child: _keranjang.isEmpty ? _buildEmptyState() : _buildKeranjang(),
@@ -332,10 +333,37 @@ PreferredSizeWidget _buildAppBar() {
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
         tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: Container(
-          width: 38, height: 38,
-          decoration: BoxDecoration(color: _K.orangeLight, borderRadius: BorderRadius.circular(8)),
-          child: const Icon(Icons.inventory_2_outlined, color: _K.orange, size: 20),
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child:
+              (produk.gambarBarang != null && produk.gambarBarang!.isNotEmpty)
+              ? Image.network(
+                  produk.gambarBarang!,
+                  width: 38,
+                  height: 38,
+                  fit: BoxFit.cover,
+                  // Kalau link fotonya rusak, balikin jadi icon kardus
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 38,
+                    height: 38,
+                    color: _K.orangeLight,
+                    child: const Icon(
+                      Icons.inventory_2_outlined,
+                      color: _K.orange,
+                      size: 20,
+                    ),
+                  ),
+                )
+              : Container(
+                  width: 38,
+                  height: 38,
+                  color: _K.orangeLight,
+                  child: const Icon(
+                    Icons.inventory_2_outlined,
+                    color: _K.orange,
+                    size: 20,
+                  ),
+                ),
         ),
         title: Text(produk.namaBarang,
             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: _K.black)),
@@ -582,51 +610,117 @@ PreferredSizeWidget _buildAppBar() {
     _resetTransaksi();
   }
 
-  Widget _buildScannerView() {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
-            child: const Icon(Icons.close, color: Colors.white, size: 20),
-          ),
-          onPressed: _tutupScanner,
-        ),
-        title: const Text('Scan Barcode', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-      ),
-      body: Stack(
-        children: [
-          MobileScanner(controller: _scannerCtrl, onDetect: _onBarcodeDetected),
-          // Overlay frame
-          Center(
-            child: Container(
-              width: 240, height: 240,
-              decoration: BoxDecoration(
-                border: Border.all(color: _K.orange, width: 2.5),
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 48,
-            left: 0, right: 0,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.55),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: const Text('Arahkan kamera ke barcode produk',
-                    style: TextStyle(color: Colors.white, fontSize: 13)),
-              ),
-            ),
+  Widget _buildEmbeddedScanner() {
+    return Container(
+      height: 220, // 🚀 Tingginya pas, gak menuhin layar
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          children: [
+            // 📷 View Kamera
+            MobileScanner(
+              controller: _scannerCtrl,
+              onDetect: _onBarcodeDetected,
+            ),
+
+            // ⬛ Overlay Gelap di luar area scan
+            ColorFiltered(
+              colorFilter: ColorFilter.mode(
+                Colors.black.withOpacity(0.5),
+                BlendMode.srcOut,
+              ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.black,
+                      backgroundBlendMode: BlendMode.dstOut,
+                    ),
+                  ),
+                  // 🚀 KOTAK SCANNER: Dibuat pipih & lebar khusus buat Barcode Batang!
+                  Center(
+                    child: Container(
+                      width: 280, // Lebar
+                      height: 100, // Pendek
+                      decoration: BoxDecoration(
+                        color: Colors.red, // Warna bebas, yang penting kepotong
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 🎯 Bingkai Putih & Tombol
+            Center(
+              child: Container(
+                width: 280,
+                height: 100,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.white70, width: 3),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+
+            // 💡 Tombol Senter & Tutup (Mirip referensi desain lu)
+            Positioned(
+              bottom: 12,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  GestureDetector(
+                    onTap: () => _scannerCtrl?.toggleTorch(),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.flashlight_on,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+                  GestureDetector(
+                    onTap: _tutupScanner,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

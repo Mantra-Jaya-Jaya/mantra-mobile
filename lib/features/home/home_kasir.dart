@@ -5,10 +5,8 @@ import 'package:frontend/features/home/services/dashboard_kasir_service.dart';
 import 'package:frontend/features/summary/summary.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 // Import fitur lainnya (Silakan sesuaikan kembali jika ada path yang berbeda)
-import '../auth/login.dart';
 import '../orders/order_kasir.dart';
 import '../profile/profile_kasir.dart';
 import '../notifications/notification_kasir.dart';
@@ -35,7 +33,9 @@ class _DashboardKasirPageState extends State<DashboardKasirPage> {
   final List<Widget> _pages = [
     const DashboardContent(),
     const OrderKasir(),
-    const KasirPosScreen(idPesanan: 0), // <--- Sekarang langsung dipanggil kosongan!
+    const KasirPosScreen(
+      idPesanan: 0,
+    ), // <--- Sekarang langsung dipanggil kosongan!
     const SummaryPage(),
     const ProfileKasir(),
   ];
@@ -50,42 +50,49 @@ class _DashboardKasirPageState extends State<DashboardKasirPage> {
 
   @override
   Widget build(BuildContext context) {
+    bool isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
     double screenWidth = MediaQuery.of(context).size.width;
-    double navPadding = 20.0; 
+    double navPadding = 20.0;
     double rowWidth = screenWidth - (navPadding * 2);
     double itemWidth = rowWidth / kasirMenus.length;
-    
-    double fabX = (itemWidth * _currentIndex) + (itemWidth / 2) - 28 + navPadding;
+
+    double fabX =
+        (itemWidth * _currentIndex) + (itemWidth / 2) - 28 + navPadding;
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: IndexedStack(index: _currentIndex, children: _pages), 
-      
-      floatingActionButtonLocation: DynamicFabLocation(fabX),
-      
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Ketika FAB diklik, langsung pindah ke halaman Payments (index 2)
-          setState(() {
-            _currentIndex = 2; 
-          });
-        },
-        backgroundColor: const Color(0xFFAD510D), 
-        shape: const CircleBorder(),
-        child: Icon(
-          kasirMenus[_currentIndex].icon,
-          color: Colors.white,
-          size: 30,
-        ),
-      ),
+      resizeToAvoidBottomInset: false,
+      body: IndexedStack(index: _currentIndex, children: _pages),
 
-      bottomNavigationBar: CustomDynamicNavbar(
-        currentIndex: _currentIndex,
-        menus: kasirMenus,
-        onTap: (index) {
-          setState(() => _currentIndex = index);
-        },
-      ),
+      floatingActionButtonLocation: DynamicFabLocation(fabX),
+
+      floatingActionButton: isKeyboardOpen
+          ? null
+          : FloatingActionButton(
+              onPressed: () {
+                setState(() {
+                  _currentIndex = 2;
+                });
+              },
+              backgroundColor: const Color(0xFFAD510D),
+              shape: const CircleBorder(),
+              child: Icon(
+                kasirMenus[_currentIndex].icon,
+                color: Colors.white,
+                size: 30,
+              ),
+            ),
+
+      // 🚀 3. LOGIKA HILANG: Sembunyiin Navbar UFO-nya kalau keyboard buka
+      bottomNavigationBar: isKeyboardOpen
+          ? null
+          : CustomDynamicNavbar(
+              currentIndex: _currentIndex,
+              menus: kasirMenus,
+              onTap: (index) {
+                setState(() => _currentIndex = index);
+              },
+            ),
     );
   }
 }
@@ -100,8 +107,11 @@ class DashboardContent extends StatefulWidget {
 
 class _DashboardContentState extends State<DashboardContent> {
   final DashboardKasirService _service = DashboardKasirService();
-  final _currencyFormat =
-      NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+  final _currencyFormat = NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp ',
+    decimalDigits: 0,
+  );
 
   DashboardKasirData? _data;
   bool _isLoading = true;
@@ -162,8 +172,12 @@ class _DashboardContentState extends State<DashboardContent> {
             ElevatedButton(
               onPressed: _loadDashboard,
               style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFAD510D)),
-              child: const Text('Coba Lagi', style: TextStyle(color: Colors.white)),
+                backgroundColor: const Color(0xFFAD510D),
+              ),
+              child: const Text(
+                'Coba Lagi',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -193,7 +207,10 @@ class _DashboardContentState extends State<DashboardContent> {
                     children: [
                       Text(
                         _hariIniLabel,
-                        style: const TextStyle(color: Colors.white70, fontSize: 14),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
                       ),
                       const SizedBox(height: 5),
                       Text(
@@ -208,10 +225,10 @@ class _DashboardContentState extends State<DashboardContent> {
                   ),
                   IconButton(
                     icon: const Icon(
-                      Icons.notifications_none, 
+                      Icons.notifications_none,
                       color: Colors.white,
                       size: 30,
-                    ), 
+                    ),
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -339,7 +356,9 @@ class _DashboardContentState extends State<DashboardContent> {
                         borderRadius: BorderRadius.circular(15),
                       ),
                       child: Column(
-                        children: data.aktivitasTerkini.asMap().entries.map((entry) {
+                        children: data.aktivitasTerkini.asMap().entries.map((
+                          entry,
+                        ) {
                           final idx = entry.key;
                           final item = entry.value;
                           return Column(
