@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/profil_kurir_model.dart'; 
 import '../network/api_client.dart';
 
@@ -28,5 +29,12 @@ class KurirService {
       // Lempar error biar FutureBuilder di UI bisa nangkep dan nampilin pesan
       rethrow;
     }
+  }
+
+  // 🚀 Fungsi logout untuk kurir
+  Future<void> logout() async {
+    final storage = const FlutterSecureStorage();
+    final refreshToken = await storage.read(key: 'refresh_token');
+    await _dio.post('/logout', data: {'refresh_token': refreshToken});
   }
 }

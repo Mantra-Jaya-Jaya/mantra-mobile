@@ -4,7 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class ApiClient {
   static const String baseUrl = String.fromEnvironment(
     'BASE_URL',
-    defaultValue: 'http://192.168.1.28:8080/api/v1', // emulator Android
+    defaultValue: 'http://localhost:8080/api/v1', // Android device via adb reverse
   );
 
   final Dio _dio;
@@ -42,7 +42,13 @@ class _AuthInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
-    if (err.response?.statusCode == 401) {
+    final path = err.requestOptions.path;
+    
+    // Jangan jalankan refresh token jika endpoint aslinya adalah login atau refresh itu sendiri
+    if (err.response?.statusCode == 401 && 
+        !path.contains('/login') && 
+        !path.contains('/register') && 
+        !path.contains('/auth/refresh')) {
       // Coba refresh token
       final refreshed = await _tryRefresh();
       if (refreshed) {

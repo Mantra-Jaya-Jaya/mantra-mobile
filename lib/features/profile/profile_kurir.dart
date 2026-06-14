@@ -109,16 +109,15 @@ class _ProfileKurirPageState extends State<ProfileKurirPage> {
                             ),
                           );
 
-                          // 1. UTAMAKAN: Hapus token lokal secara instan agar tidak tersandera error API
-                          await _storage.deleteAll();
-
-                          // 2. Jalankan API logout di background tanpa 'await' (fire-and-forget)
+                          // 1. Jalankan API logout dengan timeout agar token dikirim sebelum dihapus
                           try {
-                            final Dio = _service.getProfilKurir(); // triggering to get dio is not needed, but we can call API logout via ApiClient
-                            // We can just call /logout directly
-                            // final response = await ApiClient().dio.post('/logout', data: {'refresh_token': ...})
-                            // For simplicity, deleting all storage local token is enough to kick user out.
-                          } catch (_) {}
+                            await _service.logout().timeout(const Duration(seconds: 2));
+                          } catch (error) {
+                            debugPrint("API Logout error (ignored): $error");
+                          }
+
+                          // 2. Hapus token lokal secara instan
+                          await _storage.deleteAll();
 
                           if (!mounted) return;
                           Navigator.pop(context); // Tutup loading overlay

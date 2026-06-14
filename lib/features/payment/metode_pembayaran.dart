@@ -5,6 +5,7 @@ import '../../core/models/payment_model.dart';
 import '../../core/services/payment_service.dart';
 import 'bayarnontunai.dart';
 import 'suksesbayar.dart';
+import 'sukses_bayar_tunai.dart';
 
 // ── Design Tokens (sama dengan KasirPosScreen) ─────────────
 class _K {
@@ -89,9 +90,9 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
       Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-              builder: (_) => SuksesBayarScreen(
-                  kembalian: hasil.kembalian,
-                  nomorInvoice: hasil.nomorInvoice,
+              builder: (_) => SuksesBayarTunaiScreen(
+                  kembalian: 0,
+                  nomorInvoice: widget.idPesanan.toString(),
                   totalAkhir: _subtotal,
                   metodePembayaran: 'Tunai')));
     } catch (e) {

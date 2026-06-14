@@ -1,80 +1,76 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/core/services/notifikasi_service.dart';
 import 'package:frontend/core/widgets/base_header_widget.dart';
 
-class NotificationCustomerPage extends StatelessWidget {
+class NotificationCustomerPage extends StatefulWidget {
   const NotificationCustomerPage({super.key});
+
+  @override
+  State<NotificationCustomerPage> createState() => _NotificationCustomerPageState();
+}
+
+class _NotificationCustomerPageState extends State<NotificationCustomerPage> {
+  final NotifikasiService _service = NotifikasiService();
+  late Future<List<NotifikasiModel>> _notifFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshData();
+  }
+
+  void _refreshData() {
+    setState(() {
+      _notifFuture = _service.getNotifikasiCustomer();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F7),
-
       appBar: BaseHeaderWidget(
         title: 'Notifikasi',
-
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-
           icon: const Icon(Icons.arrow_back, color: Colors.white),
         ),
       ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          _refreshData();
+          await _notifFuture;
+        },
+        child: FutureBuilder<List<NotifikasiModel>>(
+          future: _notifFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text("Error: ${snapshot.error}"));
+            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [SizedBox(height: 250), Center(child: Text("Tidak ada notifikasi baru"))],
+              );
+            }
 
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-
-        children: [
-          const Text(
-            'Hari ini',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-
-          const SizedBox(height: 15),
-
-          _notificationCard(
-            icon: Icons.discount_outlined,
-            title: 'Diskon spesial untukmu!',
-            description:
-                'Dapatkan diskon 30% untuk semua buku pelajaran. Promo berlaku s.d 10 Mei 2026.',
-          ),
-
-          _notificationCard(
-            icon: Icons.payment_outlined,
-            title: 'Pembayaran berhasil',
-            description:
-                'Pesanan #123 telah dikonfirmasi. Total pembayaran Rp. 300.000 via Dana.',
-          ),
-
-          _notificationCard(
-            icon: Icons.local_shipping_outlined,
-            title: 'Pesanan hampir sampai!',
-            description:
-                'Pesanan #123 sedang dalam perjalanan menuju lokasi anda.',
-          ),
-
-          const SizedBox(height: 20),
-
-          const Text(
-            'Kemarin',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-
-          const SizedBox(height: 15),
-
-          _notificationCard(
-            icon: Icons.location_on_outlined,
-            title: 'Pesanan telah sampai',
-            description: 'Pesanan #234 telah diterima. Semoga kamu puas ya!',
-          ),
-        ],
+            final notifications = snapshot.data!;
+            return ListView.builder(
+              padding: const EdgeInsets.all(20),
+              itemCount: notifications.length,
+              itemBuilder: (context, index) {
+                final item = notifications[index];
+                return _buildCard(item.judul, item.pesan);
+              },
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _notificationCard({
-    required IconData icon,
-    required String title,
-    required String description,
-  }) {
+  Widget _buildCard(String title, String message) {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(14),
@@ -99,7 +95,7 @@ class NotificationCustomerPage extends StatelessWidget {
               color: const Color(0xFFFFF1E8),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: const Color(0xFFAD510D), size: 22),
+            child: const Icon(Icons.notifications_active_outlined, color: Color(0xFFAD510D), size: 22),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -115,7 +111,7 @@ class NotificationCustomerPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  description,
+                  message,
                   style: const TextStyle(
                     fontSize: 13,
                     color: Colors.black87,

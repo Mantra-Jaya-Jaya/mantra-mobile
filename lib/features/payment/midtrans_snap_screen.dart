@@ -5,11 +5,13 @@ import 'suksesbayar.dart';
 class MidtransSnapScreen extends StatefulWidget {
   final String redirectUrl;
   final String publicId;
+  final int totalAkhir;
 
   const MidtransSnapScreen({
     super.key,
     required this.redirectUrl,
     required this.publicId,
+    required this.totalAkhir,
   });
 
   @override
@@ -35,7 +37,12 @@ class _MidtransSnapScreenState extends State<MidtransSnapScreen> {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const SuksesBayarScreen(metode: 'Midtrans'),
+                  builder: (context) => SuksesBayarScreen(
+                    kembalian: 0,
+                    nomorInvoice: widget.publicId,
+                    totalAkhir: widget.totalAkhir,
+                    metodePembayaran: 'MIDTRANS',
+                  ),
                 ),
               );
               return NavigationDecision.prevent;

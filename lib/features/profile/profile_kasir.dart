@@ -106,13 +106,15 @@ class ProfileKasirState extends State<ProfileKasir> {
                             ),
                           );
 
-                          // 1. UTAMAKAN: Hapus token lokal secara instan agar tidak tersandera error API
-                          await _storage.deleteAll();
-
-                          // 2. Jalankan API logout di background tanpa 'await' (fire-and-forget)
-                          _kasirService.logout().catchError((error) {
+                          // 1. Jalankan API logout dengan timeout agar token dikirim sebelum dihapus
+                          try {
+                            await _kasirService.logout().timeout(const Duration(seconds: 2));
+                          } catch (error) {
                             debugPrint("API Logout error (ignored): $error");
-                          });
+                          }
+
+                          // 2. Hapus token lokal secara instan
+                          await _storage.deleteAll();
 
                           if (!mounted) return;
                           Navigator.pop(context); // Tutup loading overlay

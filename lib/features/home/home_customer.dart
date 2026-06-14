@@ -671,7 +671,7 @@ IconData getIconFromString(String? iconName) {
   final name = iconName.toLowerCase();
   
   // 1. Coba mapping dinamis via string_to_icon package
-  final dynamicIcon = StringToIcon.toIconData(iconName);
+  final dynamicIcon = IconMapper.getIconData(iconName);
   if (dynamicIcon != null) return dynamicIcon;
 
   // 2. Fallback mapping kategori umum (jika yang dikirim nama kategori langsung)

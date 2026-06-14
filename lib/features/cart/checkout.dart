@@ -191,6 +191,7 @@ class _CheckoutState extends State<Checkout> {
               builder: (context) => MidtransSnapScreen(
                 redirectUrl: urlToLoad,
                 publicId: idPesanan.toString(),
+                totalAkhir: totalPembayaran,
               ),
             ),
           );

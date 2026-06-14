@@ -1,3 +1,4 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../network/api_client.dart';
 
 class KasirProfileService {
@@ -12,8 +13,10 @@ class KasirProfileService {
     return response.data['data'];
   }
 
-  /// Fungsi logout untuk kasir (jika endpointnya terpisah)
+  /// Fungsi logout untuk kasir
   Future<void> logout() async {
-    await _client.dio.post('/auth/logout'); // Sesuaikan endpoint logoutmu
+    final storage = const FlutterSecureStorage();
+    final refreshToken = await storage.read(key: 'refresh_token');
+    await _client.dio.post('/logout', data: {'refresh_token': refreshToken});
   }
 }
