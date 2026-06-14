@@ -184,15 +184,21 @@ class HasilBayarNonTunai {
 
 class HasilCekStatus {
   final bool isLunas;
-  final String statusTransaksi;
+  final String statusTransaksi;   // nama status: "pending", "settlement", dll
+  final int idStatusTransaksi;    // ID numerik dari tabel status_transaksi
 
-  HasilCekStatus({required this.isLunas, required this.statusTransaksi});
+  HasilCekStatus({
+    required this.isLunas,
+    required this.statusTransaksi,
+    this.idStatusTransaksi = 0,
+  });
 
   factory HasilCekStatus.fromJson(Map<String, dynamic> json) {
     final data = json['data'] ?? {};
     return HasilCekStatus(
       isLunas: json['is_lunas'] ?? false,
       statusTransaksi: data['status_transaksi'] ?? 'pending',
+      idStatusTransaksi: data['id_status_transaksi'] ?? 0,
     );
   }
 }

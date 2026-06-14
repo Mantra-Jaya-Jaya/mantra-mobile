@@ -199,7 +199,8 @@ class _MyOrderPageState extends State<MyOrderPage> {
   Widget _buildOrderCardFromData(Map<String, dynamic> order) {
     final String publicId = order['id_pesanan'] ?? '-';
     final String nomorPesanan = order['nomor_pesanan'] ?? publicId;
-    final String statusBackend = order['status'] ?? 'menunggu_pembayaran';
+    // Backend return id_status_pesanan (int), bukan string 'status'
+    final int idStatusPesanan = order['id_status_pesanan'] ?? 0;
     final int totalBayar = order['total_bayar'] ?? 0;
     final List items = order['items'] ?? [];
     final String firstItemName = items.isNotEmpty
@@ -210,17 +211,19 @@ class _MyOrderPageState extends State<MyOrderPage> {
         : '';
     final int itemCount = items.length;
 
-    // --- PERBAIKAN 1: Menyamakan mapping status dengan format database backend (lowercase) ---
-    String statusLabel = "Belum Dibayar";
-    if (statusBackend == "diproses") {
-      statusLabel = "Diproses";
-    } else if (statusBackend == "dikirim") {
-      statusLabel = "Dikirim";
-    } else if (statusBackend == "selesai") {
-      statusLabel = "Selesai";
-    } else if (statusBackend == "dibatalkan") {
-      statusLabel = "Dibatalkan";
-    }
+    // Mapping id_status_pesanan → label tampilan
+    // ID sesuai urutan seeder: 1=Draft, 2=Menunggu Pembayaran, 3=Diproses,
+    //                          4=Dikemas, 5=Dikirim, 6=Selesai, 7=Dibatalkan
+    const Map<int, String> statusMap = {
+      1: "Draft",
+      2: "Belum Dibayar",
+      3: "Diproses",
+      4: "Dikemas",
+      5: "Dikirim",
+      6: "Selesai",
+      7: "Dibatalkan",
+    };
+    final String statusLabel = statusMap[idStatusPesanan] ?? "Belum Dibayar";
 
     final Color statusColor = primaryBrown;
 
