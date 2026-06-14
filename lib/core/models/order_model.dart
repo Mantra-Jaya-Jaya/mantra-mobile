@@ -1,3 +1,5 @@
+import '../constants/status_constants.dart';
+
 class OrderItemModel {
   final String namaBarang;
   final int qty;
@@ -21,17 +23,19 @@ class OrderItemModel {
 
 class OrderModel {
   final String orderId;       // Menampilkan ID pesanan ringkas/UUID terpotong
+  final int idStatusPesanan;  // Status ID dari backend (integer)
   final String statusText;
-  final String itemsDetail; 
+  final String itemsDetail;
   final String timeInfo;      // Menampilkan tanggal yang sudah diformat rapi
   final String price;         // Format Rupiah (cth: Rp 125.000)
   final int rawPrice;
   final String imgUrl;
   final bool isOnline;
-  final List<OrderItemModel> detailItems; 
+  final List<OrderItemModel> detailItems;
 
   OrderModel({
     required this.orderId,
+    required this.idStatusPesanan,
     required this.statusText,
     required this.itemsDetail,
     required this.timeInfo,
@@ -42,17 +46,18 @@ class OrderModel {
     required this.detailItems,
   });
 
-  factory OrderModel.fromJson(Map<String, dynamic> json) {
-    // 1. Ambil Status Pesanan Terlebih Dahulu
-    String statusStr = (json['status_pesanan'] ?? json['status'] ?? '').toString().trim();
+  // Helper methods menggunakan StatusConstants
+  String get statusDisplayName => StatusConstants.getDisplayName(idStatusPesanan);
+  String get statusColor => StatusConstants.getColor(idStatusPesanan);
+  bool get isCompleted => StatusConstants.isCompleted(idStatusPesanan);
+  bool get isCancelled => StatusConstants.isCancelled(idStatusPesanan);
 
-    // 2. KUNCI UTAMA FILTER TAB (Siasat Tanpa Mengubah Backend):
-    // Karena temanmu tidak mengirim 'tipe_pesanan', kita tahu dari request kamu kalau:
-    // - Jika statusnya "Diproses" atau "Dikemas", itu PASTI pesanan Online.
-    // - Jika status selain itu (atau Offline), nanti kita paksa jadi "Selesai".
-    bool checkIsOnline = statusStr.toLowerCase() == 'diproses' || 
-                         statusStr.toLowerCase() == 'dikemas' ||
-                         statusStr.toLowerCase() == 'dikirim';
+  factory OrderModel.fromJson(Map<String, dynamic> json) {
+    // 1. Ambil Status ID dari backend (integer)
+    int statusId = (json['id_status_pesanan'] ?? json['status_id'] ?? 1).toInt();
+
+    // 2. KUNCI UTAMA FILTER TAB - Gunakan StatusConstants
+    bool checkIsOnline = StatusConstants.isOnlineStatus(statusId);
 
     // Sesuaikan teks status untuk tampilan UI Kasir
     if (!checkIsOnline) {
@@ -105,11 +110,12 @@ class OrderModel {
 
     return OrderModel(
       orderId: idTampil.isNotEmpty ? "#ORD-$idTampil" : "#ORD-UNKNOWN",
-      statusText: statusStr,
+      idStatusPesanan: statusId,
+      statusText: StatusConstants.getName(statusId),
       itemsDetail: ringkasanItem,
       timeInfo: formatTanggal,
       // Memformat nominal integer menjadi Rupiah ber-titik otomatis (cth: Rp 125.000)
-      price: totalBayar > 0 
+      price: totalBayar > 0
           ? "Rp ${totalBayar.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}"
           : "Rp 0",
       rawPrice: totalBayar,

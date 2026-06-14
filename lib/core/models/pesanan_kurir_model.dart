@@ -27,11 +27,13 @@ class ItemBarangModel {
   }
 }
 
+import '../constants/status_constants.dart';
+
 class PesananRingkasModel {
   final String publicId;
   final int totalPembayaran;
   final String tanggalPesanan;
-  final String statusPesanan;
+  final int idStatusPesanan;
   final String namaCustomer;
   final String noTelp;
   final String alamatLengkap;
@@ -42,13 +44,21 @@ class PesananRingkasModel {
     required this.publicId,
     required this.totalPembayaran,
     required this.tanggalPesanan,
-    required this.statusPesanan,
+    required this.idStatusPesanan,
     required this.namaCustomer,
     required this.noTelp,
     required this.alamatLengkap,
     required this.catatanLokasi,
     required this.daftarBarang,
   });
+
+  // Helper methods menggunakan StatusConstants
+  String get statusPesanan => StatusConstants.getName(idStatusPesanan);
+  String get statusDisplayName => StatusConstants.getDisplayName(idStatusPesanan);
+  String get statusColor => StatusConstants.getColor(idStatusPesanan);
+  bool get isOnlineStatus => StatusConstants.isOnlineStatus(idStatusPesanan);
+  bool get isCompleted => StatusConstants.isCompleted(idStatusPesanan);
+  bool get isCancelled => StatusConstants.isCancelled(idStatusPesanan);
 
   factory PesananRingkasModel.fromJson(Map<String, dynamic> json) {
     var listBarangJson = json['daftar_barang'] as List? ?? [];
@@ -60,7 +70,7 @@ class PesananRingkasModel {
       publicId: json['public_id'] ?? '',
       totalPembayaran: json['total_pembayaran'] ?? 0,
       tanggalPesanan: json['tanggal_pesanan'] ?? '',
-      statusPesanan: json['status_pesanan'] ?? '',
+      idStatusPesanan: (json['id_status_pesanan'] ?? json['status_id'] ?? 1).toInt(),
       namaCustomer: json['nama_customer'] ?? 'Customer',
       noTelp: json['no_telp'] ?? '-',
       alamatLengkap: json['alamat_lengkap'] ?? 'Alamat tidak ditemukan',
@@ -72,35 +82,43 @@ class PesananRingkasModel {
 
 class DetailPesananModel {
   final String publicId;
-  final String namaCustomer; 
-  final String alamatLengkap; 
+  final String namaCustomer;
+  final String alamatLengkap;
   final int totalPembayaran;
   final DateTime tanggalPesanan;
-  final String statusPesanan;
+  final int idStatusPesanan;
   final MetodeBayarModel metodeBayar;
   final List<ItemBarangModel> daftarBarang;
 
   DetailPesananModel({
     required this.publicId,
     required this.totalPembayaran,
-    required this.namaCustomer, 
-    required this.alamatLengkap, 
+    required this.namaCustomer,
+    required this.alamatLengkap,
     required this.tanggalPesanan,
-    required this.statusPesanan,
+    required this.idStatusPesanan,
     required this.metodeBayar,
     required this.daftarBarang,
   });
 
+  // Helper methods menggunakan StatusConstants
+  String get statusPesanan => StatusConstants.getName(idStatusPesanan);
+  String get statusDisplayName => StatusConstants.getDisplayName(idStatusPesanan);
+  String get statusColor => StatusConstants.getColor(idStatusPesanan);
+  bool get isOnlineStatus => StatusConstants.isOnlineStatus(idStatusPesanan);
+  bool get isCompleted => StatusConstants.isCompleted(idStatusPesanan);
+  bool get isCancelled => StatusConstants.isCancelled(idStatusPesanan);
+
   factory DetailPesananModel.fromJson(Map<String, dynamic> json) {
     return DetailPesananModel(
       publicId: json['public_id'] ?? '',
-      namaCustomer: json['nama_customer'] ?? 'Customer', 
-      alamatLengkap: json['alamat_lengkap'] ?? 'Alamat Kosong', 
+      namaCustomer: json['nama_customer'] ?? 'Customer',
+      alamatLengkap: json['alamat_lengkap'] ?? 'Alamat Kosong',
       totalPembayaran: json['total_pembayaran'] ?? 0,
       tanggalPesanan: json['tanggal_pesanan'] != null
           ? DateTime.parse(json['tanggal_pesanan'])
           : DateTime.now(),
-      statusPesanan: json['status_pesanan'] ?? '',
+      idStatusPesanan: (json['id_status_pesanan'] ?? json['status_id'] ?? 1).toInt(),
       metodeBayar: MetodeBayarModel.fromJson(json['metode_bayar'] ?? {}),
       daftarBarang: json['daftar_barang'] != null
           ? (json['daftar_barang'] as List)

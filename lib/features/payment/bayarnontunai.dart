@@ -3,6 +3,7 @@ import 'package:frontend/core/services/payment_service.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'dart:async';
 import '../../core/services/order_service.dart';
+import '../../core/constants/status_constants.dart';
 import 'suksesbayar.dart';
 
 class BayarNonTunaiScreen extends StatefulWidget {
@@ -75,7 +76,7 @@ class _BayarNonTunaiScreenState extends State<BayarNonTunaiScreen> {
           final data = response['data'];
 
           if (data != null &&
-              data['status_pesanan'].toString().toLowerCase() == 'selesai') {
+              data['id_status_pesanan'] == StatusConstants.selesai) {
             timer.cancel();
             _keSukses("Non-tunai");
           }
