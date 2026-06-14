@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:string_to_icon/string_to_icon.dart';
 import 'package:frontend/features/cart/cart_customer.dart';
 import 'package:frontend/features/orders/order_customer.dart';
 import 'package:frontend/features/notifications/notification_customer.dart';
@@ -668,6 +669,12 @@ IconData getIconFromString(String? iconName) {
   if (iconName == null) return Icons.category_outlined;
 
   final name = iconName.toLowerCase();
+  
+  // 1. Coba mapping dinamis via string_to_icon package
+  final dynamicIcon = StringToIcon.toIconData(iconName);
+  if (dynamicIcon != null) return dynamicIcon;
+
+  // 2. Fallback mapping kategori umum (jika yang dikirim nama kategori langsung)
   if (name.contains('elektronik')) return Icons.devices;
   if (name.contains('fashion')) return Icons.checkroom;
   if (name.contains('makanan') || name.contains('minuman') || name.contains('makan')) return Icons.fastfood;
@@ -676,11 +683,6 @@ IconData getIconFromString(String? iconName) {
   if (name.contains('peralatan') || name.contains('rumah')) return Icons.home_work;
   if (name.contains('buku') || name.contains('tulis')) return Icons.menu_book;
   if (name.contains('cantik') || name.contains('beauty') || name.contains('kecantikan')) return Icons.face;
-
-  // Fallback map
-  if (name.contains('shirt')) return Icons.checkroom;
-  if (name.contains('food')) return Icons.fastfood;
-  if (name.contains('phone')) return Icons.phone_android;
 
   return Icons.category_outlined;
 }
