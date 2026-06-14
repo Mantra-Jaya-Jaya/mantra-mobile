@@ -12,7 +12,7 @@ class PaymentService {
   // 1. Cari produk berdasarkan nama atau scan barcode
   Future<List<HasilCariProduk>> cariProduk(String query) async {
     try {
-      final response = await _apiClient.dio.post(
+      final response = await _apiClient.dio.get(
         '/kasir/transaksi/produk',
         queryParameters: {'q': query},
       );
@@ -107,19 +107,50 @@ class PaymentService {
   }
 
   // 5. Bayar non-tunai (Midtrans)
-  Future<HasilBayarNonTunai> bayarNonTunai(int idPesanan, {bool simulasi = false}) async {
+  Future<HasilBayarNonTunai> bayarNonTunai({
+    required int idPesanan,
+    required String metode, // 🚀 BISA DIISI "qris", "bca", "bni", dll
+  }) async {
     try {
       final response = await _apiClient.dio.post(
         '/kasir/transaksi/bayar/non-tunai',
         data: {
           'id_pesanan': idPesanan,
-          'simulasi': simulasi,
+          'metode': metode, // 🚀 NGIRIM METODE KE GOLANG
         },
         options: Options(headers: {'Content-Type': 'application/json'}),
       );
-      return HasilBayarNonTunai.fromJson(response.data);
+
+      if (response.statusCode == 200) {
+        return HasilBayarNonTunai.fromJson(response.data);
+      } else {
+        throw Exception(
+          response.data['message'] ?? 'Gagal memproses pembayaran',
+        );
+      }
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Gagal memproses non-tunai');
+      throw Exception(
+        e.response?.data['message'] ??
+            'Terjadi kesalahan saat memproses pembayaran',
+      );
+    }
+  }
+
+  Future<HasilCekStatus> cekStatusPembayaran(String orderId) async {
+    try {
+      final response = await _apiClient.dio.get(
+        '/kasir/transaksi/cek-status/$orderId',
+      );
+
+      if (response.statusCode == 200) {
+        return HasilCekStatus.fromJson(response.data);
+      } else {
+        throw Exception(response.data['message'] ?? 'Gagal mengecek status');
+      }
+    } on DioException catch (e) {
+      throw Exception(
+        e.response?.data['message'] ?? 'Terjadi kesalahan saat mengecek status',
+      );
     }
   }
 

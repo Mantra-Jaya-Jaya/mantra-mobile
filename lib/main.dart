@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'features/landing_page/landing_page.dart';
-
 import 'package:intl/date_symbol_data_local.dart';
 
 // 1. TAMBAHKAN INI: Deklarasikan variabel secara global di luar class
