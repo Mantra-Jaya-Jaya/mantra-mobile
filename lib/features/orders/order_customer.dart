@@ -199,8 +199,8 @@ class _MyOrderPageState extends State<MyOrderPage> {
   Widget _buildOrderCardFromData(Map<String, dynamic> order) {
     final String publicId = order['id_pesanan'] ?? '-';
     final String nomorPesanan = order['nomor_pesanan'] ?? publicId;
-    // Backend return id_status_pesanan (int), bukan string 'status'
-    final int idStatusPesanan = order['id_status_pesanan'] ?? 0;
+    // Backend return nama_status_pesanan (string dari relasi DB, bukan hardcode)
+    final String statusLabel = order['nama_status_pesanan'] ?? 'Belum Dibayar';
     final int totalBayar = order['total_bayar'] ?? 0;
     final List items = order['items'] ?? [];
     final String firstItemName = items.isNotEmpty
@@ -210,20 +210,6 @@ class _MyOrderPageState extends State<MyOrderPage> {
         ? items[0]['gambar'] ?? ''
         : '';
     final int itemCount = items.length;
-
-    // Mapping id_status_pesanan → label tampilan
-    // ID sesuai urutan seeder: 1=Draft, 2=Menunggu Pembayaran, 3=Diproses,
-    //                          4=Dikemas, 5=Dikirim, 6=Selesai, 7=Dibatalkan
-    const Map<int, String> statusMap = {
-      1: "Draft",
-      2: "Belum Dibayar",
-      3: "Diproses",
-      4: "Dikemas",
-      5: "Dikirim",
-      6: "Selesai",
-      7: "Dibatalkan",
-    };
-    final String statusLabel = statusMap[idStatusPesanan] ?? "Belum Dibayar";
 
     final Color statusColor = primaryBrown;
 
