@@ -60,6 +60,7 @@ class OrderModel {
     bool checkIsOnline = StatusConstants.isOnlineStatus(statusId);
 
     // Sesuaikan teks status untuk tampilan UI Kasir
+    String statusStr;
     if (!checkIsOnline) {
       statusStr = "Selesai"; // Sesuai request: Offline udah pasti statusnya selesai semua
     } else {
@@ -111,7 +112,7 @@ class OrderModel {
     return OrderModel(
       orderId: idTampil.isNotEmpty ? "#ORD-$idTampil" : "#ORD-UNKNOWN",
       idStatusPesanan: statusId,
-      statusText: StatusConstants.getName(statusId),
+      statusText: statusStr,
       itemsDetail: ringkasanItem,
       timeInfo: formatTanggal,
       // Memformat nominal integer menjadi Rupiah ber-titik otomatis (cth: Rp 125.000)

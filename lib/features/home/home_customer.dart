@@ -7,7 +7,6 @@ import 'package:frontend/features/scan/scan_customer.dart';
 import 'package:frontend/core/widgets/bottom_navbar.dart';
 import 'package:frontend/features/home/services/katalog_service.dart';
 import 'package:frontend/features/home/kategori_barang_customer.dart';
-import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:frontend/features/home/search_page.dart';
 import 'package:frontend/features/home/detail_barang.dart';
 import 'package:frontend/features/home/kategori_page.dart';
@@ -668,6 +667,20 @@ class _HomeContentState extends State<HomeContent> {
 IconData getIconFromString(String? iconName) {
   if (iconName == null) return Icons.category_outlined;
 
-  // Fungsi bawaan package untuk mencari IconData berdasarkan string namanya
-  return MdiIcons.fromString(iconName) ?? Icons.category_outlined;
+  final name = iconName.toLowerCase();
+  if (name.contains('elektronik')) return Icons.devices;
+  if (name.contains('fashion')) return Icons.checkroom;
+  if (name.contains('makanan') || name.contains('minuman') || name.contains('makan')) return Icons.fastfood;
+  if (name.contains('sehat') || name.contains('health') || name.contains('kesehatan')) return Icons.local_hospital;
+  if (name.contains('olahraga') || name.contains('sport')) return Icons.sports_soccer;
+  if (name.contains('peralatan') || name.contains('rumah')) return Icons.home_work;
+  if (name.contains('buku') || name.contains('tulis')) return Icons.menu_book;
+  if (name.contains('cantik') || name.contains('beauty') || name.contains('kecantikan')) return Icons.face;
+
+  // Fallback map
+  if (name.contains('shirt')) return Icons.checkroom;
+  if (name.contains('food')) return Icons.fastfood;
+  if (name.contains('phone')) return Icons.phone_android;
+
+  return Icons.category_outlined;
 }

@@ -4,6 +4,7 @@ import '../../core/services/customer_checkout_service.dart';
 import '../../core/models/metode_pembayaran_model.dart';
 import '../../core/widgets/base_header_widget.dart';
 import '../payment/bayarnontunai.dart';
+import '../payment/midtrans_snap_screen.dart';
 import 'pilih_alamat.dart';
 import 'pilih_pembayaran.dart';
 
@@ -174,26 +175,22 @@ class _CheckoutState extends State<Checkout> {
       final data = result['data'];
       final midtransToken = data['midtrans_token'];
       final idPesanan = data['id_pesanan'];
+      final redirectUrl = data['redirect_url'];
 
       if (midtransToken != null && midtransToken.toString().isNotEmpty) {
         print("Midtrans Token: $midtransToken");
-        int pesananId = 0;
-        if (idPesanan is int) {
-          pesananId = idPesanan;
-        } else if (idPesanan != null) {
-          pesananId = int.tryParse(idPesanan.toString()) ?? 0;
-        }
+        
+        final urlToLoad = (redirectUrl != null && redirectUrl.toString().isNotEmpty) 
+            ? redirectUrl.toString() 
+            : "https://app.sandbox.midtrans.com/snap/v2/vtweb/$midtransToken";
 
         if (mounted) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              // TODO: Update ke constructor baru (orderId, metode, qrUrl, vaNumber)
-              // setelah API customer checkout dimigrasi dari Snap ke Core API
-              builder: (context) => BayarNonTunaiScreen(
-                snapToken: midtransToken.toString(),
-                idPesanan: pesananId,
-                totalAkhir: totalPembayaran,
+              builder: (context) => MidtransSnapScreen(
+                redirectUrl: urlToLoad,
+                publicId: idPesanan.toString(),
               ),
             ),
           );

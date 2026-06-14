@@ -54,24 +54,7 @@ class StatusConstants {
     }
   }
 
-  /// Tipe pesanan constants
-class TipePesananConstants {
-  static const int online = 1;
-  static const int offline = 2;
-
-  static String getName(int? id) {
-    switch (id) {
-      case online:
-        return 'Online';
-      case offline:
-        return 'Offline';
-      default:
-        return 'Unknown';
-    }
-  }
-}
-
-/// Check if status is online (requires kurir action)
+  /// Check if status is online (requires kurir action)
   static bool isOnlineStatus(int? id) {
     return id == diproses || id == dikemas || id == dikirim;
   }
@@ -124,5 +107,22 @@ class TipePesananConstants {
       {'id': selesai, 'name': 'Selesai'},
       {'id': dibatalkan, 'name': 'Dibatalkan'},
     ];
+  }
+}
+
+/// Tipe pesanan constants
+class TipePesananConstants {
+  static const int online = 1;
+  static const int offline = 2;
+
+  static String getName(int? id) {
+    switch (id) {
+      case online:
+        return 'Online';
+      case offline:
+        return 'Offline';
+      default:
+        return 'Unknown';
+    }
   }
 }
