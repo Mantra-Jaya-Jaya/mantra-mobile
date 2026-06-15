@@ -4,6 +4,7 @@ import '../orders/services/customer_order_service.dart';
 import '../orders/order_customer.dart';
 import 'pilih_alamat.dart';
 import 'pilih_pembayaran.dart';
+import 'pembayaran_detail.dart';
 import 'package:frontend/core/widgets/base_header_widget.dart';
 import '../home/home_customer.dart';
 import 'package:dio/dio.dart';
@@ -22,6 +23,21 @@ class _CheckoutState extends State<Checkout> {
   final CustomerOrderService _orderService = CustomerOrderService();
   bool _isLoading = true;
   String? _errorMessage;
+  // Helper untuk menentukan sub-text / deskripsi secara otomatis
+  String _getDeskripsiPembayaran(String? kode, String? nama) {
+    switch (kode?.toLowerCase()) {
+      case 'va':
+        return 'Dicek otomatis';
+      case 'ewallet':
+        return 'Hubungkan akun $nama Anda';
+      case 'qris':
+        return 'Scan kode QR untuk bayar';
+      case 'cod':
+        return 'Bayar tunai di tempat';
+      default:
+        return 'Bayar aman dengan $nama';
+    }
+  }
 
   Map<String, dynamic>? _alamatDipilih;
   Map<String, dynamic>? _pembayaranDipilih;
@@ -29,25 +45,48 @@ class _CheckoutState extends State<Checkout> {
   @override
   void initState() {
     super.initState();
-    // Default awal di-set ke Mantra-pay
-    _pembayaranDipilih = {
-      'kategori': 'mantrapay',
-      'id_metode': 'mantrapay',
-      'nama': 'Mantra-pay',
-      'sub': 'Saldo Rp. 120.000',
-      'icon': Icons.wallet_rounded,
-    };
-    _ambilAlamatDariBackend();
+    _loadData();
   }
 
-  Future<void> _ambilAlamatDariBackend() async {
+  // Helper untuk mengubah string icon dari backend menjadi IconData Flutter
+  IconData _getIconMetode(String? iconName) {
+    switch (iconName?.toLowerCase()) {
+      case 'account_balance':
+      case 'va':
+        return Icons.account_balance_rounded;
+      case 'phone_android':
+      case 'ewallet':
+        return Icons.phone_android_rounded;
+      case 'qr_code':
+      case 'qris':
+        return Icons.qr_code_scanner_rounded;
+      case 'handshake':
+      case 'cod':
+        return Icons.handshake_rounded;
+      default:
+        return Icons.payment_rounded;
+    }
+  }
+
+  Future<void> _loadData() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final daftarAlamatDariBackend = await _profileService.getAlamat();
+      // Ambil alamat dan metode pembayaran secara paralel
+      final results = await Future.wait([
+        _profileService.getAlamat(),
+        _orderService.GetMetodePembayaran(), // Pastikan huruf besar/kecil sesuai di service
+      ]);
+
+      final daftarAlamatDariBackend = List<Map<String, dynamic>>.from(
+        results[0],
+      );
+      final daftarMetodeDariBackend = List<Map<String, dynamic>>.from(
+        results[1],
+      );
 
       if (mounted) {
         setState(() {
@@ -57,15 +96,47 @@ class _CheckoutState extends State<Checkout> {
                 ? daftarAlamatDariBackend.first
                 : {},
           );
+
+          if (daftarMetodeDariBackend.isNotEmpty) {
+            // Mengambil metode pembayaran aktif pertama sebagai default awal
+            final firstMethod = daftarMetodeDariBackend.first;
+
+            _pembayaranDipilih = {
+              'kategori':
+                  firstMethod['kode_metode'] ?? '', // e.g., 'va', 'ewallet'
+              'id_metode':
+                  firstMethod['public_id'] ??
+                  '', // Ambil public_id untuk dikirim saat checkout!
+              'nama':
+                  firstMethod['nama_metode'] ??
+                  '', // e.g., 'BNI Virtual Account'
+              'sub': _getDeskripsiPembayaran(
+                firstMethod['kode_metode'],
+                firstMethod['nama_metode'],
+              ),
+              'icon': _getIconMetode(
+                firstMethod['icon'],
+              ), // Deteksi icon secara dinamis
+            };
+          } else {
+            // Fallback jika backend mengembalikan data kosong
+            _pembayaranDipilih = {
+              'kategori': 'cod',
+              'id_metode': '32bcf925-bba5-41ac-a750-9b0423a45379',
+              'nama': 'Cash on Delivery (COD)',
+              'sub': 'Bayar tunai di tempat',
+              'icon': Icons.handshake_rounded,
+            };
+          }
           _isLoading = false;
         });
       }
     } catch (e) {
-      print("Error ambil alamat checkout: $e");
+      print("Error ambil data checkout: $e");
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = "Gagal mengambil alamat utama dari server.";
+          _errorMessage = "Gagal mengambil data checkout dari server.";
         });
       }
     }
@@ -105,9 +176,11 @@ class _CheckoutState extends State<Checkout> {
         return {'id_spesifikasi_barang': item['id'], 'qty': item['quantity']};
       }).toList();
 
-      await _orderService.checkout(
+      final responseData = await _orderService.checkout(
         idAlamat: _alamatDipilih!['id_alamat'].toString(),
-        metodePembayaran: _pembayaranDipilih?['id_metode'] ?? 'mantrapay',
+        metodePembayaran:
+            _pembayaranDipilih?['id_metode'] ??
+            '32bcf925-bba5-41ac-a750-9b0423a45379',
         grandTotal: totalPembayaran,
         items: items,
       );
@@ -115,17 +188,19 @@ class _CheckoutState extends State<Checkout> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Pesanan Berhasil Disimpan!'),
+            content: Text('Pesanan Berhasil Dibuat!'),
             backgroundColor: Color(0xFFAD510D),
           ),
         );
-        // Navigasi ke HomeScreen dengan index 2 (Halaman Pesanan) dan hapus stack sebelumnya
-        Navigator.pushAndRemoveUntil(
+        // Navigasi ke Halaman Detail Pembayaran
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => const HomeScreen(initialIndex: 2),
+            builder: (context) => PembayaranDetailPage(
+              data: responseData,
+              totalBayar: totalPembayaran,
+            ),
           ),
-          (route) => false,
         );
       }
     } catch (e) {

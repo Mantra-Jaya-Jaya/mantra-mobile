@@ -39,7 +39,11 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabCtrl;
   final _service = PaymentService();
-  final _fmt = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+  final _fmt = NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp ',
+    decimalDigits: 0,
+  );
   final _uangCtrl = TextEditingController();
   bool _loadingBayar = false;
   String _selectedMetode = 'qris';
@@ -84,19 +88,25 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
     setState(() => _loadingBayar = true);
     try {
       final hasil = await _service.bayarTunai(
-          idPesanan: widget.idPesanan, uangDiterima: _uangDiterima);
+        idPesanan: widget.idPesanan,
+        uangDiterima: _uangDiterima,
+      );
       if (!mounted) return;
       Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-              builder: (_) => SuksesBayarScreen(
-                  kembalian: hasil.kembalian,
-                  nomorInvoice: hasil.nomorInvoice,
-                  totalAkhir: _subtotal,
-                  metodePembayaran: 'Tunai')));
+        context,
+        MaterialPageRoute(
+          builder: (_) => SuksesBayarScreen(
+            kembalian: hasil.kembalian,
+            nomorInvoice: hasil.nomorInvoice,
+            totalAkhir: _subtotal,
+            metodePembayaran: 'Tunai',
+          ),
+        ),
+      );
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) setState(() => _loadingBayar = false);
     }
@@ -171,22 +181,35 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
       title: Row(
         children: [
           Container(
-            width: 36, height: 36,
+            width: 36,
+            height: 36,
             margin: const EdgeInsets.only(left: 4, right: 10),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.18),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.receipt_long_rounded, color: Colors.white, size: 20),
+            child: const Icon(
+              Icons.receipt_long_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Pembayaran',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-              Text('#${widget.idPesanan.toString().padLeft(5, '0')}',
-                  style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.75), fontWeight: FontWeight.w400)),
+              const Text(
+                'Pembayaran',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+              ),
+              Text(
+                '#${widget.idPesanan.toString().padLeft(5, '0')}',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.white.withOpacity(0.75),
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
             ],
           ),
         ],
@@ -204,8 +227,14 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
             controller: _tabCtrl,
             labelColor: _K.orange,
             unselectedLabelColor: Colors.white,
-            labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 13,
+            ),
             indicator: BoxDecoration(
               color: _K.white,
               borderRadius: BorderRadius.circular(10),
@@ -248,8 +277,10 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
         children: [
           const CircularProgressIndicator(color: _K.orange),
           const SizedBox(height: 16),
-          Text('Memuat data pesanan…',
-              style: TextStyle(color: _K.grey600, fontSize: 13)),
+          Text(
+            'Memuat data pesanan…',
+            style: TextStyle(color: _K.grey600, fontSize: 13),
+          ),
         ],
       ),
     );
@@ -271,21 +302,43 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
             decoration: BoxDecoration(
               color: _K.white,
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 3))],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
             padding: const EdgeInsets.all(18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(children: [
-                  Container(
-                    padding: const EdgeInsets.all(7),
-                    decoration: BoxDecoration(color: _K.orangeLight, borderRadius: BorderRadius.circular(8)),
-                    child: const Icon(Icons.wallet_rounded, color: _K.orange, size: 18),
-                  ),
-                  const SizedBox(width: 10),
-                  const Text('Uang Diterima', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: _K.black)),
-                ]),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: _K.orangeLight,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.wallet_rounded,
+                        color: _K.orange,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Uang Diterima',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: _K.black,
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 14),
                 Container(
                   decoration: BoxDecoration(
@@ -296,12 +349,24 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 16,
+                        ),
                         decoration: BoxDecoration(
                           color: _K.grey300,
-                          borderRadius: const BorderRadius.horizontal(left: Radius.circular(11)),
+                          borderRadius: const BorderRadius.horizontal(
+                            left: Radius.circular(11),
+                          ),
                         ),
-                        child: const Text('Rp', style: TextStyle(fontWeight: FontWeight.w700, color: _K.grey900, fontSize: 15)),
+                        child: const Text(
+                          'Rp',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: _K.grey900,
+                            fontSize: 15,
+                          ),
+                        ),
                       ),
                       Expanded(
                         child: TextField(
@@ -441,7 +506,9 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
           _buildCTAButton(
             label: 'Konfirmasi Pembayaran',
             icon: Icons.check_circle_rounded,
-            onPressed: (_loadingBayar || !_isCukup) ? null : _konfirmasiBayarTunai,
+            onPressed: (_loadingBayar || !_isCukup)
+                ? null
+                : _konfirmasiBayarTunai,
             loading: _loadingBayar,
           ),
           const SizedBox(height: 8),
@@ -460,7 +527,8 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
     ].toSet().toList()..sort();
 
     return Wrap(
-      spacing: 8, runSpacing: 8,
+      spacing: 8,
+      runSpacing: 8,
       children: nominals.take(4).map((n) {
         final isExact = n == _subtotal;
         return GestureDetector(
@@ -474,12 +542,15 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
             decoration: BoxDecoration(
               color: isExact ? _K.orange : _K.orangeLight,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: isExact ? _K.orange : _K.orange.withOpacity(0.3)),
+              border: Border.all(
+                color: isExact ? _K.orange : _K.orange.withOpacity(0.3),
+              ),
             ),
             child: Text(
               isExact ? 'Pas ${_fmtShort(n)}' : _fmtShort(n),
               style: TextStyle(
-                fontSize: 12, fontWeight: FontWeight.w600,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
                 color: isExact ? _K.white : _K.orange,
               ),
             ),
@@ -494,8 +565,10 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
   }
 
   String _fmtShort(int v) {
-    if (v >= 1000000) return 'Rp ${(v / 1000000).toStringAsFixed(v % 1000000 == 0 ? 0 : 1)}jt';
-    if (v >= 1000) return 'Rp ${(v / 1000).toStringAsFixed(v % 1000 == 0 ? 0 : 1)}rb';
+    if (v >= 1000000)
+      return 'Rp ${(v / 1000000).toStringAsFixed(v % 1000000 == 0 ? 0 : 1)}jt';
+    if (v >= 1000)
+      return 'Rp ${(v / 1000).toStringAsFixed(v % 1000 == 0 ? 0 : 1)}rb';
     return 'Rp $v';
   }
 
@@ -632,7 +705,11 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: _K.orange.withOpacity(0.35), blurRadius: 16, offset: const Offset(0, 6)),
+          BoxShadow(
+            color: _K.orange.withOpacity(0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
         ],
       ),
       padding: const EdgeInsets.all(20),
@@ -641,10 +718,20 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
         children: [
           Row(
             children: [
-              const Icon(Icons.receipt_outlined, color: Colors.white70, size: 16),
+              const Icon(
+                Icons.receipt_outlined,
+                color: Colors.white70,
+                size: 16,
+              ),
               const SizedBox(width: 6),
-              Text('#${widget.idPesanan.toString().padLeft(5, '0')}',
-                  style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500)),
+              Text(
+                '#${widget.idPesanan.toString().padLeft(5, '0')}',
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -652,41 +739,78 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text('${widget.keranjang.length} produk',
-                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                child: Text(
+                  '${widget.keranjang.length} produk',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          const Text('Total Pembayaran', style: TextStyle(color: Colors.white70, fontSize: 13)),
+          const Text(
+            'Total Pembayaran',
+            style: TextStyle(color: Colors.white70, fontSize: 13),
+          ),
           const SizedBox(height: 4),
-          Text(_fmt.format(_subtotal),
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.w800, fontSize: 26, letterSpacing: -0.5)),
+          Text(
+            _fmt.format(_subtotal),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 26,
+              letterSpacing: -0.5,
+            ),
+          ),
           const SizedBox(height: 14),
           // Item list ringkas
-          ...widget.keranjang.take(3).map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 5, height: 5,
-                      margin: const EdgeInsets.only(right: 8, top: 1),
-                      decoration: const BoxDecoration(color: Colors.white70, shape: BoxShape.circle),
-                    ),
-                    Expanded(
-                      child: Text('${item.namaProduk} (${item.jumlah}x)',
-                          style: const TextStyle(color: Colors.white70, fontSize: 12),
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
-                    ),
-                    Text(_fmt.format(item.subtotal),
-                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
-                  ],
+          ...widget.keranjang
+              .take(3)
+              .map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 5,
+                        height: 5,
+                        margin: const EdgeInsets.only(right: 8, top: 1),
+                        decoration: const BoxDecoration(
+                          color: Colors.white70,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          '${item.namaProduk} (${item.jumlah}x)',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        _fmt.format(item.subtotal),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              )),
+              ),
           if (widget.keranjang.length > 3)
-            Text('+ ${widget.keranjang.length - 3} item lainnya…',
-                style: const TextStyle(color: Colors.white54, fontSize: 11)),
+            Text(
+              '+ ${widget.keranjang.length - 3} item lainnya…',
+              style: const TextStyle(color: Colors.white54, fontSize: 11),
+            ),
         ],
       ),
     );
@@ -709,33 +833,46 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
           disabledBackgroundColor: _K.grey300,
           disabledForegroundColor: _K.grey600,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
         child: loading
             ? const SizedBox(
-                width: 22, height: 22,
-                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
+              )
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(icon, size: 20),
                   const SizedBox(width: 8),
-                  Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
                 ],
               ),
       ),
     );
   }
 }
+
 class CurrencyInputFormatter extends TextInputFormatter {
-  final NumberFormat formatter =
-      NumberFormat.decimalPattern('id_ID');
+  final NumberFormat formatter = NumberFormat.decimalPattern('id_ID');
 
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue,
-      TextEditingValue newValue) {
-
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     if (newValue.text.isEmpty) {
       return newValue;
     }
@@ -748,9 +885,7 @@ class CurrencyInputFormatter extends TextInputFormatter {
 
     return TextEditingValue(
       text: formattedText,
-      selection: TextSelection.collapsed(
-        offset: formattedText.length,
-      ),
+      selection: TextSelection.collapsed(offset: formattedText.length),
     );
   }
 }
