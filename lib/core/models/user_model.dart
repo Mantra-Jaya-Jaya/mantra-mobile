@@ -12,6 +12,7 @@ class UserModel {
 
   UserModel({
     required this.idUser,
+    required this.publicId,
     required this.username,
     required this.email,
     required this.namaLengkap,

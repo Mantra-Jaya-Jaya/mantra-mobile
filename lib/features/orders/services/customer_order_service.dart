@@ -7,10 +7,19 @@ class CustomerOrderService {
 
   /// Mengambil daftar pesanan customer berdasarkan status
   Future<List<Map<String, dynamic>>> getOrders({String? status}) async {
+    final statusMap = {
+      'Belum Dibayar': 'menunggu_pembayaran',
+      'Dikemas': 'dikemas',
+      'Dikirim': 'dikirim',
+      'Selesai': 'selesai',
+      'Dibatalkan': 'dibatalkan',
+    };
+    final backendStatus = statusMap[status];
+
     final response = await _client.dio.get(
       '/customer/pesanan',
-      queryParameters: status != null && status != 'Semua'
-          ? {'status': status}
+      queryParameters: backendStatus != null
+          ? {'status': backendStatus}
           : null,
     );
     final List data = response.data['data'] ?? [];
@@ -52,5 +61,11 @@ class CustomerOrderService {
     final response = await _client.dio.get('/customer/metode-pembayaran');
     final List data = response.data['data'] ?? [];
     return List<Map<String, dynamic>>.from(data);
+  }
+
+  /// Info lacak pengiriman
+  Future<Map<String, dynamic>> getTrackingInfo(String publicId) async {
+    final response = await _client.dio.get('/customer/pesanan/$publicId/lacak');
+    return response.data['data'];
   }
 }

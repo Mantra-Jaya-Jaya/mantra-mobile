@@ -1,5 +1,6 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
-import '../models/pengantaran_model.dart'; // Pastikan lu udah bikin modelnya
+import '../models/pengantaran_model.dart';
 import '../network/api_client.dart';
 
 class PengantaranService {
@@ -54,6 +55,36 @@ class DetailPengantaranService {
       return null;
     } catch (e) {
       print('❌ DEBUG API PETA: Gagal Parsing Model -> $e');
+      return null;
+    }
+  }
+
+  Future<void> updateLokasiKurir(String publicId, double latitude, double longitude) async {
+    try {
+      await _apiClient.dio.put(
+        '/kurir/pengantaran/$publicId/lokasi',
+        data: {
+          'latitude': latitude,
+          'longitude': longitude,
+        },
+      );
+    } on DioException catch (e) {
+      print('❌ Gagal update lokasi kurir: ${e.response?.statusCode} - ${e.message}');
+    }
+  }
+
+  Future<Map<String, dynamic>?> uploadBuktiSelesai(String publicId, File imageFile) async {
+    try {
+      final formData = FormData.fromMap({
+        'foto': await MultipartFile.fromFile(imageFile.path, filename: 'bukti_selesai.jpg'),
+      });
+      final response = await _apiClient.dio.post(
+        '/kurir/pengantaran/$publicId/selesai',
+        data: formData,
+      );
+      return response.data;
+    } on DioException catch (e) {
+      print('❌ Gagal upload bukti selesai: ${e.response?.statusCode} - ${e.message}');
       return null;
     }
   }

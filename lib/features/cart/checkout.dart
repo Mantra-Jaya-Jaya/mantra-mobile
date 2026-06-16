@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/services/profile_service.dart';
 import '../../core/services/customer_checkout_service.dart';
-import '../../core/models/metode_pembayaran_model.dart';
+import '../../core/widgets/base_header_widget.dart';
 import 'pilih_alamat.dart';
 import 'pilih_pembayaran.dart';
 
@@ -18,14 +18,12 @@ class _CheckoutState extends State<Checkout> {
   final ProfileService _profileService = ProfileService();
   final CustomerCheckoutService _checkoutService = CustomerCheckoutService();
   bool _isLoading = true;
-  bool _isLoadingMetode = true;
   bool _isLoadingOngkir = false;
   bool _isSubmitting = false;
   String? _errorMessage;
 
   Map<String, dynamic>? _alamatDipilih;
   Map<String, dynamic>? _pembayaranDipilih;
-  List<MetodePembayaran> _daftarMetode = [];
 
   List<dynamic> _daftarEkspedisi = [];
   Map<String, dynamic>? _ekspedisiDipilih;
@@ -41,7 +39,6 @@ class _CheckoutState extends State<Checkout> {
     super.initState();
     _pembayaranDipilih = null;
     _ambilAlamatDariBackend();
-    _ambilMetodePembayaran();
   }
 
   @override
@@ -80,23 +77,6 @@ class _CheckoutState extends State<Checkout> {
           _isLoading = false;
           _errorMessage = "Gagal mengambil alamat utama dari server.";
         });
-      }
-    }
-  }
-
-  Future<void> _ambilMetodePembayaran() async {
-    try {
-      final metode = await _checkoutService.getMetodePembayaran();
-      if (mounted) {
-        setState(() {
-          _daftarMetode = metode;
-          _isLoadingMetode = false;
-        });
-      }
-    } catch (e) {
-      print("Error ambil metode bayar: $e");
-      if (mounted) {
-        setState(() => _isLoadingMetode = false);
       }
     }
   }
@@ -254,7 +234,6 @@ class _CheckoutState extends State<Checkout> {
       MaterialPageRoute(
         builder: (context) => PilihPembayaranPage(
           pembayaranSekarang: _pembayaranDipilih,
-          daftarMetode: _daftarMetode,
         ),
       ),
     );
@@ -378,13 +357,7 @@ class _CheckoutState extends State<Checkout> {
                                     ),
                         const SizedBox(height: 16),
 
-                        if (_isLoadingMetode)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 20),
-                            child: Center(child: CircularProgressIndicator(color: Color(0xFFAD510D))),
-                          )
-                        else
-                          _buildPembayaranCard(),
+                        _buildPembayaranCard(),
                         const SizedBox(height: 16),
 
                         _buildCatatanField(),
@@ -779,6 +752,63 @@ class _CheckoutState extends State<Checkout> {
         children: [
           const Row(
             children: [
+              Icon(Icons.local_shipping_outlined, color: Color(0xFFAD510D), size: 20),
+              SizedBox(width: 8),
+              Text('Pilih Ekspedisi', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...List.generate(_daftarEkspedisi.length, (i) {
+            final ekspedisi = _daftarEkspedisi[i] as Map<String, dynamic>;
+            final layananList = (ekspedisi['layanan'] as List?) ?? [];
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(ekspedisi['nama_ekspedisi'] ?? 'Ekspedisi',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 4),
+                ...layananList.map((layanan) {
+                  final l = layanan as Map<String, dynamic>;
+                  final selected = _layananDipilih?['id_layanan_ekspedisi'] == l['id_layanan_ekspedisi'];
+                  return InkWell(
+                    onTap: () {
+                      setState(() {
+                        _ekspedisiDipilih = ekspedisi;
+                        _layananDipilih = l;
+                      });
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: selected ? const Color(0x33AD510D) : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: selected ? const Color(0xFFAD510D) : Colors.grey.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(l['nama_layanan'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                if (l['estimasi'] != null)
+                                  Text('Estimasi ${l['estimasi']}', style: TextStyle(color: Colors.grey.shade600, fontSize: 11)),
+                              ],
+                            ),
+                          ),
+                          Text(_formatRupiah(l['harga'] ?? 0),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFAD510D))),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+                const SizedBox(height: 8),
+              ],
+            );
+          }),
+        ],
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'services/customer_order_service.dart';
 import '../../core/widgets/base_header_widget.dart';
 import '../cart/pembayaran_detail.dart';
+import 'order_tracking_page.dart';
 import 'package:intl/intl.dart';
 
 class OrderDetailPage extends StatefulWidget {
@@ -94,7 +95,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     final data = _orderData!;
     final items = (data['items'] as List? ?? []);
     final rincian = data['rincian_pembayaran'] as Map<String, dynamic>? ?? {};
-    final status = data['status'] ?? 'Pending';
+    final status = data['nama_status_pesanan'] ?? 'Pending';
     final tujuan = data['tujuan_pengantaran'] as Map<String, dynamic>?;
     final kurir = data['kurir'] as Map<String, dynamic>?;
 
@@ -131,7 +132,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        data['nomor_pesanan'] ?? widget.noPesanan,
+                        data['no_pesanan'] ?? widget.noPesanan,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
@@ -464,8 +465,11 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Fitur Lacak Pesanan segera hadir!")),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => OrderTrackingPage(noPesanan: widget.noPesanan),
+                      ),
                     );
                   },
                   icon: const Icon(Icons.local_shipping_outlined),
