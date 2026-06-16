@@ -48,17 +48,16 @@ class OrderModel {
 
     // 2. KUNCI UTAMA FILTER TAB (Siasat Tanpa Mengubah Backend):
     // Karena temanmu tidak mengirim 'tipe_pesanan', kita tahu dari request kamu kalau:
-    // - Jika statusnya "Diproses" atau "Dikemas", itu PASTI pesanan Online.
+    // - Jika statusnya "Dikemas", itu PASTI pesanan Online.
     // - Jika status selain itu (atau Offline), nanti kita paksa jadi "Selesai".
-    bool checkIsOnline = statusStr.toLowerCase() == 'diproses' || 
-                         statusStr.toLowerCase() == 'dikemas' ||
+    bool checkIsOnline = statusStr.toLowerCase() == 'dikemas' ||
                          statusStr.toLowerCase() == 'dikirim';
 
     // Sesuaikan teks status untuk tampilan UI Kasir
     if (!checkIsOnline) {
       statusStr = "Selesai"; // Sesuai request: Offline udah pasti statusnya selesai semua
     } else {
-      statusStr = "Diproses"; // Standarisasi teks tampilan online biar seragam
+      statusStr = "Dikemas"; // Standarisasi teks tampilan online biar seragam
     }
 
     // 3. Ambil Harga Nyata (Membaca key 'total_bayar' dari backend temanmu)

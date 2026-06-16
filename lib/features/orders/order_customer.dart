@@ -120,7 +120,7 @@ class _MyOrderPageState extends State<MyOrderPage> {
               children: [
                 _buildTabItem("Semua"),
                 _buildTabItem("Belum Dibayar"),
-                _buildTabItem("Diproses"),
+                _buildTabItem("Dikemas"),
                 _buildTabItem("Dikirim"),
                 _buildTabItem("Selesai"),
                 _buildTabItem("Dibatalkan"),
@@ -211,7 +211,7 @@ class _MyOrderPageState extends State<MyOrderPage> {
       case 'belum dibayar':
       case 'menunggu pembayaran':
         return Colors.orange;
-      case 'diproses':
+      case 'dikemas':
         return Colors.blue;
       case 'dikirim':
         return Colors.purple;

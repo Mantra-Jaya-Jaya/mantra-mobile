@@ -32,6 +32,10 @@ class _CheckoutState extends State<Checkout> {
   Map<String, dynamic>? _layananDipilih;
   final TextEditingController _catatanController = TextEditingController();
 
+  int _tipeKurir = 1; // 1 = internal, 2 = external
+  bool _dalamRadius = false;
+  bool _isLoadingRadius = false;
+
   @override
   void initState() {
     super.initState();
@@ -66,7 +70,7 @@ class _CheckoutState extends State<Checkout> {
           _isLoading = false;
         });
         if (_alamatDipilih != null && _alamatDipilih!.isNotEmpty) {
-          _cekOngkir();
+          _cekRadius();
         }
       }
     } catch (e) {
@@ -93,6 +97,29 @@ class _CheckoutState extends State<Checkout> {
       print("Error ambil metode bayar: $e");
       if (mounted) {
         setState(() => _isLoadingMetode = false);
+      }
+    }
+  }
+
+  Future<void> _cekRadius() async {
+    if (_alamatDipilih == null || _alamatDipilih!.isEmpty) return;
+    setState(() => _isLoadingRadius = true);
+
+    try {
+      final response = await _checkoutService.cekRadius(
+        idAlamat: _alamatDipilih!['public_id'] ?? _alamatDipilih!['id_alamat'],
+      );
+      if (mounted) {
+        final data = response['data'];
+        setState(() {
+          _dalamRadius = data['within_radius'] ?? false;
+          _isLoadingRadius = false;
+        });
+      }
+    } catch (e) {
+      print("Error cek radius: $e");
+      if (mounted) {
+        setState(() => _isLoadingRadius = false);
       }
     }
   }
@@ -135,7 +162,7 @@ class _CheckoutState extends State<Checkout> {
     return total;
   }
 
-  int get ongkosKirim => _layananDipilih?['harga'] ?? 0;
+  int get ongkosKirim => _tipeKurir == 1 ? 0 : (_layananDipilih?['harga'] ?? 0);
   int get pajak => ((subtotalProduk + ongkosKirim) * 0.11).round();
   int get totalPembayaran => subtotalProduk + ongkosKirim + pajak;
 
@@ -148,8 +175,12 @@ class _CheckoutState extends State<Checkout> {
       _showSnackBar('Silakan pilih alamat pengiriman terlebih dahulu');
       return;
     }
-    if (_ekspedisiDipilih == null || _layananDipilih == null) {
+    if (_tipeKurir == 2 && (_ekspedisiDipilih == null || _layananDipilih == null)) {
       _showSnackBar('Silakan pilih ekspedisi pengiriman');
+      return;
+    }
+    if (_tipeKurir == 1 && !_dalamRadius) {
+      _showSnackBar('Alamat Anda di luar jangkauan kurir toko, silakan pilih Kirim via Ekspedisi');
       return;
     }
     if (_pembayaranDipilih == null) {
@@ -162,11 +193,12 @@ class _CheckoutState extends State<Checkout> {
     try {
       final result = await _checkoutService.checkout(
         idAlamat: _alamatDipilih!['public_id'] ?? _alamatDipilih!['id_alamat'],
-        idEkspedisi: _ekspedisiDipilih!['id_ekspedisi'],
-        idLayananEkspedisi: _layananDipilih!['id_layanan_ekspedisi'],
-        ongkosKirim: _layananDipilih!['harga'],
+        idEkspedisi: _tipeKurir == 2 ? _ekspedisiDipilih!['id_ekspedisi'] : null,
+        idLayananEkspedisi: _tipeKurir == 2 ? _layananDipilih!['id_layanan_ekspedisi'] : null,
+        ongkosKirim: _tipeKurir == 2 ? _layananDipilih!['harga'] : 0,
         catatan: _catatanController.text,
         idMetodePembayaran: _pembayaranDipilih!['id_metode_pembayaran'],
+        idTipeKurir: _tipeKurir,
       );
 
       final data = result['data'];
@@ -210,8 +242,9 @@ class _CheckoutState extends State<Checkout> {
         _alamatDipilih = alamatBaruTerpilih;
         _ekspedisiDipilih = null;
         _layananDipilih = null;
+        _tipeKurir = 1;
       });
-      _cekOngkir();
+      _cekRadius();
     }
   }
 
@@ -305,6 +338,10 @@ class _CheckoutState extends State<Checkout> {
                         _buildAlamatBackendCard(),
                         const SizedBox(height: 24),
 
+                        // Pilih Tipe Kurir
+                        _buildPilihTipeKurir(),
+                        const SizedBox(height: 16),
+
                         // Sub Header Metode Pembayaran
                         const Row(
                           children: [
@@ -326,13 +363,19 @@ class _CheckoutState extends State<Checkout> {
                         ),
                         const SizedBox(height: 12),
 
-                        if (_isLoadingOngkir)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 20),
-                            child: Center(child: CircularProgressIndicator(color: Color(0xFFAD510D))),
-                          )
-                        else if (_daftarEkspedisi.isNotEmpty)
-                          _buildPilihEkspedisiCard(),
+                        if (_tipeKurir == 2)
+                          _isLoadingOngkir
+                              ? const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 20),
+                                  child: Center(child: CircularProgressIndicator(color: Color(0xFFAD510D))),
+                                )
+                              : _daftarEkspedisi.isNotEmpty
+                                  ? _buildPilihEkspedisiCard()
+                                  : const Padding(
+                                      padding: EdgeInsets.symmetric(vertical: 10),
+                                      child: Text('Tidak ada ekspedisi tersedia untuk alamat ini',
+                                        style: TextStyle(color: Colors.grey, fontSize: 13)),
+                                    ),
                         const SizedBox(height: 16),
 
                         if (_isLoadingMetode)
@@ -616,6 +659,111 @@ class _CheckoutState extends State<Checkout> {
             ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPilihTipeKurir() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: const Color(0xFFEEF3F4), borderRadius: BorderRadius.circular(20)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.local_shipping_outlined, color: Color(0xFFAD510D), size: 20),
+              SizedBox(width: 8),
+              Text('Pilih Kurir', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          InkWell(
+            onTap: () {
+              setState(() {
+                _tipeKurir = 1;
+                _ekspedisiDipilih = null;
+                _layananDipilih = null;
+              });
+              _cekRadius();
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: _tipeKurir == 1 ? const Color(0x33AD510D) : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _tipeKurir == 1 ? const Color(0xFFAD510D) : Colors.grey.shade300),
+              ),
+              child: Row(
+                children: [
+                  Radio<int>(
+                    value: 1,
+                    groupValue: _tipeKurir,
+                    activeColor: const Color(0xFFAD510D),
+                    onChanged: (v) {
+                      setState(() {
+                        _tipeKurir = v!;
+                        _ekspedisiDipilih = null;
+                        _layananDipilih = null;
+                      });
+                      _cekRadius();
+                    },
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Antar Kurir Toko', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        const SizedBox(height: 2),
+                        if (_isLoadingRadius)
+                          const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        else if (_dalamRadius)
+                          const Text('Gratis · Dalam jangkauan', style: TextStyle(color: Colors.green, fontSize: 12))
+                        else
+                          const Text('Di luar jangkauan', style: TextStyle(color: Colors.red, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: () {
+              setState(() {
+                _tipeKurir = 2;
+              });
+              _cekOngkir();
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: _tipeKurir == 2 ? const Color(0x33AD510D) : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _tipeKurir == 2 ? const Color(0xFFAD510D) : Colors.grey.shade300),
+              ),
+              child: Row(
+                children: [
+                  Radio<int>(
+                    value: 2,
+                    groupValue: _tipeKurir,
+                    activeColor: const Color(0xFFAD510D),
+                    onChanged: (v) {
+                      setState(() {
+                        _tipeKurir = v!;
+                      });
+                      _cekOngkir();
+                    },
+                  ),
+                  const Expanded(
+                    child: Text('Kirim via Ekspedisi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),

@@ -64,7 +64,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
       case 'menunggu pembayaran':
       case 'belum dibayar':
         return Colors.orange;
-      case 'diproses':
+      case 'dikemas':
         return Colors.blue;
       case 'dikirim':
         return Colors.purple;

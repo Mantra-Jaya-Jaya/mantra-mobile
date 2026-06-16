@@ -42,7 +42,7 @@ class CustomerOrderService {
     return response.data['data'];
   }
 
-  /// Membatalkan pesanan (Hanya jika status Belum Dibayar/Diproses)
+  /// Membatalkan pesanan (Hanya jika status Belum Dibayar)
   Future<void> cancelOrder(String publicId) async {
     await _client.dio.patch('/customer/pesanan/$publicId/batal');
   }
