@@ -7,7 +7,7 @@ class PaymentService {
 
   // Constructor dengan dependency injection opsional
   PaymentService({ApiClient? apiClient})
-      : _apiClient = apiClient ?? ApiClient();
+    : _apiClient = apiClient ?? ApiClient();
 
   // 1. Cari produk berdasarkan nama atau scan barcode
   Future<List<HasilCariProduk>> cariProduk(String query) async {
@@ -22,7 +22,8 @@ class PaymentService {
       final data = response.data['data'];
 
       // Handle hasil barcode (Object tunggal)
-      if (data is Map<String, dynamic> && data.containsKey('id_spesifikasi_barang')) {
+      if (data is Map<String, dynamic> &&
+          data.containsKey('id_spesifikasi_barang')) {
         return [
           HasilCariProduk(
             idBarang: data['id_barang'] ?? 0,
@@ -89,10 +90,7 @@ class PaymentService {
     try {
       final response = await _apiClient.dio.post(
         '/kasir/transaksi/bayar/tunai',
-        data: {
-          'id_pesanan': idPesanan,
-          'bayar': uangDiterima,
-        },
+        data: {'id_pesanan': idPesanan, 'bayar': uangDiterima},
         options: Options(headers: {'Content-Type': 'application/json'}),
       );
 
@@ -102,7 +100,9 @@ class PaymentService {
         throw Exception(response.data['message'] ?? 'Gagal bayar tunai');
       }
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Terjadi kesalahan server');
+      throw Exception(
+        e.response?.data['message'] ?? 'Terjadi kesalahan server',
+      );
     }
   }
 
@@ -155,4 +155,18 @@ class PaymentService {
   }
 
   Future<Object?> getDetailPesanan(int idPesanan) async {}
+
+  // ----------------------------------------------------------
+  // Ambil metode pembayaran aktif dari database
+  // ----------------------------------------------------------
+  Future<List<MetodePembayaran>> getMetodePembayaranAktif() async {
+    final response = await _apiClient.dio.get('/kasir/metode-pembayaran');
+
+    if (response.statusCode != 200) {
+      throw Exception('Gagal mengambil metode pembayaran');
+    }
+
+    final data = response.data['data'] as List<dynamic>? ?? [];
+    return data.map((item) => MetodePembayaran.fromJson(item)).toList();
+  }
 }

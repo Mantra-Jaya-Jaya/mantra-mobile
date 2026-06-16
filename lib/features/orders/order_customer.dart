@@ -17,6 +17,9 @@ class _MyOrderPageState extends State<MyOrderPage> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _orders = [];
 
+  // Menyimpan ID pesanan yang itemnya sedang dibuka (expanded)
+  final Set<String> _expandedOrderIds = {};
+
   // Warna Cokelat Utama Aplikasi
   final Color primaryBrown = const Color(0xFFAD510D);
 
@@ -29,25 +32,18 @@ class _MyOrderPageState extends State<MyOrderPage> {
   Future<void> _fetchOrders() async {
     setState(() => _isLoading = true);
     try {
-      // Map frontend status to backend status
-      String? backendStatus;
-      if (selectedStatus == "Belum Dibayar") {
-        backendStatus = "menunggu_pembayaran";
-      } else if (selectedStatus == "Diproses") {
-        backendStatus = "diproses";
-      } else if (selectedStatus == "Dikirim") {
-        backendStatus = "dikirim";
-      } else if (selectedStatus == "Selesai") {
-        backendStatus = "selesai";
-      } else if (selectedStatus == "Dibatalkan") {
-        backendStatus = "dibatalkan";
-      }
+      // Jika "Semua", kirim null. Jika status lain, kirim teksnya langsung ("Diproses", dll)
+      final String? statusParam = selectedStatus == "Semua"
+          ? null
+          : selectedStatus;
 
-      final orders = await _orderService.getOrders(status: backendStatus);
+      final orders = await _orderService.getOrders(status: statusParam);
+
       if (mounted) {
         setState(() {
           _orders = orders;
           _isLoading = false;
+          _expandedOrderIds.clear(); // Reset expand state
         });
       }
     } catch (e) {
@@ -136,28 +132,40 @@ class _MyOrderPageState extends State<MyOrderPage> {
           Expanded(
             child: _isLoading
                 ? Center(child: CircularProgressIndicator(color: primaryBrown))
-                : _orders.isEmpty
-                ? Center(
-                    child: Text(
-                      "Belum ada pesanan ${selectedStatus.toLowerCase()}",
-                      style: const TextStyle(color: Colors.grey),
-                    ),
-                  )
-                : RefreshIndicator(
-                    onRefresh: _fetchOrders,
-                    color: primaryBrown,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: _orders.length + 1,
-                      itemBuilder: (context, index) {
-                        if (index == _orders.length) {
-                          return const SizedBox(height: 80);
-                        }
-                        final order = _orders[index];
-                        return _buildOrderCardFromData(order);
-                      },
-                    ),
-                  ),
+                : () {
+                    // Terapkan filter di sisi frontend mengikuti data dari backend
+                    final filteredOrders = selectedStatus == "Semua"
+                        ? _orders
+                        : _orders.where((order) {
+                            final String status = (order['status'] ?? '').toString();
+                            return status == selectedStatus;
+                          }).toList();
+
+                    if (filteredOrders.isEmpty) {
+                      return Center(
+                        child: Text(
+                          "Belum ada pesanan ${selectedStatus.toLowerCase()}",
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                      );
+                    }
+
+                    return RefreshIndicator(
+                      onRefresh: _fetchOrders,
+                      color: primaryBrown,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: filteredOrders.length + 1,
+                        itemBuilder: (context, index) {
+                          if (index == filteredOrders.length) {
+                            return const SizedBox(height: 80);
+                          }
+                          final order = filteredOrders[index];
+                          return _buildOrderCardFromData(order);
+                        },
+                      ),
+                    );
+                  }(),
           ),
         ],
       ),
@@ -196,35 +204,38 @@ class _MyOrderPageState extends State<MyOrderPage> {
     );
   }
 
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'selesai':
+        return Colors.green;
+      case 'belum dibayar':
+      case 'menunggu pembayaran':
+        return Colors.orange;
+      case 'diproses':
+        return Colors.blue;
+      case 'dikirim':
+        return Colors.purple;
+      case 'dibatalkan':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
   Widget _buildOrderCardFromData(Map<String, dynamic> order) {
     final String publicId = order['id_pesanan'] ?? '-';
     final String nomorPesanan = order['nomor_pesanan'] ?? publicId;
-    final String statusBackend = order['status'] ?? 'menunggu_pembayaran';
+    final String statusAsli = order['status'] ?? 'Belum Dibayar';
     final int totalBayar = order['total_bayar'] ?? 0;
     final List items = order['items'] ?? [];
-    final String firstItemName = items.isNotEmpty
-        ? items[0]['nama_barang']
-        : 'Produk';
-    final String firstItemImage = items.isNotEmpty
-        ? items[0]['gambar'] ?? ''
-        : '';
     final int itemCount = items.length;
 
-    // --- PERBAIKAN 1: Menyamakan mapping status dengan format database backend (lowercase) ---
-    String statusLabel = "Belum Dibayar";
-    if (statusBackend == "diproses") {
-      statusLabel = "Diproses";
-    } else if (statusBackend == "dikirim") {
-      statusLabel = "Dikirim";
-    } else if (statusBackend == "selesai") {
-      statusLabel = "Selesai";
-    } else if (statusBackend == "dibatalkan") {
-      statusLabel = "Dibatalkan";
-    }
+    bool isExpanded = _expandedOrderIds.contains(publicId);
 
-    final Color statusColor = primaryBrown;
+    final List itemsToShow = isExpanded
+        ? items
+        : (items.isNotEmpty ? [items[0]] : []);
 
-    // Format Tanggal
     String tanggalStr = "-";
     if (order['tanggal_pesanan'] != null) {
       try {
@@ -232,9 +243,7 @@ class _MyOrderPageState extends State<MyOrderPage> {
         final date = DateTime.parse(rawDateStr);
         tanggalStr = DateFormat('dd MMMM yyyy', 'id_ID').format(date);
       } catch (error) {
-        print(
-          "Gagal parsing tanggal untuk order $nomorPesanan. Data asli: ${order['tanggal_pesanan']}. Error: $error",
-        );
+        print("Gagal parsing tanggal");
       }
     }
 
@@ -251,11 +260,6 @@ class _MyOrderPageState extends State<MyOrderPage> {
           MaterialPageRoute(
             builder: (context) => OrderDetailPage(
               noPesanan: publicId,
-              tampilanNoPesanan: nomorPesanan,
-              namaProduk: firstItemName,
-              statusLabel: statusLabel,
-              warnaStatus: statusColor,
-              tanggalPesanan: tanggalStr,
             ),
           ),
         );
@@ -266,11 +270,19 @@ class _MyOrderPageState extends State<MyOrderPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: Colors.blueGrey.shade100),
+          border: Border.all(color: Colors.blueGrey.shade50),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // HEADER KARTU (ID & STATUS)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -279,14 +291,14 @@ class _MyOrderPageState extends State<MyOrderPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        "ORDER ID",
-                        style: TextStyle(color: Colors.grey, fontSize: 11),
+                        "No. Pesanan",
+                        style: TextStyle(color: Colors.grey, fontSize: 10),
                       ),
                       Text(
                         nomorPesanan,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                          fontSize: 13,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -297,114 +309,182 @@ class _MyOrderPageState extends State<MyOrderPage> {
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
-                    vertical: 4,
+                    vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
+                    color: _getStatusColor(statusAsli).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    statusLabel,
+                    statusAsli,
                     style: TextStyle(
-                      color: statusColor,
-                      fontSize: 11,
+                      color: _getStatusColor(statusAsli),
+                      fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
               ],
             ),
-            const Divider(height: 24),
-            Row(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: firstItemImage.isNotEmpty
-                      ? ClipRRect(
+            const Divider(height: 24, thickness: 0.5),
+
+            // LIST ITEM
+            if (itemsToShow.isEmpty)
+              const Text(
+                "Tidak ada item produk",
+                style: TextStyle(color: Colors.grey),
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: itemsToShow.length,
+                separatorBuilder: (context, i) => const SizedBox(height: 12),
+                itemBuilder: (context, i) {
+                  final item = itemsToShow[i];
+                  final String itemName = item['nama_barang'] ?? 'Produk';
+                  final String itemImage = item['gambar'] ?? '';
+                  final int qty = item['jumlah'] ?? 1;
+
+                  return Row(
+                    children: [
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
                           borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            firstItemImage,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                const Icon(Icons.book, color: Colors.grey),
-                          ),
-                        )
-                      : const Icon(Icons.book, color: Colors.grey),
-                ),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                        ),
+                        child: itemImage.isNotEmpty
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  itemImage,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.shopping_bag_outlined,
+                                    color: Colors.grey,
+                                    size: 20,
+                                  ),
+                                ),
+                              )
+                            : const Icon(Icons.shopping_bag_outlined, color: Colors.grey, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              itemName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              "$qty barang",
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+
+            // TOMBOL LIHAT SELENGKAPNYA
+            if (itemCount > 1)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: InkWell(
+                  onTap: () {
+                    setState(() {
+                      if (isExpanded) {
+                        _expandedOrderIds.remove(publicId);
+                      } else {
+                        _expandedOrderIds.add(publicId);
+                      }
+                    });
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        firstItemName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        "$itemCount item",
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12,
+                        isExpanded
+                            ? "Sembunyikan"
+                            : "Lihat ${itemCount - 1} produk lainnya",
+                        style: TextStyle(
+                          color: primaryBrown,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      Text(
-                        currencyFormat.format(totalBayar),
-                        style: const TextStyle(
-                          color: Color(0xFFAD510D),
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Icon(
+                        isExpanded
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
+                        color: primaryBrown,
+                        size: 16,
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-            const Divider(height: 24),
+              ),
+
+            const Divider(height: 24, thickness: 0.5),
+
+            // FOOTER KARTU (DENGAN AKSI TOMBOL)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  tanggalStr,
-                  style: const TextStyle(color: Colors.grey, fontSize: 11),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      tanggalStr,
+                      style: const TextStyle(color: Colors.grey, fontSize: 10),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      currencyFormat.format(totalBayar),
+                      style: TextStyle(
+                        color: primaryBrown,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
                 ),
-                // Mengatur aksi tombol ke halaman detail atau fungsi batal
-                ElevatedButton(
-                  onPressed: () {
-                    // Memicu aksi navigasi yang sama dengan tap card (Membuka Detail)
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => OrderDetailPage(
-                          noPesanan: publicId,
-                          tampilanNoPesanan: nomorPesanan,
-                          namaProduk: firstItemName,
-                          statusLabel: statusLabel,
-                          warnaStatus: statusColor,
-                          tanggalPesanan: tanggalStr,
+                Row(
+                  children: [
+                    if (statusAsli == "Belum Dibayar" || statusAsli == "Menunggu Pembayaran") ...[
+                      SizedBox(
+                        height: 30,
+                        child: OutlinedButton(
+                          onPressed: () => _cancelOrder(publicId),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: const BorderSide(color: Colors.red, width: 0.5),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            "Batalkan",
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF3F4F6),
-                    foregroundColor: Colors.black87,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  child: const Text("Detail", style: TextStyle(fontSize: 11)),
+                    ],
+                  ],
                 ),
               ],
             ),

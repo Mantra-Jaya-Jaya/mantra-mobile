@@ -36,8 +36,21 @@ class CustomerOrderService {
     return response.data['data'];
   }
 
+  /// Mengambil detail satu pesanan
+  Future<Map<String, dynamic>> getOrderDetail(String publicId) async {
+    final response = await _client.dio.get('/customer/pesanan/$publicId');
+    return response.data['data'];
+  }
+
   /// Membatalkan pesanan (Hanya jika status Belum Dibayar/Diproses)
   Future<void> cancelOrder(String publicId) async {
     await _client.dio.patch('/customer/pesanan/$publicId/batal');
+  }
+
+  /// Mengambil daftar metode pembayaran yang aktif
+  Future<List<Map<String, dynamic>>> GetMetodePembayaran() async {
+    final response = await _client.dio.get('/customer/metode-pembayaran');
+    final List data = response.data['data'] ?? [];
+    return List<Map<String, dynamic>>.from(data);
   }
 }

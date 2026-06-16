@@ -1,24 +1,20 @@
 import 'package:flutter/material.dart';
-import '../../core/services/profile_service.dart';
-import 'package:frontend/core/models/alamat_model.dart';
+import 'services/customer_order_service.dart';
 import '../../core/widgets/base_header_widget.dart';
+import '../cart/pembayaran_detail.dart';
+import 'package:intl/intl.dart';
 
 class OrderDetailPage extends StatefulWidget {
-  final String noPesanan;
-  final String? tampilanNoPesanan;
-  final String namaProduk;
-  final String statusLabel;
-  final Color warnaStatus;
-  final String tanggalPesanan;
+  final String noPesanan; // Ini adalah Public ID UUID
 
   const OrderDetailPage({
     super.key,
     required this.noPesanan,
-    this.tampilanNoPesanan,
-    required this.namaProduk,
-    required this.statusLabel,
-    required this.warnaStatus,
-    required this.tanggalPesanan,
+    String? tampilanNoPesanan, // Parameter lama tetap ada agar tidak break
+    String? namaProduk,
+    String? statusLabel,
+    Color? warnaStatus,
+    String? tanggalPesanan,
   });
 
   @override
@@ -26,96 +22,84 @@ class OrderDetailPage extends StatefulWidget {
 }
 
 class _OrderDetailPageState extends State<OrderDetailPage> {
-  final ProfileService _profileService = ProfileService();
-  bool _isLoadingAlamat = true;
-  AlamatModel? _alamatUtama;
-  String? _alamatErrorMessage;
+  final CustomerOrderService _orderService = CustomerOrderService();
+  bool _isLoading = true;
+  Map<String, dynamic>? _orderData;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _fetchAlamatCustomer();
+    _fetchOrderDetail();
   }
 
-  // Mengambil data alamat dari API profile_service dan menyaring alamat utama (isUtama)
-  Future<void> _fetchAlamatCustomer() async {
+  Future<void> _fetchOrderDetail() async {
     try {
-      final List<dynamic> alamatRawData = await _profileService.getAlamat();
-      final List<AlamatModel> daftarAlamat = alamatRawData
-          .map((json) => AlamatModel.fromJson(json as Map<String, dynamic>))
-          .toList();
-
-      // Cari alamat yang di-set sebagai alamat utama (isUtama == true atau 1)
-      final utama = daftarAlamat.firstWhere(
-        (alamat) => alamat.isUtama == true,
-        orElse: () => daftarAlamat.isNotEmpty
-            ? daftarAlamat.first
-            : AlamatModel(
-                idAlamat: '',
-                labelAlamat: 'Rumah',
-                namaPenerima: '-',
-                noTelpPenerima: '-',
-                alamatLengkap: 'Belum ada alamat utama yang diatur.',
-                isUtama: false,
-                // Tambahkan parameter wajib yang kurang di bawah ini:
-                publicId: '',
-                idCustomer: '',
-                latitude:
-                    0.0, // sesuaikan tipe datanya, jika double ganti jadi 0.0
-                longitude:
-                    0.0, // sesuaikan tipe datanya, jika double ganti jadi 0.0
-                catatanLokasi: '',
-              ),
-      );
-
+      final data = await _orderService.getOrderDetail(widget.noPesanan);
       if (mounted) {
         setState(() {
-          _alamatUtama = utama;
-          _isLoadingAlamat = false;
+          _orderData = data;
+          _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _isLoadingAlamat = false;
-          _alamatErrorMessage = "Gagal memuat alamat pengantaran";
+          _isLoading = false;
+          _errorMessage = "Gagal memuat detail pesanan";
         });
       }
     }
   }
 
   String _formatRupiah(int number) {
-    return 'Rp. ${number.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}, 00';
+    final formatter = NumberFormat("#,###", "pt_BR");
+    return 'Rp. ${formatter.format(number).replaceAll(',', '.')}';
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'selesai':
+        return Colors.green;
+      case 'menunggu pembayaran':
+      case 'belum dibayar':
+        return Colors.orange;
+      case 'diproses':
+        return Colors.blue;
+      case 'dikirim':
+        return Colors.purple;
+      case 'dibatalkan':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Penyesuaian list item mockup: jika halaman sebelumnya melempar item,
-    // di sini kita simulasikan daftar barang (menyesuaikan gambar mockup yang berisi 3 item)
-    List<Map<String, dynamic>> itemsDetail = [
-      {
-        'title':
-            widget.namaProduk, // Menyesuaikan dinamis dari card yang diklik
-        'qty': 1,
-        'price': 50000,
-        'icon': Icons.book_outlined,
-      },
-    ];
+    if (_isLoading) {
+      return Scaffold(
+        appBar: const BaseHeaderWidget(title: 'Detail Pesanan', leading: BackButton(color: Colors.white)),
+        body: const Center(child: CircularProgressIndicator(color: Color(0xFFAD510D))),
+      );
+    }
 
-    int deliveryFee = 20000;
-    int protectionFee =
-        20000; // Sesuai total visual Rp 172.000 jika subtotal item Rp 150.000 (dikurang delivery fee)
-    int totalItemsPrice = itemsDetail.fold(
-      0,
-      (sum, item) => sum + (item['price'] as int),
-    );
-    int subtotalAkhir =
-        totalItemsPrice +
-        deliveryFee +
-        2000; // Protection fee di gambar tertulis 2.000,00 namun kalkulasi total 172.000 (2.000 + 20.000 + 150.000)
+    if (_errorMessage != null || _orderData == null) {
+      return Scaffold(
+        appBar: const BaseHeaderWidget(title: 'Detail Pesanan', leading: BackButton(color: Colors.white)),
+        body: Center(child: Text(_errorMessage ?? "Pesanan tidak ditemukan")),
+      );
+    }
+
+    final data = _orderData!;
+    final items = (data['items'] as List? ?? []);
+    final rincian = data['rincian_pembayaran'] as Map<String, dynamic>? ?? {};
+    final status = data['status'] ?? 'Pending';
+    final tujuan = data['tujuan_pengantaran'] as Map<String, dynamic>?;
+    final kurir = data['kurir'] as Map<String, dynamic>?;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF7F7F7),
       appBar: BaseHeaderWidget(
         title: 'Detail Pesanan',
         leading: IconButton(
@@ -129,264 +113,388 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // --- NOMOR PESANAN & STATUS ---
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "No. Pesanan",
-                      style: TextStyle(color: Colors.grey, fontSize: 11),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      widget.tampilanNoPesanan ?? widget.noPesanan,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: widget.warnaStatus.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    widget.statusLabel,
-                    style: TextStyle(
-                      color: widget.warnaStatus,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const Divider(height: 25, thickness: 1),
-
-            // --- DAFTAR BARANG ---
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: itemsDetail.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 14),
-              itemBuilder: (context, index) {
-                var item = itemsDetail[index];
-                return Row(
-                  children: [
-                    Container(
-                      width: 55,
-                      height: 55,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(item['icon'], color: Colors.grey[600]),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item['title'],
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            "${item['qty']} item",
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            "Rp. 50.000",
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-            const Divider(height: 35, thickness: 1),
-
-            // --- TUJUAN PENGANTARAN (PANGGIL API ALAMAT) ---
-            const Text(
-              "Tujuan Pengantaran",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-            const SizedBox(height: 8),
-            _isLoadingAlamat
-                ? const LinearProgressIndicator(color: Color(0xFFAD510D))
-                : _alamatErrorMessage != null
-                ? Text(
-                    _alamatErrorMessage!,
-                    style: const TextStyle(color: Colors.red, fontSize: 13),
-                  )
-                : Column(
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        _alamatUtama?.namaPenerima ?? "-",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                          color: Colors.black87,
-                        ),
+                      const Text(
+                        "No. Pesanan",
+                        style: TextStyle(color: Colors.grey, fontSize: 11),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        _alamatUtama?.alamatLengkap ?? "-",
-                        style: TextStyle(
-                          color: Colors.grey[700],
-                          fontSize: 13,
-                          height: 1.3,
+                        data['nomor_pesanan'] ?? widget.noPesanan,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
                         ),
                       ),
                     ],
                   ),
-            const Divider(height: 35, thickness: 1),
-
-            // --- KURIR ---
-            const Text(
-              "Kurir",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: Colors.grey[200],
-                  child: const Icon(Icons.person, color: Colors.grey),
-                ),
-                const SizedBox(width: 14),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Ricardo Holahilo",
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(status).withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      status,
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        color: _getStatusColor(status),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    SizedBox(height: 2),
-                    Text(
-                      "H 6582 TH",
-                      style: TextStyle(color: Colors.black87, fontSize: 12),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      "SPEX Express",
-                      style: TextStyle(color: Colors.blueGrey, fontSize: 11),
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
-            const Divider(height: 35, thickness: 1),
+            const SizedBox(height: 20),
 
-            // --- TOTAL RINCIAN ---
+            // --- DAFTAR BARANG ---
             const Text(
-              "Total",
+              "Daftar Produk",
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
             const SizedBox(height: 12),
-            _buildRowTotal("Item 1", "x1", "Rp. 50.000, 00"),
-            _buildRowTotal("Item 2", "x1", "Rp. 50.000, 00"),
-            _buildRowTotal("Item 3", "x1", "Rp. 50.000, 00"),
-            _buildRowTotal("Delivery fee", "", "Rp. 20.000, 00"),
-            _buildRowTotal("Protection fee", "", "Rp. 2.000, 00"),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Subtotal",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-                Text(
-                  _formatRupiah(subtotalAkhir),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: items.length,
+                separatorBuilder: (context, index) => const Divider(height: 30),
+                itemBuilder: (context, index) {
+                  var item = items[index];
+                  return Row(
+                    children: [
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                          image: item['gambar'] != null ? DecorationImage(
+                            image: NetworkImage(item['gambar']),
+                            fit: BoxFit.cover,
+                          ) : null,
+                        ),
+                        child: item['gambar'] == null ? const Icon(Icons.shopping_bag_outlined, color: Colors.grey) : null,
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item['nama_barang'] ?? '-',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                            if (item['varian'] != null)
+                              Text(
+                                "Varian: ${item['varian']}",
+                                style: const TextStyle(color: Colors.grey, fontSize: 12),
+                              ),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  "${item['jumlah']} x ${_formatRupiah(item['harga_satuan'] ?? 0)}",
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                Text(
+                                  _formatRupiah((item['harga_satuan'] ?? 0) * (item['jumlah'] ?? 0)),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: Color(0xFFAD510D),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 25),
+
+            // --- METODE PEMBAYARAN ---
+            const Text(
+              "Informasi Pembayaran",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Metode", style: TextStyle(color: Colors.grey, fontSize: 13)),
+                      Text(
+                        (rincian['metode'] != null && rincian['metode'].toString().isNotEmpty) 
+                            ? rincian['metode'].toString().toUpperCase() 
+                            : 'BELUM TERPILIH',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                    ],
                   ),
+                  if (status == 'Belum Dibayar' || status == 'Menunggu Pembayaran') ...[
+                    const Divider(height: 24),
+                    const Text(
+                      "Selesaikan pembayaran Anda segera untuk memproses pesanan ini.",
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PembayaranDetailPage(
+                                data: {
+                                  'metode': rincian['metode'],
+                                  'va_number': rincian['va_number'],
+                                  'qr_url': rincian['qr_url'],
+                                  'bill_key': rincian['bill_key'],
+                                  'bill_code': rincian['bill_code'],
+                                  'order_id': rincian['order_id'],
+                                },
+                                totalBayar: rincian['total'] ?? 0,
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.payment_rounded, size: 18),
+                        label: const Text("Lihat Instruksi Pembayaran"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFAD510D),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 25),
+
+            // --- TUJUAN PENGANTARAN ---
+            if (tujuan != null) ...[
+              const Text(
+                "Tujuan Pengantaran",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
                 ),
-              ],
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      tujuan['nama_penerima'] ?? "-",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      tujuan['alamat_lengkap'] ?? "-",
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontSize: 13,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 25),
+            ],
+
+            // --- KURIR ---
+            if (kurir != null) ...[
+              const Text(
+                "Informasi Kurir",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: Colors.grey[200],
+                      backgroundImage: (kurir['foto_kurir'] != null && kurir['foto_kurir'].toString().isNotEmpty) 
+                          ? NetworkImage(kurir['foto_kurir']) 
+                          : null,
+                      child: (kurir['foto_kurir'] == null || kurir['foto_kurir'].toString().isEmpty) 
+                          ? const Icon(Icons.person, color: Colors.grey) 
+                          : null,
+                    ),
+                    const SizedBox(width: 14),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          kurir['nama_kurir'] ?? "-",
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        if (kurir['ekspedisi'] != null)
+                          Text(
+                            kurir['ekspedisi'],
+                            style: const TextStyle(color: Colors.blueGrey, fontSize: 11),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 25),
+            ],
+
+            // --- TOTAL RINCIAN ---
+            const Text(
+              "Rincian Biaya",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  _buildRowTotal("Subtotal Produk", _formatRupiah(rincian['subtotal_items'] ?? 0)),
+                  const SizedBox(height: 8),
+                  _buildRowTotal("Ongkos Kirim", _formatRupiah(rincian['ongkir'] ?? 0)),
+                  const Divider(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Total Pembayaran",
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      Text(
+                        _formatRupiah(rincian['total'] ?? 0),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Color(0xFFAD510D),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 30),
 
-            // --- TOMBOL LACAK PESANAN ---
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  // Tambahkan fungsionalitas pelacakan kurir/pesanan di sini
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFAD510D),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            // --- TOMBOL AKSI ---
+            if (status == 'Belum Dibayar')
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () async {
+                    // Logika batalkan pesanan
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  elevation: 0,
+                  child: const Text("Batalkan Pesanan"),
                 ),
-                child: const Text(
-                  "Lacak Pesanan",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+              ),
+            
+            if (status == 'Dikirim')
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Fitur Lacak Pesanan segera hadir!")),
+                    );
+                  },
+                  icon: const Icon(Icons.local_shipping_outlined),
+                  label: const Text("Lacak Pesanan"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFAD510D),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildRowTotal(String label, String qty, String price) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: Text(
-              label,
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
-            ),
-          ),
-          Expanded(
-            flex: 1,
-            child: Text(
-              qty,
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
-            ),
-          ),
-          Text(price, style: TextStyle(color: Colors.grey[700], fontSize: 12)),
-        ],
-      ),
+  Widget _buildRowTotal(String label, String price) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(color: Colors.grey, fontSize: 13),
+        ),
+        Text(price, style: const TextStyle(color: Colors.black87, fontSize: 13, fontWeight: FontWeight.w500)),
+      ],
     );
   }
 }
