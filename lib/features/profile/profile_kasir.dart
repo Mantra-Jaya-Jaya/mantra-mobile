@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../../core/models/user_model.dart'; // Sesuaikan dengan path UserModel kamu
-import '../../core/services/kasir_profile_service.dart'; // Sesuaikan dengan path KasirProfileService kamu
-import '../auth/login.dart'; // Sesuaikan dengan path LoginScreen kamu
+import '../../core/models/user_model.dart';
+import '../../core/services/kasir_profile_service.dart';
+import '../auth/login.dart';
+import 'edit_profile_kasir.dart';
+import 'ubah_password.dart';
 
 class ProfileKasir extends StatefulWidget {
   const ProfileKasir({super.key});
@@ -24,6 +26,12 @@ class ProfileKasirState extends State<ProfileKasir> {
 
   void _loadProfile() {
     _profileFuture = _kasirService.getProfil().then((data) => UserModel.fromJson(data));
+  }
+
+  void _refreshProfile() {
+    setState(() {
+      _loadProfile();
+    });
   }
 
   // Dialog konfirmasi logout custom anti-stuck
@@ -319,6 +327,28 @@ class ProfileKasirState extends State<ProfileKasir> {
                                         const Padding(
                                           padding: EdgeInsets.symmetric(horizontal: 22),
                                           child: Text(
+                                            "Username",
+                                            style: TextStyle(color: Colors.grey, fontSize: 13),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 22),
+                                          child: Text(
+                                            user.username.isNotEmpty ? user.username : '-',
+                                            style: const TextStyle(
+                                              color: Color(0xFF000000),
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 14),
+                                        const Divider(color: Color(0xFFBFC9D1), height: 1),
+                                        const SizedBox(height: 12),
+
+                                        const Padding(
+                                          padding: EdgeInsets.symmetric(horizontal: 22),
+                                          child: Text(
                                             "Email",
                                             style: TextStyle(color: Colors.grey, fontSize: 13),
                                           ),
@@ -334,10 +364,111 @@ class ProfileKasirState extends State<ProfileKasir> {
                                             ),
                                           ),
                                         ),
+                                        const SizedBox(height: 14),
+                                        const Divider(color: Color(0xFFBFC9D1), height: 1),
+                                        const SizedBox(height: 12),
+
+                                        const Padding(
+                                          padding: EdgeInsets.symmetric(horizontal: 22),
+                                          child: Text(
+                                            "No. Telepon",
+                                            style: TextStyle(color: Colors.grey, fontSize: 13),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 22),
+                                          child: Text(
+                                            user.noTelp.isNotEmpty ? user.noTelp : '-',
+                                            style: const TextStyle(
+                                              color: Color(0xFF000000),
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 14),
+                                        const Divider(color: Color(0xFFBFC9D1), height: 1),
+                                        const SizedBox(height: 12),
+
+                                        const Padding(
+                                          padding: EdgeInsets.symmetric(horizontal: 22),
+                                          child: Text(
+                                            "Alamat",
+                                            style: TextStyle(color: Colors.grey, fontSize: 13),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 22),
+                                          child: Text(
+                                            user.alamat.isNotEmpty ? user.alamat : '-',
+                                            style: const TextStyle(
+                                              color: Color(0xFF000000),
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
                                   
+                                  // Tombol Edit Profil
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 38),
+                                    child: OutlinedButton.icon(
+                                      onPressed: () async {
+                                        final result = await Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const EditProfileKasir(),
+                                          ),
+                                        );
+                                        if (result == true) _refreshProfile();
+                                      },
+                                      icon: const Icon(Icons.edit_outlined, color: Color(0xFFAF510C)),
+                                      label: const Text(
+                                        "Edit Profil",
+                                        style: TextStyle(color: Color(0xFFAF510C), fontSize: 16, fontWeight: FontWeight.bold),
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                        minimumSize: const Size(double.infinity, 50),
+                                        side: const BorderSide(color: Color(0xFFAF510C), width: 1.5),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Tombol Ubah Password
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 38),
+                                    child: OutlinedButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const UbahPassword(),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.lock_outline, color: Color(0xFFAF510C)),
+                                      label: const Text(
+                                        "Ubah Password",
+                                        style: TextStyle(color: Color(0xFFAF510C), fontSize: 16, fontWeight: FontWeight.bold),
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                        minimumSize: const Size(double.infinity, 50),
+                                        side: const BorderSide(color: Color(0xFFAF510C), width: 1.5),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+
                                   // Memanggil Tombol Keluar Akun
                                   _buildLogoutButton(),
                                 ],

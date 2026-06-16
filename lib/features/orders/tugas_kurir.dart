@@ -15,21 +15,23 @@ class _TugasKurirPageState extends State<TugasKurirPage> {
   // State untuk toggle tab (true = Pengantaran, false = Selesai)
   bool _isPengantaran = true;
 
-  // 🚀 Bikin variabel Future buat nampung tarikan data API
   late Future<List<PengantaranModel>> _pengantaranFuture;
 
   @override
   void initState() {
     super.initState();
-    // 🚀 Tarik data dari API saat halaman pertama kali dibuka
-    _pengantaranFuture = PengantaranService().getDaftarPengantaran();
+    _fetchData();
   }
 
-  // 🚀 Fungsi buat nge-refresh data kalau ditarik ke bawah (opsional, tapi best practice)
-  Future<void> _refreshData() async {
+  void _fetchData() {
+    final filter = _isPengantaran ? "aktif" : "selesai";
     setState(() {
-      _pengantaranFuture = PengantaranService().getDaftarPengantaran();
+      _pengantaranFuture = PengantaranService().getDaftarPengantaran(status: filter);
     });
+  }
+
+  Future<void> _refreshData() async {
+    _fetchData();
   }
 
   @override
@@ -62,7 +64,10 @@ class _TugasKurirPageState extends State<TugasKurirPage> {
                   // Tombol Pengantaran
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => setState(() => _isPengantaran = true),
+                      onTap: () {
+                        setState(() => _isPengantaran = true);
+                        _fetchData();
+                      },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 250),
                         curve: Curves.easeInOut,
@@ -90,7 +95,10 @@ class _TugasKurirPageState extends State<TugasKurirPage> {
                   // Tombol Selesai
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => setState(() => _isPengantaran = false),
+                      onTap: () {
+                        setState(() => _isPengantaran = false);
+                        _fetchData();
+                      },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 250),
                         curve: Curves.easeInOut,
@@ -178,19 +186,9 @@ class _TugasKurirPageState extends State<TugasKurirPage> {
                           );
                         }
 
-                        // 🚀 4. DATANYA ADA! Sekarang kita filter sesuai tab yang dipencet
-                        final allData = snapshot.data!;
-                        final filteredData = allData.where((item) {
-                          if (_isPengantaran) {
-                            // Tab Pengantaran: Tampilkan yang statusnya BUKAN Selesai
-                            return item.status.toLowerCase() != 'selesai';
-                          } else {
-                            // Tab Selesai: Tampilkan KHUSUS yang statusnya Selesai
-                            return item.status.toLowerCase() == 'selesai';
-                          }
-                        }).toList();
+                        // 🚀 4. DATANYA ADA! Langsung tampilkan (backend sudah filter sesuai tab)
+                        final filteredData = snapshot.data!;
 
-                        // 5. Cek lagi kalau setelah difilter ternyata kosong
                         if (filteredData.isEmpty) {
                           return Center(
                             child: Text(
@@ -205,7 +203,7 @@ class _TugasKurirPageState extends State<TugasKurirPage> {
                           );
                         }
 
-                        // 6. Kalau datanya ada, tampilkan di ListView!
+                        // 5. Kalau datanya ada, tampilkan di ListView!
                         return ListView.builder(
                           padding: const EdgeInsets.only(
                             top: 24,
