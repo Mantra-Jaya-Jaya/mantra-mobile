@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/models/user_model.dart'; // Sesuaikan dengan path UserModel kamu
 import '../../core/services/kasir_profile_service.dart'; // Sesuaikan dengan path KasirProfileService kamu
 import '../auth/login.dart'; // Sesuaikan dengan path LoginScreen kamu
@@ -15,6 +17,8 @@ class ProfileKasirState extends State<ProfileKasir> {
   final KasirProfileService _kasirService = KasirProfileService();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   late Future<UserModel> _profileFuture;
+  final ImagePicker _picker = ImagePicker();
+  bool _isUploading = false;
 
   @override
   void initState() {
@@ -24,6 +28,81 @@ class ProfileKasirState extends State<ProfileKasir> {
 
   void _loadProfile() {
     _profileFuture = _kasirService.getProfil().then((data) => UserModel.fromJson(data));
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 50,
+      );
+
+      if (image == null) return;
+
+      setState(() {
+        _isUploading = true;
+      });
+
+      // 1. Upload ke server storage
+      final String imageUrl = await _kasirService.uploadFoto(File(image.path));
+
+      // 2. Update field foto_profil di database
+      await _kasirService.updateProfil(fotoProfil: imageUrl);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Foto profil berhasil diperbarui")),
+      );
+
+      // 3. Refresh data profil
+      setState(() {
+        _isUploading = false;
+        _loadProfile();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isUploading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Gagal memperbarui foto profil: $e")),
+      );
+    }
+  }
+
+  void _showFullScreenImage(String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: InteractiveViewer(
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  width: double.infinity,
+                  height: double.infinity,
+                ),
+              ),
+            ),
+            Positioned(
+              top: 40,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // Dialog konfirmasi logout custom anti-stuck
@@ -246,23 +325,55 @@ class ProfileKasirState extends State<ProfileKasir> {
                                     ),
                                   ),
                                   
-                                  // Foto Profil
-                                  Container(
-                                    margin: const EdgeInsets.only(bottom: 23),
-                                    width: 85,
-                                    height: 83,
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(40),
-                                      child: Image.network(
-                                        (user.fotoProfil != null && user.fotoProfil!.isNotEmpty)
-                                            ? user.fotoProfil!
-                                            : "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/I5ymBTe5W6/n8ic1gkq_expires_30_days.png",
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return const Icon(Icons.account_circle, size: 85, color: Colors.grey);
+                                  // Foto Profil dengan Tombol Edit & Fitur Lihat Foto
+                                  Stack(
+                                    children: [
+                                      GestureDetector(
+                                        onTap: () {
+                                          if (user.fotoProfil != null && user.fotoProfil!.isNotEmpty) {
+                                            _showFullScreenImage(user.fotoProfil!);
+                                          }
                                         },
+                                        child: Container(
+                                          margin: const EdgeInsets.only(bottom: 23),
+                                          width: 85,
+                                          height: 83,
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(40),
+                                            child: _isUploading 
+                                              ? const Center(child: CircularProgressIndicator(color: Color(0xFFAF510C)))
+                                              : Image.network(
+                                                  (user.fotoProfil != null && user.fotoProfil!.isNotEmpty)
+                                                      ? "${user.fotoProfil}${user.fotoProfil!.contains('?') ? '&' : '?'}t=${DateTime.now().millisecondsSinceEpoch}"
+                                                      : "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/I5ymBTe5W6/n8ic1gkq_expires_30_days.png",
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error, stackTrace) {
+                                                    return const Icon(Icons.account_circle, size: 85, color: Colors.grey);
+                                                  },
+                                                ),
+                                          ),
+                                        ),
                                       ),
-                                    ),
+                                      Positioned(
+                                        bottom: 20,
+                                        right: 0,
+                                        child: GestureDetector(
+                                          onTap: _isUploading ? null : _pickAndUploadImage,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: const BoxDecoration(
+                                              color: Color(0xFFAF510C),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.camera_alt,
+                                              color: Colors.white,
+                                              size: 18,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   
                                   // Informasi Akun Card
