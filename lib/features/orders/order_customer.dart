@@ -120,7 +120,7 @@ class _MyOrderPageState extends State<MyOrderPage> {
               children: [
                 _buildTabItem("Semua"),
                 _buildTabItem("Belum Dibayar"),
-                _buildTabItem("Diproses"),
+                _buildTabItem("Dikemas"),
                 _buildTabItem("Dikirim"),
                 _buildTabItem("Selesai"),
                 _buildTabItem("Dibatalkan"),
@@ -137,7 +137,7 @@ class _MyOrderPageState extends State<MyOrderPage> {
                     final filteredOrders = selectedStatus == "Semua"
                         ? _orders
                         : _orders.where((order) {
-                            final String status = (order['status'] ?? '').toString();
+                            final String status = (order['nama_status_pesanan'] ?? '').toString();
                             return status == selectedStatus;
                           }).toList();
 
@@ -211,7 +211,7 @@ class _MyOrderPageState extends State<MyOrderPage> {
       case 'belum dibayar':
       case 'menunggu pembayaran':
         return Colors.orange;
-      case 'diproses':
+      case 'dikemas':
         return Colors.blue;
       case 'dikirim':
         return Colors.purple;
@@ -224,8 +224,8 @@ class _MyOrderPageState extends State<MyOrderPage> {
 
   Widget _buildOrderCardFromData(Map<String, dynamic> order) {
     final String publicId = order['id_pesanan'] ?? '-';
-    final String nomorPesanan = order['nomor_pesanan'] ?? publicId;
-    final String statusAsli = order['status'] ?? 'Belum Dibayar';
+    final String nomorPesanan = order['id_pesanan'] ?? publicId;
+    final String statusAsli = order['nama_status_pesanan'] ?? 'Belum Dibayar';
     final int totalBayar = order['total_bayar'] ?? 0;
     final List items = order['items'] ?? [];
     final int itemCount = items.length;
@@ -237,9 +237,9 @@ class _MyOrderPageState extends State<MyOrderPage> {
         : (items.isNotEmpty ? [items[0]] : []);
 
     String tanggalStr = "-";
-    if (order['tanggal_pesanan'] != null) {
+    if (order['tanggal_pesan'] != null) {
       try {
-        final rawDateStr = order['tanggal_pesanan'].toString();
+        final rawDateStr = order['tanggal_pesan'].toString();
         final date = DateTime.parse(rawDateStr);
         tanggalStr = DateFormat('dd MMMM yyyy', 'id_ID').format(date);
       } catch (error) {

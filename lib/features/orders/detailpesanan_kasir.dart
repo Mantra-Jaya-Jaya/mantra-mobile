@@ -131,7 +131,7 @@ class DetailPesananState extends State<DetailPesanan> {
         : idAsli;
 
     final List items   = data['items'] ?? [];
-    final String status     = data['status'] ?? 'Diproses';
+    final String status     = data['nama_status_pesanan'] ?? 'Dikemas';
     final String totalBayar = _formatRupiah(data['total_bayar'] ?? 0);
     const String metode     = "Tunai (Kasir)";
 
