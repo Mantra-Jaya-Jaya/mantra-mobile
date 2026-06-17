@@ -160,13 +160,22 @@ class _CheckoutState extends State<Checkout> {
     setState(() => _isSubmitting = true);
 
     try {
+      final items = widget.selectedProducts.map((item) => {
+        return {
+          'id_spesifikasi_barang': item['id_spesifikasi_barang'] ?? item['id'],
+          'quantity': item['quantity'],
+        };
+      }).toList();
+
       final result = await _checkoutService.checkout(
         idAlamat: _alamatDipilih!['public_id'] ?? _alamatDipilih!['id_alamat'],
+        items: items,
         idEkspedisi: _ekspedisiDipilih!['id_ekspedisi'],
         idLayananEkspedisi: _layananDipilih!['id_layanan_ekspedisi'],
         ongkosKirim: _layananDipilih!['harga'],
         catatan: _catatanController.text,
         idMetodePembayaran: _pembayaranDipilih!['id_metode_pembayaran'],
+        idTipeKurir: 2,
       );
 
       final data = result['data'];
