@@ -112,14 +112,17 @@ class PaymentService {
     required String metode, // 🚀 BISA DIISI "qris", "bca", "bni", dll
   }) async {
     try {
+      print("🚀 Memulai bayarNonTunai: idPesanan=$idPesanan, metode=$metode");
       final response = await _apiClient.dio.post(
         '/kasir/transaksi/bayar/non-tunai',
         data: {
           'id_pesanan': idPesanan,
-          'metode': metode, // 🚀 NGIRIM METODE KE GOLANG
+          'metode': metode,
         },
         options: Options(headers: {'Content-Type': 'application/json'}),
       );
+
+      print("✅ Response bayarNonTunai: ${response.data}");
 
       if (response.statusCode == 200) {
         return HasilBayarNonTunai.fromJson(response.data);
@@ -129,6 +132,7 @@ class PaymentService {
         );
       }
     } on DioException catch (e) {
+      print("❌ Error Dio bayarNonTunai: ${e.response?.data}");
       throw Exception(
         e.response?.data['message'] ??
             'Terjadi kesalahan saat memproses pembayaran',

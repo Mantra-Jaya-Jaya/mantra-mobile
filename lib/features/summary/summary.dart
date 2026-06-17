@@ -123,7 +123,7 @@ Future<void> _fetchLaporanData() async {
   Widget _buildPendapatanCard() {
     final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
     final isPositive = _data!.persentasePendapatan >= 0;
-    final badgeText = "${isPositive ? '+' : ''}${_data!.persentasePendapatan.toStringAsFixed(1)}%";
+    final badgeText = "${isPositive ? '+' : '-'}${currencyFormat.format(_data!.persentasePendapatan.abs())}";
     final badgeBg = isPositive ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2);
     final badgeColor = isPositive ? const Color(0xFF15803D) : const Color(0xFFB91C1C);
     final badgeIcon = isPositive ? Icons.trending_up : Icons.trending_down;
@@ -223,9 +223,9 @@ Future<void> _fetchLaporanData() async {
   }
 
   Widget _buildSmallStatRow() {
-    final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+     final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0); // ← tambah ini
     final isTxPositive = _data!.persentaseTransaksi >= 0;
-    final txBadgeText = "${isTxPositive ? '+' : ''}${_data!.persentaseTransaksi}%";
+    final txBadgeText = "${isTxPositive ? '+' : '-'}${currencyFormat.format(_data!.persentaseTransaksi.abs())}";
     final txBadgeBg = isTxPositive ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2);
     final txBadgeColor = isTxPositive ? const Color(0xFF15803D) : const Color(0xFFB91C1C);
 

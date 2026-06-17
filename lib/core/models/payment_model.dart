@@ -161,22 +161,28 @@ class HasilBayarNonTunai {
   final String metode;
   final String? qrUrl;
   final String? vaNumber;
+  final String? billKey;  // 🚀 Tambahan buat Mandiri
+  final String? billCode; // 🚀 Tambahan buat Mandiri
 
   HasilBayarNonTunai({
     required this.orderId,
     required this.metode,
     this.qrUrl,
     this.vaNumber,
+    this.billKey,
+    this.billCode,
   });
 
   factory HasilBayarNonTunai.fromJson(Map<String, dynamic> json) {
     final data = json['data'] ?? {};
 
     return HasilBayarNonTunai(
-      orderId: data['order_id'] ?? '',
-      metode: data['metode'] ?? '',
+      orderId: (data['order_id'] ?? '').toString(),
+      metode: (data['metode'] ?? '').toString(),
       qrUrl: data['qr_url'],
       vaNumber: data['va_number'],
+      billKey: data['bill_key'],
+      billCode: data['bill_code'],
     );
   }
 }

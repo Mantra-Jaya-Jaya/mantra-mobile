@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'features/landing_page/landing_page.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'core/network/api_client.dart';
+import 'core/services/push_notification_service.dart';
 
 final RouteObserver<Route> routeObserver = RouteObserver<Route>();
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -9,6 +10,9 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id_ID', null);
+
+  await PushNotificationService.initialize();
+  PushNotificationService.startPolling();
 
   ApiClient.setOnUnauthorized(() {
     navigatorKey.currentState?.pushAndRemoveUntil(

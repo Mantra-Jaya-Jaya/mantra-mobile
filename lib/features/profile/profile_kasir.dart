@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/models/user_model.dart';
 import '../../core/services/kasir_profile_service.dart';
 import '../../core/widgets/global_appbar_kurir.dart';
@@ -18,6 +20,8 @@ class ProfileKasirState extends State<ProfileKasir> {
   final KasirProfileService _kasirService = KasirProfileService();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   late Future<UserModel> _profileFuture;
+  final ImagePicker _picker = ImagePicker();
+  bool _isUploading = false;
 
   @override
   void initState() {
@@ -29,12 +33,83 @@ class ProfileKasirState extends State<ProfileKasir> {
     _profileFuture = _kasirService.getProfil().then((data) => UserModel.fromJson(data));
   }
 
+  Future<void> _pickAndUploadImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 50,
+      );
+
+      if (image == null) return;
+
+      setState(() {
+        _isUploading = true;
+      });
+
+      final String imageUrl = await _kasirService.uploadFoto(File(image.path));
+
+      await _kasirService.updateProfil(fotoProfil: imageUrl);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Foto profil berhasil diperbarui")),
+      );
+
+      setState(() {
+        _isUploading = false;
+        _loadProfile();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isUploading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Gagal memperbarui foto profil: $e")),
+      );
+    }
+  }
+
+  void _showFullScreenImage(String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: InteractiveViewer(
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  width: double.infinity,
+                  height: double.infinity,
+                ),
+              ),
+            ),
+            Positioned(
+              top: 40,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _refreshProfile() {
     setState(() {
       _loadProfile();
     });
   }
-
   void _showLogoutDialog() {
     showDialog(
       context: context,
@@ -259,32 +334,64 @@ class ProfileKasirState extends State<ProfileKasir> {
                         ),
                         child: Column(
                           children: [
-                            Container(
-                              width: 90,
-                              height: 90,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFAD510D).withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: const Color(0xFFAD510D).withValues(alpha: 0.3),
-                                  width: 2,
+                            Stack(
+                              children: [
+                                Container(
+                                  width: 90,
+                                  height: 90,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFAD510D).withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: const Color(0xFFAD510D).withValues(alpha: 0.3),
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(18),
+                                    child: _isUploading
+                                        ? const Center(child: CircularProgressIndicator(color: Color(0xFFAF510C)))
+                                        : GestureDetector(
+                                            onTap: () {
+                                              if (user.fotoProfil != null && user.fotoProfil!.isNotEmpty) {
+                                                _showFullScreenImage(user.fotoProfil!);
+                                              }
+                                            },
+                                            child: Image.network(
+                                              (user.fotoProfil != null && user.fotoProfil!.isNotEmpty)
+                                                  ? "${user.fotoProfil}${user.fotoProfil!.contains('?') ? '&' : '?'}t=${DateTime.now().millisecondsSinceEpoch}"
+                                                  : "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/I5ymBTe5W6/n8ic1gkq_expires_30_days.png",
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) =>
+                                                  const Icon(
+                                                    Icons.person_outline,
+                                                    size: 50,
+                                                    color: Color(0xFFAD510D),
+                                                  ),
+                                            ),
+                                          ),
+                                  ),
                                 ),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(18),
-                                child: Image.network(
-                                  (user.fotoProfil != null && user.fotoProfil!.isNotEmpty)
-                                      ? user.fotoProfil!
-                                      : "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/I5ymBTe5W6/n8ic1gkq_expires_30_days.png",
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(
-                                        Icons.person_outline,
-                                        size: 50,
-                                        color: Color(0xFFAD510D),
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: GestureDetector(
+                                    onTap: _isUploading ? null : _pickAndUploadImage,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFAF510C),
+                                        shape: BoxShape.circle,
                                       ),
+                                      child: const Icon(
+                                        Icons.camera_alt,
+                                        color: Colors.white,
+                                        size: 16,
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              ),
+                              ],
                             ),
                             const SizedBox(height: 32),
                             Container(
@@ -307,10 +414,6 @@ class ProfileKasirState extends State<ProfileKasir> {
                                         color: Colors.black87,
                                       ),
                                     ),
-                                  ),
-                                  Divider(
-                                    height: 1,
-                                    color: Colors.grey.shade200,
                                   ),
                                   _buildInfoItem('Nama Lengkap', user.namaLengkap.isNotEmpty ? user.namaLengkap : 'Kasir'),
                                   _buildInfoItem('Username', user.username.isNotEmpty ? user.username : '-'),

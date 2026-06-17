@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import '../network/api_client.dart';
 
 class NotifikasiModel {
@@ -6,21 +5,32 @@ class NotifikasiModel {
   final String judul;
   final String pesan;
   final String status;
+  final DateTime? createdAt;
 
   NotifikasiModel({
     required this.idNotifikasi,
     required this.judul,
     required this.pesan,
     required this.status,
+    this.createdAt,
   });
 
   factory NotifikasiModel.fromJson(Map<String, dynamic> json) {
+    // Backend mengirim status dalam objek nested: status_notifikasi -> nama_status
+    String statusName = 'unread';
+    if (json['status_notifikasi'] != null &&
+        json['status_notifikasi']['nama_status'] != null) {
+      statusName = json['status_notifikasi']['nama_status'];
+    }
+
     return NotifikasiModel(
-      // Pastikan key JSON di sini sama persis dengan yang dikirim backend
       idNotifikasi: json['id_notifikasi'] ?? 0,
       judul: json['judul'] ?? 'Tanpa Judul',
       pesan: json['pesan'] ?? '',
-      status: json['status'] ?? 'unread',
+      status: statusName,
+      createdAt: json['created_at'] != null 
+          ? DateTime.tryParse(json['created_at']) 
+          : null,
     );
   }
 }
@@ -43,7 +53,7 @@ class NotifikasiService {
         final dynamic rawData = response.data['data'];
         
         if (rawData != null && rawData is List) {
-          return (rawData as List)
+          return rawData
               .map((json) => NotifikasiModel.fromJson(json))
               .toList();
         }

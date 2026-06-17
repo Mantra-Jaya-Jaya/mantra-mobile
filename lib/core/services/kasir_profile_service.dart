@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:dio/dio.dart';
 import '../network/api_client.dart';
 
 class KasirProfileService {
@@ -9,6 +11,21 @@ class KasirProfileService {
   Future<Map<String, dynamic>> getProfil() async {
     final response = await _client.dio.get('/kasir/profil'); 
     return response.data['data'];
+  }
+
+  /// Mengunggah foto profil
+  Future<String> uploadFoto(File file) async {
+    String fileName = file.path.split('/').last;
+    FormData formData = FormData.fromMap({
+      "foto": await MultipartFile.fromFile(file.path, filename: fileName),
+    });
+
+    final response = await _client.dio.post(
+      '/admin/karyawan/upload',
+      data: formData,
+    );
+
+    return response.data['url'];
   }
 
   /// Memperbarui profil kasir

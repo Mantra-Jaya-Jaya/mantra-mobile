@@ -114,6 +114,15 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
 
   Future<void> _prosesBayarNonTunai() async {
     if (_syncing) return;
+    print("DEBUG: Memulai proses non-tunai. ID: ${widget.idPesanan}, Total: $_subtotal, Metode: $_selectedMetode");
+    
+    if (_subtotal <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Total bayar tidak boleh nol.")),
+      );
+      return;
+    }
+
     setState(() => _loadingBayar = true);
     try {
       // 🚀 1. Kirim parameter metode ke backend
@@ -133,17 +142,24 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
             metode: hasil.metode,
             qrUrl: hasil.qrUrl,
             vaNumber: hasil.vaNumber,
+            billKey: hasil.billKey,   // 🚀 Tambahan
+            billCode: hasil.billCode, // 🚀 Tambahan
             totalAkhir: _subtotal,
             publicId: _publicId ?? "",
           ),
         ),
       );
     } catch (e) {
+      String errMsg = e.toString();
+      if (errMsg.contains('400')) errMsg = "Gagal: Total bayar tidak valid atau Order ID duplikat.";
+      if (errMsg.contains('500')) errMsg = "Server Error: Pastikan Server Key Midtrans sudah benar.";
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString()),
+          content: Text(errMsg),
           backgroundColor: _K.orangeDark,
-        ), // 🚀 Warnanya coklat gelap, bukan merah
+          duration: const Duration(seconds: 4),
+        ),
       );
     } finally {
       if (mounted) setState(() => _loadingBayar = false);
