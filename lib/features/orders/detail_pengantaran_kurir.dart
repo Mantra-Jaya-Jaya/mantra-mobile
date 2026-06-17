@@ -172,13 +172,17 @@ class _DetailPesananPageState extends State<DetailPesananPage> {
                                   decoration: BoxDecoration(
                                     color: widget.isSedangDiantar
                                         ? const Color(0xFFAD510D)
+                                        : widget.isSelesai
+                                        ? Colors.green
                                         : const Color(0xFF5B6B76),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
-                                    widget.isSedangDiantar
-                                        ? 'SEDANG DIANTAR'
-                                        : 'BELUM DITERIMA',
+                                    widget.isSelesai
+                                        ? 'Selesai'
+                                        : widget.isSedangDiantar
+                                        ? 'Diantar'
+                                        : 'Menunggu',
                                     style: const TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
@@ -686,10 +690,11 @@ class _DetailPesananPageState extends State<DetailPesananPage> {
                                       ScaffoldMessenger.of(
                                         context,
                                       ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Gagal! Pesanan mungkin sudah diambil kurir lain.',
+                                        SnackBar(
+                                          content: const Text(
+                                            'Gagal menerima pesanan. Coba lagi.',
                                           ),
+                                          duration: const Duration(seconds: 3),
                                         ),
                                       );
                                     }

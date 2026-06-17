@@ -21,12 +21,28 @@ class PengantaranModel {
     required this.totalPendapatan,
   });
 
+  String get statusLabel {
+    switch (status.toLowerCase()) {
+      case 'menunggu pickup':
+        return 'Menunggu';
+      case 'dalam perjalanan':
+        return 'Diantar';
+      case 'tiba di tujuan':
+        return 'Tiba';
+      case 'selesai':
+        return 'Selesai';
+      case 'gagal antar':
+        return 'Gagal';
+      default:
+        return status;
+    }
+  }
+
   factory PengantaranModel.fromJson(Map<String, dynamic> json) {
     return PengantaranModel(
-      // 🚀 SEKARANG DATANYA DIAMBIL LANGSUNG KARENA JSON-NYA UDAH FLAT (DTO)
       publicId: json['public_id'] ?? '',
-      status: json['status'] ?? 'MENUNGGU',
-      ekspedisi: json['ekspedisi'] ?? 'Internal / Belum Ada',
+      status: json['status'] ?? 'Menunggu',
+      ekspedisi: json['ekspedisi'] ?? 'Internal',
       waktuPickup: json['waktu_pickup'],
       waktuSampai: json['waktu_sampai'],
       namaCustomer: json['nama_customer'] ?? 'Customer',

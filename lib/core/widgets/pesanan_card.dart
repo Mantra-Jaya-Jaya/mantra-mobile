@@ -371,10 +371,11 @@ class PesananCard extends StatelessWidget {
                                       ScaffoldMessenger.of(
                                         mainContext,
                                       ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Gagal! Pesanan mungkin sudah diambil kurir lain.',
+                                        SnackBar(
+                                          content: const Text(
+                                            'Gagal menerima pesanan. Coba lagi.',
                                           ),
+                                          duration: const Duration(seconds: 3),
                                         ),
                                       );
                                     }
@@ -425,9 +426,9 @@ class PesananCard extends StatelessWidget {
         // 🚀 Kopi Paste Auto-Redirect Lu! Otomatis pindah setelah 2 detik!
         Future.delayed(const Duration(seconds: 2), () {
           if (mainContext.mounted) {
-            Navigator.pop(dialogContext); // Tutup dialog
-            Navigator.push(
-              mainContext, // Push pakai context utama
+            Navigator.pop(dialogContext);
+            Navigator.pushReplacement(
+              mainContext,
               MaterialPageRoute(
                 builder: (context) => RutePengantaranPage(idPengantaran: newId),
               ),
