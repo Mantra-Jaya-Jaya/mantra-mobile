@@ -23,6 +23,8 @@ class BayarNonTunaiScreen extends StatefulWidget {
   final String metode;
   final String? qrUrl;
   final String? vaNumber;
+  final String? billKey;  // 🚀 Tambahan Mandiri
+  final String? billCode; // 🚀 Tambahan Mandiri
   final int totalAkhir;
   final String publicId;
 
@@ -32,6 +34,8 @@ class BayarNonTunaiScreen extends StatefulWidget {
     required this.metode,
     this.qrUrl,
     this.vaNumber,
+    this.billKey,
+    this.billCode,
     required this.totalAkhir,
     required this.publicId,
   });
@@ -47,21 +51,30 @@ class _BayarNonTunaiScreenState extends State<BayarNonTunaiScreen> {
     decimalDigits: 0,
   );
   Timer? _visualTimer;
+  Timer? _statusTimer; // 🚀 Timer buat nge-cek status otomatis
   final PaymentService _paymentService = PaymentService();
 
   int _countdown = 900; // Standar Midtrans 15 Menit (900 detik)
   bool _isChecking = false; // Buat loading tombol cek status
+  bool _isSuccess = false; // Mencegah multiple navigasi
 
   @override
   void initState() {
     super.initState();
 
-    // Murni buat ngurangin angka jam di layar, GAK NGE-HIT API
+    // 1. Murni buat ngurangin angka jam di layar, GAK NGE-HIT API
     _visualTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_countdown > 0) {
         setState(() => _countdown--);
       } else {
         timer.cancel();
+      }
+    });
+
+    // 2. 🚀 POLLING OTOMATIS: Cek status tiap 5 detik biar kasir gak capek klik
+    _statusTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (!_isChecking && !_isSuccess) {
+        _cekStatusOtomatis();
       }
     });
 
@@ -79,11 +92,27 @@ class _BayarNonTunaiScreenState extends State<BayarNonTunaiScreen> {
   @override
   void dispose() {
     _visualTimer?.cancel();
+    _statusTimer?.cancel(); // 🚀 Jangan lupa dimatiin timernya
     super.dispose();
+  }
+
+  // 🚀 LOGIC BARU: CEK STATUS OTOMATIS (DI-HIT TIMER)
+  Future<void> _cekStatusOtomatis() async {
+    try {
+      final hasil = await _paymentService.cekStatusPembayaran(widget.orderId);
+      if (hasil.isLunas && !_isSuccess && mounted) {
+        _isSuccess = true;
+        _statusTimer?.cancel();
+        _keSukses(widget.metode);
+      }
+    } catch (e) {
+      print("Polling status error: $e");
+    }
   }
 
   // 🚀 LOGIC BARU: CEK STATUS MANUAL (Ditekan sama Kasir)
   Future<void> _cekStatusManual() async {
+    if (_isSuccess) return;
     setState(() => _isChecking = true);
 
     try {
@@ -93,6 +122,8 @@ class _BayarNonTunaiScreenState extends State<BayarNonTunaiScreen> {
       if (!mounted) return;
 
       if (hasil.isLunas) {
+        _isSuccess = true;
+        _statusTimer?.cancel();
         _keSukses(widget.metode);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -148,9 +179,14 @@ class _BayarNonTunaiScreenState extends State<BayarNonTunaiScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isQris =
-        widget.metode.toLowerCase() == 'qris' ||
-        widget.metode.toLowerCase() == 'gopay';
+    final cleanMetode = widget.metode.toLowerCase();
+    final isQris = cleanMetode == 'qris' || cleanMetode == 'gopay';
+    final isMandiri = cleanMetode == 'mandiri';
+    
+    // Cek apakah data instruksi ada (antisipasi string kosong dari backend)
+    final bool hasQr = isQris && widget.qrUrl != null && widget.qrUrl!.isNotEmpty;
+    final bool hasVa = !isQris && !isMandiri && widget.vaNumber != null && widget.vaNumber!.isNotEmpty;
+    final bool hasMandiri = isMandiri && widget.billKey != null && widget.billCode != null;
 
     return Scaffold(
       backgroundColor: _K.grey100,
@@ -209,8 +245,8 @@ class _BayarNonTunaiScreenState extends State<BayarNonTunaiScreen> {
                   const Divider(color: _K.grey300, thickness: 1),
                   const SizedBox(height: 16),
 
-                  // ── Area QRIS / VA ──
-                  if (isQris && widget.qrUrl != null) ...[
+                  // ── Area QRIS / VA / MANDIRI ──
+                  if (hasQr) ...[
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -236,7 +272,7 @@ class _BayarNonTunaiScreenState extends State<BayarNonTunaiScreen> {
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 12, color: _K.grey600),
                     ),
-                  ] else if (!isQris && widget.vaNumber != null) ...[
+                  ] else if (hasVa) ...[
                     // Tampilan Virtual Account
                     Container(
                       width: double.infinity,
@@ -257,8 +293,6 @@ class _BayarNonTunaiScreenState extends State<BayarNonTunaiScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
-
-                          // 🚀 SOLUSI OVERFLOW: Dibungkus Expanded & FittedBox
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -291,11 +325,28 @@ class _BayarNonTunaiScreenState extends State<BayarNonTunaiScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Salin nomor di atas dan transfer sesuai nominal Total Akhir.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12, color: _K.grey600),
+                  ] else if (hasMandiri) ...[
+                    // Tampilan Mandiri Bill
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: _K.orangeLight.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: _K.orange.withOpacity(0.5)),
+                      ),
+                      child: Column(
+                        children: [
+                          const Text(
+                            'Mandiri Bill Payment',
+                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: _K.orangeDark),
+                          ),
+                          const SizedBox(height: 12),
+                          _rowMandiri('Bill Key', widget.billKey!),
+                          const SizedBox(height: 8),
+                          _rowMandiri('Bill Code', widget.billCode!),
+                        ],
+                      ),
                     ),
                   ] else ...[
                     const Icon(
@@ -305,7 +356,8 @@ class _BayarNonTunaiScreenState extends State<BayarNonTunaiScreen> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Gagal memuat instruksi pembayaran',
+                      'Gagal memuat instruksi pembayaran. Pastikan Server Key Midtrans valid.',
+                      textAlign: TextAlign.center,
                       style: TextStyle(color: _K.red),
                     ),
                   ],
@@ -396,6 +448,26 @@ class _BayarNonTunaiScreenState extends State<BayarNonTunaiScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _rowMandiri(String label, String value) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: const TextStyle(fontSize: 11, color: _K.grey600)),
+              Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _K.black)),
+            ],
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.copy_rounded, color: _K.orange, size: 20),
+          onPressed: () => _copyToClipboard(value),
+        ),
+      ],
     );
   }
 }

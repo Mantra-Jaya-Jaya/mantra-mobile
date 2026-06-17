@@ -26,14 +26,18 @@ class AktivitasItem {
 class DashboardKasirData {
   final String namaKasir;
   final int totalPendapatan;
+  final int totalPendapatanBersih;
   final int jumlahTransaksi;
+  final int jumlahTransaksiSelesai;
   final int totalItemTerjual;
   final List<AktivitasItem> aktivitasTerkini;
 
   DashboardKasirData({
     required this.namaKasir,
     required this.totalPendapatan,
+    required this.totalPendapatanBersih,
     required this.jumlahTransaksi,
+    required this.jumlahTransaksiSelesai,
     required this.totalItemTerjual,
     required this.aktivitasTerkini,
   });
@@ -46,7 +50,9 @@ class DashboardKasirData {
     return DashboardKasirData(
       namaKasir: user['nama_kasir'] ?? 'Kasir',
       totalPendapatan: statistik['total_pendapatan'] ?? 0,
+      totalPendapatanBersih: statistik['total_pendapatan_bersih'] ?? 0,
       jumlahTransaksi: statistik['jumlah_transaksi'] ?? 0,
+      jumlahTransaksiSelesai: statistik['jumlah_transaksi_selesai'] ?? 0,
       totalItemTerjual: statistik['total_item_terjual'] ?? 0,
       aktivitasTerkini:
           aktivitas.map((e) => AktivitasItem.fromJson(e)).toList(),

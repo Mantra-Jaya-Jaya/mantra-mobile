@@ -92,31 +92,8 @@ class DetailPesananState extends State<DetailPesanan> {
       );
     }
 
-    // ── Logika asli (tidak diubah) ───────────────────────
-    dynamic rawData = detailData;
-    Map<String, dynamic>? data;
-
-    List<dynamic> listPesanan = [];
-    if (rawData is Map && rawData.containsKey('data')) {
-      listPesanan = rawData['data'] as List<dynamic>;
-    } else if (rawData is List) {
-      listPesanan = rawData;
-    }
-
-    print("DEBUG: Mencari ID: ${widget.publicId}");
-    for (var item in listPesanan) {
-      print("DEBUG: Ada ID di server: ${item['id_pesanan']}");
-    }
-    String targetId =
-        widget.publicId.replaceAll('#ORD-', '').toLowerCase();
-
-    data = listPesanan.firstWhere(
-      (item) =>
-          item['id_pesanan'].toString().toLowerCase().startsWith(targetId),
-      orElse: () => null,
-    );
-    // ─────────────────────────────────────────────────────
-
+    // ── Logika penanganan data dari backend ───────────────────────
+    final data = detailData?['data'];
     if (data == null) {
       return Scaffold(
         backgroundColor: _greyLight,
@@ -125,15 +102,38 @@ class DetailPesananState extends State<DetailPesanan> {
       );
     }
 
-    final String idAsli = data['id_pesanan'] ?? widget.publicId;
+    final String idAsli = data['public_id'] ?? widget.publicId;
     final String noPesananPendek = idAsli.length > 8
         ? "#ORD-" + idAsli.substring(0, 8).toUpperCase()
         : idAsli;
 
     final List items   = data['items'] ?? [];
-    final String status     = data['status'] ?? 'Diproses';
-    final String totalBayar = _formatRupiah(data['total_bayar'] ?? 0);
-    const String metode     = "Tunai (Kasir)";
+    
+    // ── LOGIKA SYNC STATUS DENGAN HALAMAN DEPAN ──────────────────
+    // Karena backend GetDetailPesanan tidak kirim 'nama_status_pesanan', 
+    // kita petakan manual dari id_status_pesanan
+    final int idStatus = data['id_status_pesanan'] ?? 0;
+    String statusStr = "Diproses";
+    if (idStatus == 2) statusStr = "Menunggu Pembayaran";
+    else if (idStatus == 3) statusStr = "Diproses";
+    else if (idStatus == 4) statusStr = "Dikemas";
+    else if (idStatus == 5) statusStr = "Dikirim";
+    else if (idStatus == 6) statusStr = "Selesai";
+    else if (idStatus == 7) statusStr = "Dibatalkan";
+
+    // Gunakan logika override yang sama dengan OrderModel (halaman depan)
+    bool checkIsOnline = idStatus == 2 || idStatus == 3 || idStatus == 4 || idStatus == 5;
+    if (!checkIsOnline && idStatus != 7) {
+      statusStr = "Selesai";
+    }
+    final String status = statusStr;
+    // ─────────────────────────────────────────────────────────────
+
+    // ── Ambil rincian pembayaran dari rincian_pembayaran ──────────
+    final rincian = data['rincian_pembayaran'] ?? {};
+    final String totalBayar = _formatRupiah(rincian['total'] ?? 0);
+    final String metode     = rincian['metode'] ?? "Pembayaran (Kasir)";
+    // ─────────────────────────────────────────────────────────────
 
     return Scaffold(
       backgroundColor: _greyLight,
@@ -270,8 +270,9 @@ class DetailPesananState extends State<DetailPesanan> {
   // ── Item card ────────────────────────────────────────────
   Widget _buildItemCard(dynamic item, int index, int total) {
     final int jumlah    = item['jumlah'] ?? 0;
-    final dynamic harga = item['harga_saat_beli'] ?? 0;
+    final dynamic harga = item['harga_satuan'] ?? item['harga_saat_beli'] ?? 0;
     final String nama   = item['nama_barang'] ?? 'Produk';
+    final String gambar = item['gambar'] ?? '';
     final subtotal      = jumlah * (int.tryParse(harga.toString()) ?? 0);
 
     // Rounded corners: top-only for first, bottom-only for last, square for middle
@@ -312,15 +313,32 @@ class DetailPesananState extends State<DetailPesanan> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
-                // Item icon
+                // Item icon / Image from backend
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                     color: _orangeLight,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.fastfood_rounded, color: _orange, size: 20),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: gambar.isNotEmpty
+                        ? Image.network(
+                            gambar,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.fastfood_rounded,
+                              color: _orange,
+                              size: 20,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.fastfood_rounded,
+                            color: _orange,
+                            size: 20,
+                          ),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 // Name + qty
