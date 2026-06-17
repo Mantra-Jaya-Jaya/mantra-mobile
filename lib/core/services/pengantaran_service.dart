@@ -59,26 +59,28 @@ class DetailPengantaranService {
     }
   }
 
-  Future<void> updateLokasiKurir(String publicId, double latitude, double longitude) async {
+  Future<bool> updateLokasiKurir(String publicId, double latitude, double longitude) async {
     try {
-      await _apiClient.dio.put(
+      final response = await _apiClient.dio.put(
         '/kurir/pengantaran/$publicId/lokasi',
         data: {
           'latitude': latitude,
           'longitude': longitude,
         },
       );
+      return response.statusCode == 200;
     } on DioException catch (e) {
       print('❌ Gagal update lokasi kurir: ${e.response?.statusCode} - ${e.message}');
+      return false;
     }
   }
 
   Future<Map<String, dynamic>?> uploadBuktiSelesai(String publicId, File imageFile) async {
     try {
       final formData = FormData.fromMap({
-        'foto': await MultipartFile.fromFile(imageFile.path, filename: 'bukti_selesai.jpg'),
+        'foto_bukti': await MultipartFile.fromFile(imageFile.path, filename: 'bukti_selesai.jpg'),
       });
-      final response = await _apiClient.dio.post(
+      final response = await _apiClient.dio.put(
         '/kurir/pengantaran/$publicId/selesai',
         data: formData,
       );

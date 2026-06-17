@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/models/user_model.dart';
 import '../../core/services/kasir_profile_service.dart';
+import '../../core/widgets/global_appbar_kurir.dart';
 import '../auth/login.dart';
 import 'edit_profile_kasir.dart';
 import 'ubah_password.dart';
@@ -34,7 +35,6 @@ class ProfileKasirState extends State<ProfileKasir> {
     });
   }
 
-  // Dialog konfirmasi logout custom anti-stuck
   void _showLogoutDialog() {
     showDialog(
       context: context,
@@ -81,7 +81,6 @@ class ProfileKasirState extends State<ProfileKasir> {
                 const SizedBox(height: 25),
                 Row(
                   children: [
-                    // Tombol Tidak — kembali ke profil
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () => Navigator.pop(context),
@@ -99,13 +98,10 @@ class ProfileKasirState extends State<ProfileKasir> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    // Tombol Iya — hapus token lokal secara instan & jalankan API di background
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          Navigator.pop(context); // Tutup dialog konfirmasi
-
-                          // Tampilkan loading overlay
+                          Navigator.pop(context);
                           showDialog(
                             context: context,
                             barrierDismissible: false,
@@ -113,19 +109,13 @@ class ProfileKasirState extends State<ProfileKasir> {
                               child: CircularProgressIndicator(color: Color(0xFFAF510C)),
                             ),
                           );
-
-                          // 1. UTAMAKAN: Hapus token lokal secara instan agar tidak tersandera error API
                           await _storage.deleteAll();
-
-                          // 2. Jalankan API logout di background tanpa 'await' (fire-and-forget)
                           _kasirService.logout().catchError((error) {
                             debugPrint("API Logout error (ignored): $error");
+                            return null;
                           });
-
                           if (!mounted) return;
-                          Navigator.pop(context); // Tutup loading overlay
-
-                          // 3. Langsung tendang ke halaman login dan bersihkan seluruh history navigation
+                          Navigator.pop(context);
                           Navigator.pushAndRemoveUntil(
                             context,
                             MaterialPageRoute(
@@ -157,332 +147,312 @@ class ProfileKasirState extends State<ProfileKasir> {
     );
   }
 
-  // Widget tombol logout custom OutlinedButton
-  Widget _buildLogoutButton() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 38),
-      child: OutlinedButton.icon(
-        onPressed: _showLogoutDialog, 
-        icon: const Icon(Icons.logout, color: Color(0xFFAF510C)),
-        label: const Text(
-          "Keluar dari Akun",
-          style: TextStyle(color: Color(0xFFAF510C), fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        style: OutlinedButton.styleFrom(
-          minimumSize: const Size(double.infinity, 50),
-          side: const BorderSide(color: Color(0xFFAF510C), width: 1.5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+  void _confirmLogout() {
+    _showLogoutDialog();
+  }
+
+  Widget _buildInfoItem(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
           ),
         ),
-      ),
+        Divider(height: 1, color: Colors.grey.shade200),
+      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFAD510D),
+      appBar: const GlobalAppBarKurir(
+        title: 'Profile Kasir',
+        showBackButton: false,
+      ),
       body: SafeArea(
-        child: Container(
-          constraints: const BoxConstraints.expand(),
-          color: const Color(0xFFFFFFFF),
-          child: FutureBuilder<UserModel>(
-            future: _profileFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(color: Color(0xFFAF510C)),
-                );
-              }
-
-              if (snapshot.hasError) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
-                      const SizedBox(height: 10),
-                      Text("Gagal memuat profil: ${snapshot.error}"),
-                      const SizedBox(height: 10),
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            _loadProfile();
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFAF510C)),
-                        child: const Text("Coba Lagi", style: TextStyle(color: Colors.white)),
-                      )
-                    ],
+        bottom: false,
+        child: Column(
+          children: [
+            const SizedBox(height: 16),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(30),
                   ),
-                );
-              }
+                  child: FutureBuilder<UserModel>(
+                    future: _profileFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFFAD510D),
+                          ),
+                        );
+                      }
 
-              final user = snapshot.data!;
+                      if (snapshot.hasError || !snapshot.hasData) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.error_outline, size: 50, color: Colors.grey),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Gagal memuat profil',
+                                style: TextStyle(color: Colors.grey.shade600),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _loadProfile();
+                                  });
+                                },
+                                child: const Text(
+                                  'Coba Lagi',
+                                  style: TextStyle(color: Color(0xFFAD510D)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Container(
-                      color: const Color(0xFFFFFFFF),
-                      width: double.infinity,
-                      child: SingleChildScrollView(
+                      final user = snapshot.data!;
+
+                      return SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.only(
+                          left: 24,
+                          right: 24,
+                          top: 32,
+                          bottom: 120,
+                        ),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Container(
-                              padding: const EdgeInsets.only(bottom: 50),
-                              width: double.infinity,
+                              width: 90,
+                              height: 90,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFAD510D).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: const Color(0xFFAD510D).withValues(alpha: 0.3),
+                                  width: 2,
+                                ),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(18),
+                                child: Image.network(
+                                  (user.fotoProfil != null && user.fotoProfil!.isNotEmpty)
+                                      ? user.fotoProfil!
+                                      : "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/I5ymBTe5W6/n8ic1gkq_expires_30_days.png",
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const Icon(
+                                        Icons.person_outline,
+                                        size: 50,
+                                        color: Color(0xFFAD510D),
+                                      ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
                               child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  // Header Orange
-                                  IntrinsicHeight(
-                                    child: Container(
-                                      color: const Color(0xFFAF510C),
-                                      padding: const EdgeInsets.only(top: 40, bottom: 20, left: 30),
-                                      margin: const EdgeInsets.only(bottom: 24),
-                                      width: double.infinity,
-                                      child: const Text(
-                                        "Profile Kasir",
-                                        style: TextStyle(
-                                          color: Color(0xFFFFFFFF),
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    child: Text(
+                                      'Informasi Akun',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
                                       ),
                                     ),
                                   ),
-                                  
-                                  // Foto Profil
-                                  Container(
-                                    margin: const EdgeInsets.only(bottom: 23),
-                                    width: 85,
-                                    height: 83,
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(40),
-                                      child: Image.network(
-                                        (user.fotoProfil != null && user.fotoProfil!.isNotEmpty)
-                                            ? user.fotoProfil!
-                                            : "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/I5ymBTe5W6/n8ic1gkq_expires_30_days.png",
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return const Icon(Icons.account_circle, size: 85, color: Colors.grey);
-                                        },
-                                      ),
-                                    ),
+                                  Divider(
+                                    height: 1,
+                                    color: Colors.grey.shade200,
                                   ),
-                                  
-                                  // Informasi Akun Card
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      border: Border.all(
-                                        color: const Color(0xFFBFC9D1),
-                                        width: 1,
-                                      ),
-                                      borderRadius: BorderRadius.circular(15),
+                                  _buildInfoItem('Nama Lengkap', user.namaLengkap.isNotEmpty ? user.namaLengkap : 'Kasir'),
+                                  _buildInfoItem('Username', user.username.isNotEmpty ? user.username : '-'),
+                                  _buildInfoItem('Email', user.email.isNotEmpty ? user.email : '-'),
+                                  _buildInfoItem('No. Telepon', user.noTelp.isNotEmpty ? user.noTelp : '-'),
+                                  _buildInfoItem('Alamat', user.alamat.isNotEmpty ? user.alamat : '-'),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 16,
                                     ),
-                                    padding: const EdgeInsets.symmetric(vertical: 15),
-                                    margin: const EdgeInsets.only(bottom: 31, left: 38, right: 38),
-                                    width: double.infinity,
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        const Center(
-                                          child: Text(
-                                            "Informasi Akun",
+                                        const Text(
+                                          'Status',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green.shade50,
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(
+                                              color: Colors.green.shade200,
+                                            ),
+                                          ),
+                                          child: const Text(
+                                            'Aktif',
                                             style: TextStyle(
-                                              color: Color(0xFF000000),
-                                              fontSize: 18,
+                                              fontSize: 12,
                                               fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 10),
-                                        const Divider(color: Color(0xFFBFC9D1), height: 1),
-                                        const SizedBox(height: 12),
-                                        
-                                        const Padding(
-                                          padding: EdgeInsets.symmetric(horizontal: 22),
-                                          child: Text(
-                                            "Nama Lengkap",
-                                            style: TextStyle(color: Colors.grey, fontSize: 13),
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 22),
-                                          child: Text(
-                                            user.namaLengkap.isNotEmpty ? user.namaLengkap : 'Kasir',
-                                            style: const TextStyle(
-                                              color: Color(0xFF000000),
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 14),
-                                        const Divider(color: Color(0xFFBFC9D1), height: 1),
-                                        const SizedBox(height: 12),
-                                        
-                                        const Padding(
-                                          padding: EdgeInsets.symmetric(horizontal: 22),
-                                          child: Text(
-                                            "Username",
-                                            style: TextStyle(color: Colors.grey, fontSize: 13),
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 22),
-                                          child: Text(
-                                            user.username.isNotEmpty ? user.username : '-',
-                                            style: const TextStyle(
-                                              color: Color(0xFF000000),
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 14),
-                                        const Divider(color: Color(0xFFBFC9D1), height: 1),
-                                        const SizedBox(height: 12),
-
-                                        const Padding(
-                                          padding: EdgeInsets.symmetric(horizontal: 22),
-                                          child: Text(
-                                            "Email",
-                                            style: TextStyle(color: Colors.grey, fontSize: 13),
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 22),
-                                          child: Text(
-                                            user.email.isNotEmpty ? user.email : '-',
-                                            style: const TextStyle(
-                                              color: Color(0xFF000000),
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 14),
-                                        const Divider(color: Color(0xFFBFC9D1), height: 1),
-                                        const SizedBox(height: 12),
-
-                                        const Padding(
-                                          padding: EdgeInsets.symmetric(horizontal: 22),
-                                          child: Text(
-                                            "No. Telepon",
-                                            style: TextStyle(color: Colors.grey, fontSize: 13),
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 22),
-                                          child: Text(
-                                            user.noTelp.isNotEmpty ? user.noTelp : '-',
-                                            style: const TextStyle(
-                                              color: Color(0xFF000000),
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 14),
-                                        const Divider(color: Color(0xFFBFC9D1), height: 1),
-                                        const SizedBox(height: 12),
-
-                                        const Padding(
-                                          padding: EdgeInsets.symmetric(horizontal: 22),
-                                          child: Text(
-                                            "Alamat",
-                                            style: TextStyle(color: Colors.grey, fontSize: 13),
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 22),
-                                          child: Text(
-                                            user.alamat.isNotEmpty ? user.alamat : '-',
-                                            style: const TextStyle(
-                                              color: Color(0xFF000000),
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w500,
+                                              color: Colors.green,
                                             ),
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                  
-                                  // Tombol Edit Profil
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 38),
-                                    child: OutlinedButton.icon(
-                                      onPressed: () async {
-                                        final result = await Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => const EditProfileKasir(),
-                                          ),
-                                        );
-                                        if (result == true) _refreshProfile();
-                                      },
-                                      icon: const Icon(Icons.edit_outlined, color: Color(0xFFAF510C)),
-                                      label: const Text(
-                                        "Edit Profil",
-                                        style: TextStyle(color: Color(0xFFAF510C), fontSize: 16, fontWeight: FontWeight.bold),
-                                      ),
-                                      style: OutlinedButton.styleFrom(
-                                        minimumSize: const Size(double.infinity, 50),
-                                        side: const BorderSide(color: Color(0xFFAF510C), width: 1.5),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-
-                                  // Tombol Ubah Password
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 38),
-                                    child: OutlinedButton.icon(
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => const UbahPassword(),
-                                          ),
-                                        );
-                                      },
-                                      icon: const Icon(Icons.lock_outline, color: Color(0xFFAF510C)),
-                                      label: const Text(
-                                        "Ubah Password",
-                                        style: TextStyle(color: Color(0xFFAF510C), fontSize: 16, fontWeight: FontWeight.bold),
-                                      ),
-                                      style: OutlinedButton.styleFrom(
-                                        minimumSize: const Size(double.infinity, 50),
-                                        side: const BorderSide(color: Color(0xFFAF510C), width: 1.5),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 24),
-
-                                  // Memanggil Tombol Keluar Akun
-                                  _buildLogoutButton(),
                                 ],
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 55,
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const EditProfileKasir(),
+                                    ),
+                                  );
+                                  if (result == true) _refreshProfile();
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFAD510D),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Edit Profil',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 55,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const UbahPassword(),
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF2C3E50),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Ubah Password',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 55,
+                              child: ElevatedButton(
+                                onPressed: _confirmLogout,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red.shade700,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Keluar dari akun',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
-                ],
-              );
-            },
-          ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
