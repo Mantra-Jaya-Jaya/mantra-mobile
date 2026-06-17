@@ -3,12 +3,15 @@
 // ============================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
 
-// Sesuaikan path import dengan struktur folder lu
+import '../../core/network/api_client.dart';
 import '../../core/services/kurir_profile_service.dart';
 import '../../core/widgets/global_appbar_kurir.dart';
 import '../../core/models/profil_kurir_model.dart';
+import '../auth/login.dart';
+import 'ubah_password.dart';
 class ProfileKurirPage extends StatefulWidget {
   const ProfileKurirPage({super.key});
 
@@ -19,6 +22,7 @@ class ProfileKurirPage extends StatefulWidget {
 class _ProfileKurirPageState extends State<ProfileKurirPage> {
   // 🚀 SERVICE & FUTURE
   final KurirService _service = KurirService();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
   late Future<ProfilKurirModel?> _profilFuture;
 
   @override
@@ -37,6 +41,119 @@ class _ProfileKurirPageState extends State<ProfileKurirPage> {
     } catch (e) {
       return isoDate; // Kalau gagal format, tampilin teks aslinya aja
     }
+  }
+
+  void _confirmLogout() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Container(
+            width: 300,
+            padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 30),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0x1FAD510D),
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  child: const Icon(
+                    Icons.logout,
+                    color: Color(0xFFAD510D),
+                    size: 42,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  "Keluar dari Akun?",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  "Kamu yakin ingin keluar\ndari akun ini?",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                ),
+                const SizedBox(height: 25),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          side: const BorderSide(color: Color(0xFFAD510D)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          "Tidak",
+                          style: TextStyle(color: Color(0xFFAD510D)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (context) => const Center(
+                              child: CircularProgressIndicator(color: Color(0xFFAD510D)),
+                            ),
+                          );
+                          await _storage.deleteAll();
+                          try {
+                            await ApiClient().dio.post('/auth/logout');
+                          } catch (error) {
+                            debugPrint("API Logout error (ignored): $error");
+                          }
+                          if (!mounted) return;
+                          Navigator.pop(context);
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LoginScreen(),
+                            ),
+                            (route) => false,
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFAD510D),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          "Iya",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -133,12 +250,12 @@ class _ProfileKurirPageState extends State<ProfileKurirPage> {
                               decoration: BoxDecoration(
                                 color: const Color(
                                   0xFFAD510D,
-                                ).withOpacity(0.15),
+                                ).withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: const Color(
                                     0xFFAD510D,
-                                  ).withOpacity(0.3),
+                                  ).withValues(alpha: 0.3),
                                   width: 2,
                                 ),
                               ),
@@ -266,7 +383,14 @@ class _ProfileKurirPageState extends State<ProfileKurirPage> {
                               width: double.infinity,
                               height: 55,
                               child: ElevatedButton(
-                                onPressed: () {},
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const UbahPassword(),
+                                    ),
+                                  );
+                                },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFFAD510D),
                                   elevation: 0,
@@ -292,7 +416,7 @@ class _ProfileKurirPageState extends State<ProfileKurirPage> {
                               width: double.infinity,
                               height: 55,
                               child: ElevatedButton(
-                                onPressed: () {},
+                                onPressed: _confirmLogout,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF2C3E50),
                                   elevation: 0,
