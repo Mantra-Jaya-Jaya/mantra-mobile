@@ -56,8 +56,7 @@ class OrderKasirState extends State<OrderKasir> {
       case 'menunggu pembayaran':
         return const Color(0xFFFEF9C3); // Kuning muda
       case 'dikemas':
-      case 'diproses': 
-        return const Color(0xFFFFEDD5); 
+        return const Color(0xFFFFEDD5);
       case 'selesai': 
       case 'dikirim':
         return const Color(0xFFDCFCE7); 
@@ -71,8 +70,7 @@ class OrderKasirState extends State<OrderKasir> {
       case 'menunggu pembayaran':
         return const Color(0xFF854D0E); // Coklat/Kuning tua
       case 'dikemas':
-      case 'diproses': 
-        return const Color(0xFFAF510C); 
+        return const Color(0xFFAF510C);
       case 'selesai': 
       case 'dikirim':
         return const Color(0xFF15803D); 

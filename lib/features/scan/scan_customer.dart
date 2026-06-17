@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../main.dart'
-    as app; // ✅ Import untuk mengakses RouteObserver global
+    as app;
 import 'package:frontend/core/widgets/base_header_widget.dart';
+import 'package:frontend/core/network/api_client.dart';
+import 'package:frontend/features/home/services/katalog_service.dart';
+import 'package:frontend/features/home/detail_barang.dart';
+import 'package:intl/intl.dart';
 
 class ScanPage extends StatefulWidget {
   const ScanPage({super.key});
@@ -13,51 +17,61 @@ class ScanPage extends StatefulWidget {
 
 class _ScanPageState extends State<ScanPage>
     with WidgetsBindingObserver, RouteAware {
-  // Variabel untuk menampung hasil scan
   final MobileScannerController scannerController = MobileScannerController();
+  final ApiClient _client = ApiClient();
+  final NumberFormat _currencyFormat = NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp ',
+    decimalDigits: 0,
+  );
+
   String? barcodeTerdeteksi;
   String namaBarang = "Menunggu Scan...";
   String hargaBarang = "-";
+  String gambarBarang = "";
+  String? scanPublicId;
   bool isFound = false;
   bool _isProcessing = false;
   bool _isFlashOn = false;
 
-  // Simulasi Database Lokal
-  final Map<String, Map<String, String>> dummyDatabase = {
-    "6956953588031": {
-      "nama": "CARINEX HI-TECH Pen 0.28mm",
-      "harga": "Rp. 2.000",
-    },
-    "8993988055679": {
-      "nama": "JOYKO Correction Tape CT-570",
-      "harga": "Rp. 12.000",
-    },
-  };
-
   void cekBarcode(String code) async {
-    if (_isProcessing) return; // Jika sedang proses, abaikan scan baru
+    if (_isProcessing) return;
     _isProcessing = true;
 
-    if (dummyDatabase.containsKey(code)) {
+    try {
+      final response = await _client.dio.get('/scan/$code');
+      final data = response.data['data'];
+
+      final varians = data['varian'] as List? ?? [];
+      int harga = 0;
+      if (varians.isNotEmpty) {
+        harga = (varians.first['harga_barang'] ?? 0).toInt();
+      }
+
+      final rawPublicId = data['public_id'];
+      final publicIdStr = rawPublicId != null ? rawPublicId.toString() : null;
+
       setState(() {
         barcodeTerdeteksi = code;
-        namaBarang = dummyDatabase[code]!['nama']!;
-        hargaBarang = dummyDatabase[code]!['harga']!;
+        scanPublicId = publicIdStr;
+        namaBarang = data['nama_barang'] ?? 'Barang Tidak Diketahui';
+        hargaBarang = _currencyFormat.format(harga);
+        gambarBarang = data['gambar_barang'] ?? '';
         isFound = true;
       });
-
-      // Beri jeda 3 detik agar user bisa baca hasil sebelum boleh scan barang lain
-      await Future.delayed(const Duration(seconds: 3));
-    } else {
+    } catch (e) {
       setState(() {
         namaBarang = "Barang Tidak Terdaftar";
         hargaBarang = "-";
+        gambarBarang = "";
         isFound = false;
       });
-      // Beri jeda 1 detik saja jika tidak ketemu agar tidak spamming log
-      await Future.delayed(const Duration(seconds: 1));
     }
-    _isProcessing = false;
+
+    await Future.delayed(const Duration(seconds: 3));
+    if (mounted) {
+      setState(() => _isProcessing = false);
+    }
   }
 
   @override
@@ -232,7 +246,43 @@ class _ScanPageState extends State<ScanPage>
             ),
           ),
 
-          const SizedBox(height: 30),
+          const SizedBox(height: 24),
+
+          if (isFound && scanPublicId != null)
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => DetailBarangPage(
+                      barang: BarangModel(
+                        idBarang: scanPublicId!,
+                        namaBarang: namaBarang,
+                        gambarBarang: gambarBarang,
+                        deskripsi: "",
+                        hargaTerendah: 0,
+                        hargaTertinggi: 0,
+                        hargaDiskon: 0,
+                        punyaDiskon: false,
+                        stok: "",
+                      ),
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.search, size: 18),
+              label: const Text("Lihat Detail"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFAF510C),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+
+          const SizedBox(height: 16),
 
           // ================= CARD HASIL SCAN =================
           Container(
@@ -244,25 +294,26 @@ class _ScanPageState extends State<ScanPage>
             ),
             child: Row(
               children: [
-                // Placeholder Gambar Barang
+                // Gambar Barang
                 Container(
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
                     color: Colors.grey[300],
                     borderRadius: BorderRadius.circular(12),
-                    image: isFound
-                        ? const DecorationImage(
-                            image: AssetImage(
-                              "assets/images/book_placeholder.jpg",
-                            ), // Ganti image-mu
-                            fit: BoxFit.cover,
-                          )
-                        : null,
                   ),
-                  child: !isFound
-                      ? const Icon(Icons.image, color: Colors.grey)
-                      : null,
+                  child: isFound && gambarBarang.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            gambarBarang,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(Icons.image, color: Colors.grey);
+                            },
+                          ),
+                        )
+                      : const Icon(Icons.image, color: Colors.grey),
                 ),
                 const SizedBox(width: 16),
                 // Info Barang

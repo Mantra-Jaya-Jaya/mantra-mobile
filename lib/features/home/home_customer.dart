@@ -7,7 +7,6 @@ import 'package:frontend/features/scan/scan_customer.dart';
 import 'package:frontend/core/widgets/bottom_navbar.dart';
 import 'package:frontend/features/home/services/katalog_service.dart';
 import 'package:frontend/features/home/kategori_barang_customer.dart';
-import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:frontend/features/home/search_page.dart';
 import 'package:frontend/features/home/detail_barang.dart';
 import 'package:frontend/features/home/kategori_page.dart';
@@ -668,6 +667,49 @@ class _HomeContentState extends State<HomeContent> {
 IconData getIconFromString(String? iconName) {
   if (iconName == null) return Icons.category_outlined;
 
-  // Fungsi bawaan package untuk mencari IconData berdasarkan string namanya
-  return MdiIcons.fromString(iconName) ?? Icons.category_outlined;
+  switch (iconName.toLowerCase()) {
+    case 'food':
+    case 'makanan':
+    case 'fastfood':
+      return Icons.restaurant_outlined;
+    case 'drink':
+    case 'minuman':
+    case 'beverage':
+      return Icons.local_drink_outlined;
+    case 'snack':
+    case 'snacks':
+    case 'cemilan':
+      return Icons.cookie_outlined;
+    case 'fruit':
+    case 'buah':
+    case 'vegetable':
+    case 'sayur':
+      return Icons.spa_outlined;
+    case 'electronic':
+    case 'elektronik':
+      return Icons.electrical_services_outlined;
+    case 'fashion':
+    case 'pakaian':
+      return Icons.checkroom_outlined;
+    case 'sport':
+    case 'olahraga':
+      return Icons.sports_esports_outlined;
+    case 'health':
+    case 'kesehatan':
+      return Icons.health_and_safety_outlined;
+    case 'home':
+    case 'rumah':
+    case 'household':
+      return Icons.home_outlined;
+    case 'book':
+    case 'buku':
+    case 'stationery':
+    case 'alat tulis':
+      return Icons.menu_book_outlined;
+    case 'toy':
+    case 'mainan':
+      return Icons.toys_outlined;
+    default:
+      return Icons.category_outlined;
+  }
 }

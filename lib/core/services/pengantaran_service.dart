@@ -1,6 +1,6 @@
-import 'package:dio/dio.dart';
 import 'dart:io';
-import '../models/pengantaran_model.dart'; 
+import 'package:dio/dio.dart';
+import '../models/pengantaran_model.dart';
 import '../network/api_client.dart';
 
 class PengantaranService {
@@ -8,10 +8,10 @@ class PengantaranService {
   final Dio _dio = ApiClient().dio;
 
   // 🚀 Fungsi buat narik data tugas pengantaran
-  Future<List<PengantaranModel>> getDaftarPengantaran() async {
+  Future<List<PengantaranModel>> getDaftarPengantaran({String? status}) async {
     try {
-      // Tembak rute API Golang lu (sesuaikan dengan rute di Golang)
-      final response = await _dio.get('/kurir/tugas');
+      final queryParams = status != null ? {'status': status} : null;
+      final response = await _dio.get('/kurir/tugas', queryParameters: queryParams);
 
       if (response.data != null && response.data['data'] != null) {
         final List<dynamic> rawData = response.data['data'];
@@ -59,76 +59,35 @@ class DetailPengantaranService {
     }
   }
 
-  // ----------------------------------------------------------
-  // Tembak API Update Lokasi GPS Kurir (Realtime)
-  // ----------------------------------------------------------
-  Future<bool> updateLokasiKurir(
-    String publicId,
-    double latitude,
-    double longitude,
-  ) async {
+  Future<bool> updateLokasiKurir(String publicId, double latitude, double longitude) async {
     try {
-      // 🚀 Tembak PUT sesuai router Golang lu
       final response = await _apiClient.dio.put(
         '/kurir/pengantaran/$publicId/lokasi',
-        data: {'latitude': latitude, 'longitude': longitude},
+        data: {
+          'latitude': latitude,
+          'longitude': longitude,
+        },
       );
-
-      // Kalau sukses (200 OK), kembalikan nilai true
-      if (response.statusCode == 200) {
-        return true;
-      }
-      return false;
+      return response.statusCode == 200;
     } on DioException catch (e) {
-      print(
-        '❌ DEBUG API LOKASI: Error nembak lokasi -> ${e.response?.statusCode} - ${e.message}',
-      );
-      return false;
-    } catch (e) {
-      print('❌ DEBUG API LOKASI: Error System -> $e');
+      print('❌ Gagal update lokasi kurir: ${e.response?.statusCode} - ${e.message}');
       return false;
     }
   }
 
-  Future<SelesaikanPengantaranModel?> uploadBuktiSelesai(
-    String publicId,
-    File fileGambar,
-  ) async {
+  Future<Map<String, dynamic>?> uploadBuktiSelesai(String publicId, File imageFile) async {
     try {
-      // 🚀 1. Bungkus gambar lu jadi Multipart/Form-Data
-      // Ambil nama file asli dari path-nya
-      String fileName = fileGambar.path.split('/').last;
-
-      FormData formData = FormData.fromMap({
-        // Key "foto_bukti" ini WAJIB sama kayak di Golang lu
-        "foto_bukti": await MultipartFile.fromFile(
-          fileGambar.path,
-          filename: fileName,
-        ),
+      final formData = FormData.fromMap({
+        'foto_bukti': await MultipartFile.fromFile(imageFile.path, filename: 'bukti_selesai.jpg'),
       });
-
-      // 🚀 2. Tembak pakai method PUT (sesuai kesepakatan kita tadi)
       final response = await _apiClient.dio.put(
         '/kurir/pengantaran/$publicId/selesai',
         data: formData,
       );
-
-      // 🚀 3. Tangkap balikannya
-      if (response.statusCode == 200 && response.data['data'] != null) {
-        print('✅ DEBUG UPLOAD: Sukses upload bukti!');
-        return SelesaikanPengantaranModel.fromJson(response.data['data']);
-      }
-      return null;
+      return response.data;
     } on DioException catch (e) {
-      print(
-        '❌ DEBUG API UPLOAD: Error nembak -> ${e.response?.statusCode} - ${e.response?.data}',
-      );
-      return null;
-    } catch (e) {
-      print('❌ DEBUG API UPLOAD: Error System -> $e');
+      print('❌ Gagal upload bukti selesai: ${e.response?.statusCode} - ${e.message}');
       return null;
     }
   }
 }
-
-
