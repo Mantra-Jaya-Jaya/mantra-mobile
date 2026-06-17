@@ -25,30 +25,31 @@ class _SummaryPageState extends State<SummaryPage> {
     _fetchLaporanData();
   }
 
-  Future<void> _fetchLaporanData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+Future<void> _fetchLaporanData() async {
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
 
-    try {
-      final rawData = await _summaryService.getLaporanRingkasan();
+  try {
+    // Service sekarang langsung mengembalikan objek SummaryData yang sudah di-parse
+    final data = await _summaryService.getLaporanRingkasan();
 
-      if (mounted) {
-        setState(() {
-          _data = model.SummaryData.fromJson(rawData);
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = e.toString().replaceAll('Exception: ', '');
-          _isLoading = false;
-        });
-      }
+    if (mounted) {
+      setState(() {
+        _data = data; // Tidak perlu .fromJson(rawData) lagi, karena sudah jadi objek
+        _isLoading = false;
+      });
+    }
+  } catch (e) {
+    if (mounted) {
+      setState(() {
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
+        _isLoading = false;
+      });
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -122,7 +123,7 @@ class _SummaryPageState extends State<SummaryPage> {
   Widget _buildPendapatanCard() {
     final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
     final isPositive = _data!.persentasePendapatan >= 0;
-    final badgeText = "${isPositive ? '+' : ''}${_data!.persentasePendapatan.toStringAsFixed(1)}%";
+    final badgeText = "${isPositive ? '+' : '-'}${currencyFormat.format(_data!.persentasePendapatan.abs())}";
     final badgeBg = isPositive ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2);
     final badgeColor = isPositive ? const Color(0xFF15803D) : const Color(0xFFB91C1C);
     final badgeIcon = isPositive ? Icons.trending_up : Icons.trending_down;
@@ -222,9 +223,9 @@ class _SummaryPageState extends State<SummaryPage> {
   }
 
   Widget _buildSmallStatRow() {
-    final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+     final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0); // ← tambah ini
     final isTxPositive = _data!.persentaseTransaksi >= 0;
-    final txBadgeText = "${isTxPositive ? '+' : ''}${_data!.persentaseTransaksi}%";
+    final txBadgeText = "${isTxPositive ? '+' : '-'}${currencyFormat.format(_data!.persentaseTransaksi.abs())}";
     final txBadgeBg = isTxPositive ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2);
     final txBadgeColor = isTxPositive ? const Color(0xFF15803D) : const Color(0xFFB91C1C);
 
@@ -324,8 +325,8 @@ class _SummaryPageState extends State<SummaryPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            // Mengirim ID Produk (int) ke halaman detail riwayat transaksi
-            builder: (context) => RiwayatTransaksi(productId: product.idProduk),
+            // Mengirim ID Produk ke halaman detail riwayat transaksi
+            builder: (context) => RiwayatTransaksi(publicId: product.idProduk),
           ),
         );
       },
@@ -361,7 +362,7 @@ class _SummaryPageState extends State<SummaryPage> {
                 children: [
                   Text(product.nama, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1A1C1C))),
                   const SizedBox(height: 2),
-                  Text(product.deskripsi, style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(product.deskripsi ?? '', style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)), maxLines: 1, overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),

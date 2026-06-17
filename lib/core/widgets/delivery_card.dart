@@ -116,7 +116,8 @@ class DeliveryCard extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (context) => DetailPesananPage(
                       idPengantaran: idPengantaran,
-                      isSedangDiantar: true,
+                      isSedangDiantar: variant == CardVariant.history,
+                      isSelesai: variant == CardVariant.done,
                     ),
                   ),
                 );
@@ -137,7 +138,7 @@ class DeliveryCard extends StatelessWidget {
   }
 
   Widget _buildBadge() {
-    String text = data?.status.toUpperCase() ?? 'PENGANTARAN';
+    String text = data?.statusLabel ?? 'Menunggu';
     Color bgColor = variant == CardVariant.done
         ? Colors.grey.shade300
         : const Color(0xFFAD510D).withOpacity(0.6);

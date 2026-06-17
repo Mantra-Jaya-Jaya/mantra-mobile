@@ -1,11 +1,15 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+typedef OnUnauthorized = void Function();
+
 class ApiClient {
   static const String baseUrl = String.fromEnvironment(
     'BASE_URL',
-    defaultValue: 'http://172.16.95.155:8080/api/v1', // emulator Android
+    defaultValue: 'http://10.0.2.2:8080/api/v1', // emulator Android
   );
+
+  static OnUnauthorized? onUnauthorized;
 
   final Dio _dio;
   final FlutterSecureStorage _storage;
@@ -17,6 +21,10 @@ class ApiClient {
   }
 
   Dio get dio => _dio;
+
+  static void setOnUnauthorized(OnUnauthorized callback) {
+    onUnauthorized = callback;
+  }
 }
 
 class _AuthInterceptor extends Interceptor {
@@ -30,7 +38,6 @@ class _AuthInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    // Tandai semua request dari Flutter agar backend bisa membedakan dari NextJS
     options.headers['X-Client-Type'] = 'flutter';
 
     final token = await _storage.read(key: 'access_token');
@@ -43,18 +50,20 @@ class _AuthInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
     if (err.response?.statusCode == 401) {
-      // Coba refresh token
+      if (err.requestOptions.path.contains('/login')) {
+        handler.next(err);
+        return;
+      }
       final refreshed = await _tryRefresh();
       if (refreshed) {
-        // Retry request asal
         final token = await _storage.read(key: 'access_token');
         err.requestOptions.headers['Authorization'] = 'Bearer $token';
         final response = await _dio.fetch(err.requestOptions);
         handler.resolve(response);
         return;
       }
-      // Refresh gagal — hapus token, redirect ke login
       await _storage.deleteAll();
+      ApiClient.onUnauthorized?.call();
     }
     handler.next(err);
   }

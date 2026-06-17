@@ -1,70 +1,215 @@
 import 'package:flutter/material.dart';
-import '../../core/models/metode_pembayaran_model.dart';
 import '../../core/widgets/base_header_widget.dart';
+import '../orders/services/customer_order_service.dart';
 
 class PilihPembayaranPage extends StatefulWidget {
   final Map<String, dynamic>? pembayaranSekarang;
-  final List<MetodePembayaran> daftarMetode;
 
-  const PilihPembayaranPage({
-    super.key,
-    this.pembayaranSekarang,
-    required this.daftarMetode,
-  });
+  const PilihPembayaranPage({super.key, this.pembayaranSekarang});
 
   @override
   State<PilihPembayaranPage> createState() => _PilihPembayaranPageState();
 }
 
 class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
+  final CustomerOrderService _orderService = CustomerOrderService();
+  bool _isLoading = true;
+  String? _errorMessage;
+  List<Map<String, dynamic>> _daftarMetode = [];
+
+  // Variabel untuk melacak kategori utama mana yang sedang di-expand (membentang)
   String? _kategoriExpanded;
+
+  // Variabel penampung sub-pilihan atau pilihan final
   Map<String, dynamic>? _pembayaranTerpilih;
 
   @override
   void initState() {
     super.initState();
     _pembayaranTerpilih = widget.pembayaranSekarang;
+
+    // Jika sebelumnya sudah ada pilihan, sesuaikan status expand kategori utamanya
     if (_pembayaranTerpilih != null) {
       _kategoriExpanded = _pembayaranTerpilih!['kategori'];
     }
+    _ambilDaftarMetode();
   }
 
-  List<MetodePembayaran> _getByCategory(String prefix) {
-    return widget.daftarMetode.where((m) =>
-      m.kodeMetode.startsWith(prefix)
-    ).toList();
+  Future<void> _ambilDaftarMetode() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      final metodeData = await _orderService.GetMetodePembayaran();
+      setState(() {
+        _daftarMetode = metodeData;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = "Gagal memuat metode pembayaran.";
+      });
+    }
   }
 
-  bool _isMetodeChecked(int id) {
-    return _pembayaranTerpilih?['id_metode_pembayaran'] == id;
+  // Fungsi pembantu untuk mendeteksi apakah item ini yang sedang aktif dicentang
+  bool _isMetodeChecked(String idMetode) {
+    return _pembayaranTerpilih?['id_metode'] == idMetode;
   }
 
-  IconData _iconForMetode(String kodeMetode) {
-    if (kodeMetode == 'cash') return Icons.wallet_rounded;
-    if (kodeMetode.startsWith('va')) return Icons.account_balance_rounded;
-    if (kodeMetode.startsWith('ew')) return Icons.phone_android_rounded;
-    if (kodeMetode == 'qris') return Icons.qr_code_scanner_rounded;
-    if (kodeMetode == 'cod') return Icons.handshake_rounded;
-    return Icons.payment_rounded;
-  }
+  Widget _buildDynamicMetodeList() {
+    List<Widget> children = [];
 
-  String _subtitleForMetode(String kodeMetode) {
-    if (kodeMetode == 'cash') return 'Bayar tunai';
-    if (kodeMetode == 'qris') return 'Scan QR untuk bayar';
-    if (kodeMetode == 'cod') return 'Bayar tunai di tempat';
-    if (kodeMetode.startsWith('va')) return 'Transfer bank otomatis';
-    if (kodeMetode.startsWith('ew')) return 'Bayar via e-wallet';
-    return '';
+    for (var item in _daftarMetode) {
+      final kode = item['kode_metode'] ?? '';
+      final nama = item['nama_metode'] ?? '';
+
+      if (kode == 'cash') {
+        children.add(
+          _buildKategoriUtamaCard(
+            idKategori: 'cash',
+            nama: nama,
+            sub: 'Bayar tunai langsung',
+            icon: Icons.payments_outlined,
+            hasDropdown: false,
+            onTap: () {
+              setState(() {
+                _kategoriExpanded = 'cash';
+                _pembayaranTerpilih = {
+                  'kategori': 'cash',
+                  'id_metode': 'cash',
+                  'nama': nama,
+                  'sub': 'Bayar tunai langsung',
+                  'icon': Icons.payments_outlined,
+                };
+              });
+            },
+          ),
+        );
+      } else if (kode == 'va') {
+        children.add(
+          _buildKategoriUtamaCard(
+            idKategori: 'va',
+            nama: nama,
+            sub: 'Format otomatis & dicek otomatis',
+            icon: Icons.account_balance_rounded,
+            hasDropdown: true,
+            onTap: () {
+              setState(() {
+                _kategoriExpanded = _kategoriExpanded == 'va' ? null : 'va';
+              });
+            },
+          ),
+        );
+        if (_kategoriExpanded == 'va') {
+          children.add(
+            _buildSubDropdownContainer(
+              children: [
+                _buildSubMetodeTile(
+                  idKategori: 'va',
+                  idMetode: 'va_bni',
+                  nama: 'BNI Virtual Account',
+                  sub: 'Dicek otomatis',
+                ),
+                _buildSubMetodeTile(
+                  idKategori: 'va',
+                  idMetode: 'va_bri',
+                  nama: 'BRI Virtual Account',
+                  sub: 'Dicek otomatis',
+                ),
+                _buildSubMetodeTile(
+                  idKategori: 'va',
+                  idMetode: 'va_mandiri',
+                  nama: 'Mandiri Virtual Account',
+                  sub: 'Dicek otomatis',
+                ),
+                _buildSubMetodeTile(
+                  idKategori: 'va',
+                  idMetode: 'va_bca',
+                  nama: 'BCA Virtual Account',
+                  sub: 'Dicek otomatis',
+                ),
+              ],
+            ),
+          );
+        }
+      } else if (kode == 'qris') {
+        children.add(
+          _buildKategoriUtamaCard(
+            idKategori: 'qris',
+            nama: nama,
+            sub: 'Bayar instan pakai aplikasi bank',
+            icon: Icons.qr_code_scanner_rounded,
+            hasDropdown: false,
+            onTap: () {
+              setState(() {
+                _kategoriExpanded = 'qris';
+                _pembayaranTerpilih = {
+                  'kategori': 'qris',
+                  'id_metode': 'qris',
+                  'nama': nama,
+                  'sub': 'Scan kode QR untuk bayar',
+                  'icon': Icons.qr_code_scanner_rounded,
+                };
+              });
+            },
+          ),
+        );
+      } else if (kode == 'cod') {
+        children.add(
+          _buildKategoriUtamaCard(
+            idKategori: 'cod',
+            nama: nama,
+            sub: 'Bayar tunai langsung ke kurir saat barang sampai',
+            icon: Icons.handshake_rounded,
+            hasDropdown: false,
+            onTap: () {
+              setState(() {
+                _kategoriExpanded = 'cod';
+                _pembayaranTerpilih = {
+                  'kategori': 'cod',
+                  'id_metode': 'cod',
+                  'nama': nama,
+                  'sub': 'Bayar tunai di tempat',
+                  'icon': Icons.handshake_rounded,
+                };
+              });
+            },
+          ),
+        );
+      } else {
+        // Fallback untuk metode lain
+        children.add(
+          _buildKategoriUtamaCard(
+            idKategori: kode,
+            nama: nama,
+            sub: 'Bayar dengan $nama',
+            icon: Icons.payment_rounded,
+            hasDropdown: false,
+            onTap: () {
+              setState(() {
+                _kategoriExpanded = kode;
+                _pembayaranTerpilih = {
+                  'kategori': kode,
+                  'id_metode': kode,
+                  'nama': nama,
+                  'sub': 'Bayar dengan $nama',
+                  'icon': Icons.payment_rounded,
+                };
+              });
+            },
+          ),
+        );
+      }
+    }
+
+    return ListView(padding: const EdgeInsets.all(20), children: children);
   }
 
   @override
   Widget build(BuildContext context) {
-    final mantrapayList = _getByCategory('cash');
-    final vaList = _getByCategory('va');
-    final ewalletList = _getByCategory('ewallet');
-    final qrisList = _getByCategory('qris');
-    final codList = _getByCategory('cod');
-
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F7),
       appBar: BaseHeaderWidget(
@@ -78,108 +223,27 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
         child: Column(
           children: [
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  if (mantrapayList.isNotEmpty)
-                    _buildKategoriUtamaCard(
-                      idKategori: 'mantrapay',
-                      nama: 'Mantra-pay',
-                      sub: 'Saldo internal',
-                      icon: Icons.wallet_rounded,
-                      hasDropdown: false,
-                      metode: mantrapayList.first,
-                    ),
-
-                  _buildKategoriUtamaCard(
-                    idKategori: 'va',
-                    nama: 'Transfer Bank (VA)',
-                    sub: 'Format otomatis & dicek otomatis',
-                    icon: Icons.account_balance_rounded,
-                    hasDropdown: true,
-                    onTap: () {
-                      setState(() {
-                        // Toggle expand/collapse
-                        _kategoriExpanded = _kategoriExpanded == 'va'
-                            ? null
-                            : 'va';
-                      });
-                    },
-                  ),
-                  // Dropdown list bank jika kategori 'va' di-expand
-                  if (_kategoriExpanded == 'va')
-                    _buildSubDropdownContainer(
-                      children: vaList.map((m) =>
-                        _buildSubMetodeTile(metode: m)
-                      ).toList(),
-                    ),
-
-                  if (ewalletList.isNotEmpty)
-                    _buildKategoriUtamaCard(
-                      idKategori: 'ewallet',
-                      nama: 'E-Wallet',
-                      sub: 'DANA, ShopeePay, OVO, dll',
-                      icon: Icons.phone_android_rounded,
-                      hasDropdown: true,
-                    ),
-                  if (_kategoriExpanded == 'ewallet')
-                    _buildSubDropdownContainer(
-                      children: ewalletList.map((m) =>
-                        _buildSubMetodeTile(metode: m)
-                      ).toList(),
-                  if (vaList.isNotEmpty)
-                    _buildKategoriUtamaCard(
-                      idKategori: 'va',
-                      nama: 'Transfer Bank (VA)',
-                      sub: 'Format otomatis & dicek otomatis',
-                      icon: Icons.account_balance_rounded,
-                      hasDropdown: true,
-                    ),
-                  if (_kategoriExpanded == 'va')
-                    _buildSubDropdownContainer(
-                      children: vaList.map((m) =>
-                        _buildSubMetodeTile(metode: m)
-                      ).toList(),
-                    ),
-
-                  if (ewalletList.isNotEmpty)
-                    _buildKategoriUtamaCard(
-                      idKategori: 'ewallet',
-                      nama: 'E-Wallet',
-                      sub: 'DANA, ShopeePay, OVO, dll',
-                      icon: Icons.phone_android_rounded,
-                      hasDropdown: true,
-                    ),
-                  if (_kategoriExpanded == 'ewallet')
-                    _buildSubDropdownContainer(
-                      children: ewalletList.map((m) =>
-                        _buildSubMetodeTile(metode: m)
-                      ).toList(),
-                    ),
-
-                  if (qrisList.isNotEmpty)
-                    _buildKategoriUtamaCard(
-                      idKategori: 'qris',
-                      nama: 'QRIS',
-                      sub: 'Bayar instan pakai QR',
-                      icon: Icons.qr_code_scanner_rounded,
-                      hasDropdown: false,
-                      metode: qrisList.first,
-                    ),
-
-                  if (codList.isNotEmpty)
-                    _buildKategoriUtamaCard(
-                      idKategori: 'cod',
-                      nama: 'Cash on Delivery (COD)',
-                      sub: 'Bayar tunai di tempat',
-                      icon: Icons.handshake_rounded,
-                      hasDropdown: false,
-                      metode: codList.first,
-                    ),
-                ],
-              ),
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFAD510D),
+                      ),
+                    )
+                  : _errorMessage != null
+                  ? Center(
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    )
+                  : _daftarMetode.isEmpty
+                  ? const Center(
+                      child: Text('Tidak ada metode pembayaran aktif.'),
+                    )
+                  : _buildDynamicMetodeList(),
             ),
 
+            // Tombol Konfirmasi Pembayaran di Bagian Bawah
             if (_pembayaranTerpilih != null)
               Container(
                 padding: const EdgeInsets.all(20),
@@ -187,6 +251,7 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
+                    // Mengembalikan data pembayaran lengkap ke halaman Checkout
                     Navigator.pop(context, _pembayaranTerpilih);
                   },
                   style: ElevatedButton.styleFrom(
@@ -212,36 +277,22 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
     );
   }
 
+  // Widget Pembuat Box Kategori Utama (Mantra-pay, VA, E-Wallet, QRIS, COD)
   Widget _buildKategoriUtamaCard({
     required String idKategori,
     required String nama,
     required String sub,
     required IconData icon,
     required bool hasDropdown,
-    MetodePembayaran? metode,
+    required VoidCallback onTap,
   }) {
     final isCategoryActive = _kategoriExpanded == idKategori;
-    final isChecked = _pembayaranTerpilih?['kategori'] == idKategori && !hasDropdown;
+    // Check apakah ini pembayaran final (untuk yang non-dropdown seperti Mantra-pay, QRIS, COD)
+    final isChecked =
+        _pembayaranTerpilih?['kategori'] == idKategori && !hasDropdown;
 
     return GestureDetector(
-      onTap: () {
-        if (hasDropdown) {
-          setState(() {
-            _kategoriExpanded = _kategoriExpanded == idKategori ? null : idKategori;
-          });
-        } else if (metode != null) {
-          setState(() {
-            _kategoriExpanded = idKategori;
-            _pembayaranTerpilih = {
-              'kategori': idKategori,
-              'id_metode_pembayaran': metode.idMetodePembayaran,
-              'nama': metode.namaMetode,
-              'sub': _subtitleForMetode(metode.kodeMetode),
-              'icon': _iconForMetode(metode.kodeMetode),
-            };
-          });
-        }
-      },
+      onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(top: 15),
         padding: const EdgeInsets.all(16),
@@ -285,6 +336,7 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
                 ],
               ),
             ),
+            // Indikator Kanan: Dropdown Arrow atau Checkbox Bulat
             if (hasDropdown)
               Icon(
                 isCategoryActive
@@ -316,6 +368,7 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
     );
   }
 
+  // Container Pembungkus Dropdown anak-anaknya agar terlihat rapi mengelompok
   Widget _buildSubDropdownContainer({required List<Widget> children}) {
     return Container(
       margin: const EdgeInsets.only(top: 4, left: 10, right: 10),
@@ -328,18 +381,25 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
     );
   }
 
-  Widget _buildSubMetodeTile({required MetodePembayaran metode}) {
-    final isChecked = _isMetodeChecked(metode.idMetodePembayaran);
+  // Baris Pilihan Bank atau E-Wallet Spesifik di dalam dropdown
+  Widget _buildSubMetodeTile({
+    required String idKategori,
+    required String idMetode,
+    required String nama,
+    required String sub,
+  }) {
+    final isChecked = _isMetodeChecked(idMetode);
 
     return InkWell(
       onTap: () {
         setState(() {
           _pembayaranTerpilih = {
-            'kategori': metode.kodeMetode.startsWith('va_') ? 'va' : 'ewallet',
-            'id_metode_pembayaran': metode.idMetodePembayaran,
-            'nama': metode.namaMetode,
-            'sub': _subtitleForMetode(metode.kodeMetode),
-            'icon': metode.kodeMetode.startsWith('va_')
+            'kategori': idKategori,
+            'id_metode': idMetode,
+            'nama': nama,
+            'sub': sub,
+            // Tentukan icon kustom saat tampil kembali di halaman Checkout
+            'icon': idKategori == 'va'
                 ? Icons.account_balance_rounded
                 : Icons.phone_android_rounded,
           };
@@ -353,12 +413,23 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(metode.namaMetode, style: TextStyle(fontWeight: isChecked ? FontWeight.bold : FontWeight.normal, fontSize: 14)),
-                  const SizedBox(height: 2),
-                  Text(_subtitleForMetode(metode.kodeMetode), style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                  Text(
+                    nama,
+                    style: TextStyle(
+                      fontWeight: isChecked
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      fontSize: 14,
+                    ),
+                  ),
+                  Text(
+                    sub,
+                    style: const TextStyle(color: Colors.grey, fontSize: 11),
+                  ),
                 ],
               ),
             ),
+            // Lingkaran Radio Button kecil penanda aktif
             Container(
               width: 18,
               height: 18,

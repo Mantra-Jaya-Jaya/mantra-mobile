@@ -1,33 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/core/widgets/bottom_navbar.dart';
+import 'package:frontend/features/home/semua_aktivitas.dart';
 import 'package:frontend/features/home/services/dashboard_kasir_service.dart';
 import 'package:frontend/features/summary/summary.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 // Import fitur lainnya (Silakan sesuaikan kembali jika ada path yang berbeda)
-import '../auth/login.dart';
 import '../orders/order_kasir.dart';
 import '../profile/profile_kasir.dart';
 import '../notifications/notification_kasir.dart';
 import '../payment/payment.dart'; // Menuju ke file PaymentScreen baru yang mandiri
 
 class DashboardKasirPage extends StatefulWidget {
-  const DashboardKasirPage({super.key});
+  final int initialIndex;
+  const DashboardKasirPage({super.key, this.initialIndex = 0});
 
   @override
   State<DashboardKasirPage> createState() => _DashboardKasirPageState();
 }
 
 class _DashboardKasirPageState extends State<DashboardKasirPage> {
-  int _currentIndex = 0;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+  }
 
   // List halaman utama kasir — Bersih total dari pengecekan dan parameter kamera
   final List<Widget> _pages = [
     const DashboardContent(),
     const OrderKasir(),
-    const KasirPosScreen(idPesanan: 3), // <--- Sekarang langsung dipanggil kosongan!
+    const KasirPosScreen(
+      idPesanan: 0,
+    ), // <--- Sekarang langsung dipanggil kosongan!
     const SummaryPage(),
     const ProfileKasir(),
   ];
@@ -42,42 +50,49 @@ class _DashboardKasirPageState extends State<DashboardKasirPage> {
 
   @override
   Widget build(BuildContext context) {
+    bool isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
     double screenWidth = MediaQuery.of(context).size.width;
-    double navPadding = 20.0; 
+    double navPadding = 20.0;
     double rowWidth = screenWidth - (navPadding * 2);
     double itemWidth = rowWidth / kasirMenus.length;
-    
-    double fabX = (itemWidth * _currentIndex) + (itemWidth / 2) - 28 + navPadding;
+
+    double fabX =
+        (itemWidth * _currentIndex) + (itemWidth / 2) - 28 + navPadding;
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: IndexedStack(index: _currentIndex, children: _pages), 
-      
-      floatingActionButtonLocation: DynamicFabLocation(fabX),
-      
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Ketika FAB diklik, langsung pindah ke halaman Payments (index 2)
-          setState(() {
-            _currentIndex = 2; 
-          });
-        },
-        backgroundColor: const Color(0xFFAD510D), 
-        shape: const CircleBorder(),
-        child: Icon(
-          kasirMenus[_currentIndex].icon,
-          color: Colors.white,
-          size: 30,
-        ),
-      ),
+      resizeToAvoidBottomInset: false,
+      body: IndexedStack(index: _currentIndex, children: _pages),
 
-      bottomNavigationBar: CustomDynamicNavbar(
-        currentIndex: _currentIndex,
-        menus: kasirMenus,
-        onTap: (index) {
-          setState(() => _currentIndex = index);
-        },
-      ),
+      floatingActionButtonLocation: DynamicFabLocation(fabX),
+
+      floatingActionButton: isKeyboardOpen
+          ? null
+          : FloatingActionButton(
+              onPressed: () {
+                setState(() {
+                  _currentIndex = 2;
+                });
+              },
+              backgroundColor: const Color(0xFFAD510D),
+              shape: const CircleBorder(),
+              child: Icon(
+                kasirMenus[_currentIndex].icon,
+                color: Colors.white,
+                size: 30,
+              ),
+            ),
+
+      // 🚀 3. LOGIKA HILANG: Sembunyiin Navbar UFO-nya kalau keyboard buka
+      bottomNavigationBar: isKeyboardOpen
+          ? null
+          : CustomDynamicNavbar(
+              currentIndex: _currentIndex,
+              menus: kasirMenus,
+              onTap: (index) {
+                setState(() => _currentIndex = index);
+              },
+            ),
     );
   }
 }
@@ -92,8 +107,11 @@ class DashboardContent extends StatefulWidget {
 
 class _DashboardContentState extends State<DashboardContent> {
   final DashboardKasirService _service = DashboardKasirService();
-  final _currencyFormat =
-      NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+  final _currencyFormat = NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp ',
+    decimalDigits: 0,
+  );
 
   DashboardKasirData? _data;
   bool _isLoading = true;
@@ -154,8 +172,12 @@ class _DashboardContentState extends State<DashboardContent> {
             ElevatedButton(
               onPressed: _loadDashboard,
               style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFAD510D)),
-              child: const Text('Coba Lagi', style: TextStyle(color: Colors.white)),
+                backgroundColor: const Color(0xFFAD510D),
+              ),
+              child: const Text(
+                'Coba Lagi',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -185,7 +207,10 @@ class _DashboardContentState extends State<DashboardContent> {
                     children: [
                       Text(
                         _hariIniLabel,
-                        style: const TextStyle(color: Colors.white70, fontSize: 14),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
                       ),
                       const SizedBox(height: 5),
                       Text(
@@ -200,10 +225,10 @@ class _DashboardContentState extends State<DashboardContent> {
                   ),
                   IconButton(
                     icon: const Icon(
-                      Icons.notifications_none, 
+                      Icons.notifications_none,
                       color: Colors.white,
                       size: 30,
-                    ), 
+                    ),
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -240,22 +265,27 @@ class _DashboardContentState extends State<DashboardContent> {
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: const [
-                          Text(
-                            'Pendapatan Hari Ini',
-                            style: TextStyle(color: Colors.grey),
+                        children: [
+                          const Text(
+                            'Pendapatan Bersih Hari Ini',
+                            style: TextStyle(color: Colors.grey, fontSize: 13),
                           ),
-                          Icon(Icons.trending_up, color: Color(0xFFAD510D)),
+                          const Icon(Icons.trending_up, color: Color(0xFFAD510D)),
                         ],
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 5),
                       Text(
-                        _currencyFormat.format(data.totalPendapatan),
+                        _currencyFormat.format(data.totalPendapatanBersih),
                         style: const TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFFAD510D),
                         ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        'Gross: ${_currencyFormat.format(data.totalPendapatan)}',
+                        style: const TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                       const SizedBox(height: 20),
                       Row(
@@ -263,7 +293,7 @@ class _DashboardContentState extends State<DashboardContent> {
                           _smallStatItem(
                             Icons.receipt_long,
                             'Total Transaksi',
-                            '${data.jumlahTransaksi}',
+                            '${data.jumlahTransaksiSelesai}/${data.jumlahTransaksi}',
                           ),
                           const SizedBox(width: 15),
                           _smallStatItem(
@@ -290,7 +320,14 @@ class _DashboardContentState extends State<DashboardContent> {
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SemuaAktivitasPage(),
+                        ),
+                      );
+                    },
                     child: const Text(
                       'Lihat Semua',
                       style: TextStyle(color: Color(0xFFAD510D)),
@@ -324,7 +361,9 @@ class _DashboardContentState extends State<DashboardContent> {
                         borderRadius: BorderRadius.circular(15),
                       ),
                       child: Column(
-                        children: data.aktivitasTerkini.asMap().entries.map((entry) {
+                        children: data.aktivitasTerkini.asMap().entries.map((
+                          entry,
+                        ) {
                           final idx = entry.key;
                           final item = entry.value;
                           return Column(

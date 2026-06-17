@@ -1,5 +1,6 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
-import '../models/pengantaran_model.dart'; // Pastikan lu udah bikin modelnya
+import '../models/pengantaran_model.dart';
 import '../network/api_client.dart';
 
 class PengantaranService {
@@ -7,10 +8,10 @@ class PengantaranService {
   final Dio _dio = ApiClient().dio;
 
   // 🚀 Fungsi buat narik data tugas pengantaran
-  Future<List<PengantaranModel>> getDaftarPengantaran() async {
+  Future<List<PengantaranModel>> getDaftarPengantaran({String? status}) async {
     try {
-      // Tembak rute API Golang lu (sesuaikan dengan rute di Golang)
-      final response = await _dio.get('/kurir/tugas');
+      final queryParams = status != null ? {'status': status} : null;
+      final response = await _dio.get('/kurir/tugas', queryParameters: queryParams);
 
       if (response.data != null && response.data['data'] != null) {
         final List<dynamic> rawData = response.data['data'];
@@ -54,6 +55,38 @@ class DetailPengantaranService {
       return null;
     } catch (e) {
       print('❌ DEBUG API PETA: Gagal Parsing Model -> $e');
+      return null;
+    }
+  }
+
+  Future<bool> updateLokasiKurir(String publicId, double latitude, double longitude) async {
+    try {
+      final response = await _apiClient.dio.put(
+        '/kurir/pengantaran/$publicId/lokasi',
+        data: {
+          'latitude': latitude,
+          'longitude': longitude,
+        },
+      );
+      return response.statusCode == 200;
+    } on DioException catch (e) {
+      print('❌ Gagal update lokasi kurir: ${e.response?.statusCode} - ${e.message}');
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>?> uploadBuktiSelesai(String publicId, File imageFile) async {
+    try {
+      final formData = FormData.fromMap({
+        'foto_bukti': await MultipartFile.fromFile(imageFile.path, filename: 'bukti_selesai.jpg'),
+      });
+      final response = await _apiClient.dio.put(
+        '/kurir/pengantaran/$publicId/selesai',
+        data: formData,
+      );
+      return response.data;
+    } on DioException catch (e) {
+      print('❌ Gagal upload bukti selesai: ${e.response?.statusCode} - ${e.message}');
       return null;
     }
   }
