@@ -265,22 +265,27 @@ class _DashboardContentState extends State<DashboardContent> {
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: const [
-                          Text(
-                            'Pendapatan Hari Ini',
-                            style: TextStyle(color: Colors.grey),
+                        children: [
+                          const Text(
+                            'Pendapatan Bersih Hari Ini',
+                            style: TextStyle(color: Colors.grey, fontSize: 13),
                           ),
-                          Icon(Icons.trending_up, color: Color(0xFFAD510D)),
+                          const Icon(Icons.trending_up, color: Color(0xFFAD510D)),
                         ],
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 5),
                       Text(
-                        _currencyFormat.format(data.totalPendapatan),
+                        _currencyFormat.format(data.totalPendapatanBersih),
                         style: const TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFFAD510D),
                         ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        'Gross: ${_currencyFormat.format(data.totalPendapatan)}',
+                        style: const TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                       const SizedBox(height: 20),
                       Row(
@@ -288,7 +293,7 @@ class _DashboardContentState extends State<DashboardContent> {
                           _smallStatItem(
                             Icons.receipt_long,
                             'Total Transaksi',
-                            '${data.jumlahTransaksi}',
+                            '${data.jumlahTransaksiSelesai}/${data.jumlahTransaksi}',
                           ),
                           const SizedBox(width: 15),
                           _smallStatItem(

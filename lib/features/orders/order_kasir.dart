@@ -53,6 +53,8 @@ class OrderKasirState extends State<OrderKasir> {
 
   Color _getStatusColor(String status) {
     switch (status.trim().toLowerCase()) {
+      case 'menunggu pembayaran':
+        return const Color(0xFFFEF9C3); // Kuning muda
       case 'dikemas':
         return const Color(0xFFFFEDD5);
       case 'selesai': 
@@ -65,6 +67,8 @@ class OrderKasirState extends State<OrderKasir> {
 
   Color _getStatusTextColor(String status) {
     switch (status.trim().toLowerCase()) {
+      case 'menunggu pembayaran':
+        return const Color(0xFF854D0E); // Coklat/Kuning tua
       case 'dikemas':
         return const Color(0xFFAF510C);
       case 'selesai': 
@@ -231,7 +235,7 @@ class OrderKasirState extends State<OrderKasir> {
           context,
           MaterialPageRoute(
             // KODE BARU:
-            builder: (context) => DetailPesanan(publicId: order.orderId), 
+            builder: (context) => DetailPesanan(publicId: order.fullPublicId), 
           ),
         );
       },
