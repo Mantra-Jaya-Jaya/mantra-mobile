@@ -6,16 +6,24 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/core/services/notifikasi_service.dart';
 import 'package:frontend/features/notifications/notification_kasir.dart';
+import 'package:frontend/features/notifications/notification_customer.dart';
 
 class PushNotificationService {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
-  
+
   static final NotifikasiService _notifikasiService = NotifikasiService();
   static Timer? _pollingTimer;
+  static String _role = '';
+
+  static String get role => _role;
+
+  static void setRole(String role) {
+    _role = role;
+    print("--- PushNotificationService: Role di-set ke '$role' ---");
+  }
 
   static Future<void> initialize() async {
-    // 1. Request Izin Notifikasi (Penting untuk Android 13+)
     if (await Permission.notification.isDenied) {
       await Permission.notification.request();
     }
@@ -30,33 +38,44 @@ class PushNotificationService {
     await _notificationsPlugin.initialize(
       settings: initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        // Logika saat notifikasi diklik
         if (navigatorKey.currentState != null) {
+          Widget targetPage;
+          if (_role == 'customer') {
+            targetPage = const NotificationCustomerPage();
+          } else {
+            targetPage = const NotificationScreen();
+          }
           navigatorKey.currentState!.push(
-            MaterialPageRoute(
-              builder: (context) => const NotificationScreen(),
-            ),
+            MaterialPageRoute(builder: (context) => targetPage),
           );
         }
       },
     );
 
-    // 2. Buat Notification Channel secara eksplisit
-    const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'kasir_notif_channel', // id
-      'Notifikasi Kasir', // title
-      description: 'Channel untuk notifikasi pesanan dan stok kasir', // description
+    const AndroidNotificationChannel kasirChannel = AndroidNotificationChannel(
+      'kasir_notif_channel',
+      'Notifikasi Kasir',
+      description: 'Channel untuk notifikasi pesanan dan stok kasir',
       importance: Importance.max,
     );
 
-    await _notificationsPlugin
+    const AndroidNotificationChannel customerChannel = AndroidNotificationChannel(
+      'customer_notif_channel',
+      'Notifikasi Customer',
+      description: 'Channel untuk notifikasi pesanan customer',
+      importance: Importance.max,
+    );
+
+    final plugin = _notificationsPlugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    await plugin?.createNotificationChannel(kasirChannel);
+    await plugin?.createNotificationChannel(customerChannel);
   }
 
   static void startPolling() {
-    print("--- Polling Notifikasi Dimulai ---");
+    print("--- Polling Notifikasi Dimulai (role: $_role) ---");
     _pollingTimer?.cancel();
     _pollingTimer = Timer.periodic(const Duration(seconds: 15), (timer) async {
       await checkNewNotifications();
@@ -69,17 +88,24 @@ class PushNotificationService {
   }
 
   static Future<void> checkNewNotifications() async {
+    if (_role.isEmpty) return;
+
     try {
-      final notifList = await _notifikasiService.getNotifikasiKasir();
+      final List<NotifikasiModel> notifList;
+      if (_role == 'customer') {
+        notifList = await _notifikasiService.getNotifikasiCustomer();
+      } else {
+        notifList = await _notifikasiService.getNotifikasiKasir();
+      }
+
       if (notifList.isEmpty) return;
 
       final prefs = await SharedPreferences.getInstance();
-      final lastId = prefs.getInt('last_notification_id') ?? 0;
+      final lastId = prefs.getInt('last_notification_id_$_role') ?? 0;
 
-      // Filter notifikasi baru (ID > lastId)
       final newNotifs = notifList.where((n) => n.idNotifikasi > lastId).toList();
 
-      print("Polling: Ditemukan ${notifList.length} total, ${newNotifs.length} baru (Last ID: $lastId)");
+      print("Polling ($_role): Ditemukan ${notifList.length} total, ${newNotifs.length} baru (Last ID: $lastId)");
 
       if (newNotifs.isNotEmpty) {
         newNotifs.sort((a, b) => a.idNotifikasi.compareTo(b.idNotifikasi));
@@ -92,11 +118,10 @@ class PushNotificationService {
           );
         }
 
-        // Simpan ID terbaru agar tidak muncul lagi
-        await prefs.setInt('last_notification_id', newNotifs.last.idNotifikasi);
+        await prefs.setInt('last_notification_id_$_role', newNotifs.last.idNotifikasi);
       }
     } catch (e) {
-      print("Polling error: $e");
+      print("Polling error ($_role): $e");
     }
   }
 
@@ -105,17 +130,20 @@ class PushNotificationService {
     required String title,
     required String body,
   }) async {
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'kasir_notif_channel',
-      'Notifikasi Kasir',
-      channelDescription: 'Channel untuk notifikasi pesanan dan stok kasir',
+    final channelId = _role == 'customer' ? 'customer_notif_channel' : 'kasir_notif_channel';
+    final channelName = _role == 'customer' ? 'Notifikasi Customer' : 'Notifikasi Kasir';
+
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      channelId,
+      channelName,
+      channelDescription: channelName,
       importance: Importance.max,
       priority: Priority.high,
       showWhen: true,
       icon: '@mipmap/ic_launcher',
     );
 
-    const NotificationDetails platformDetails = NotificationDetails(
+    final NotificationDetails platformDetails = NotificationDetails(
       android: androidDetails,
     );
 

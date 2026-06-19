@@ -54,6 +54,10 @@ class _AuthInterceptor extends Interceptor {
         handler.next(err);
         return;
       }
+      if (err.requestOptions.headers['X-Skip-Auth-Redirect'] == 'true') {
+        handler.next(err);
+        return;
+      }
       final refreshed = await _tryRefresh();
       if (refreshed) {
         final token = await _storage.read(key: 'access_token');

@@ -8,6 +8,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 // Import fitur lainnya (Silakan sesuaikan kembali jika ada path yang berbeda)
 import '../orders/order_kasir.dart';
+import 'package:frontend/core/services/push_notification_service.dart';
 import '../profile/profile_kasir.dart';
 import '../notifications/notification_kasir.dart';
 import '../payment/payment.dart'; // Menuju ke file PaymentScreen baru yang mandiri
@@ -27,6 +28,7 @@ class _DashboardKasirPageState extends State<DashboardKasirPage> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    PushNotificationService.setRole('kasir');
   }
 
   // List halaman utama kasir — Bersih total dari pengecekan dan parameter kamera

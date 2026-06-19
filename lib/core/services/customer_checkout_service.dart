@@ -31,6 +31,7 @@ class CustomerCheckoutService {
 
   Future<Map<String, dynamic>> checkout({
     required String idAlamat,
+    required List<Map<String, dynamic>> items,
     int? idEkspedisi,
     int? idLayananEkspedisi,
     int ongkosKirim = 0,
@@ -38,15 +39,21 @@ class CustomerCheckoutService {
     required String idMetodePembayaran,
     int? idTipeKurir,
   }) async {
-    final response = await _dio.post('/customer/pesanan/checkout', data: {
-      'id_alamat': idAlamat,
-      'metode_pembayaran': idMetodePembayaran,
-      'id_ekspedisi': idEkspedisi,
-      'id_layanan_ekspedisi': idLayananEkspedisi,
-      'ongkos_kirim': ongkosKirim,
-      'catatan': catatan,
-      'id_tipe_kurir': idTipeKurir,
-    });
-    return response.data;
+    try {
+      final response = await _dio.post('/customer/pesanan/checkout', data: {
+        'id_alamat': idAlamat,
+        'metode_pembayaran': idMetodePembayaran,
+        'items': items,
+        'id_ekspedisi': idEkspedisi,
+        'id_layanan_ekspedisi': idLayananEkspedisi,
+        'ongkos_kirim': ongkosKirim,
+        'catatan': catatan,
+        'id_tipe_kurir': idTipeKurir,
+      });
+      return response.data;
+    } on DioException catch (e) {
+      final msg = e.response?.data['message'] ?? 'Gagal membuat pesanan';
+      throw Exception(msg);
+    }
   }
 }
