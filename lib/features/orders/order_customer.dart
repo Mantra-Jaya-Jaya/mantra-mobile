@@ -137,7 +137,8 @@ class _MyOrderPageState extends State<MyOrderPage> {
                     final filteredOrders = selectedStatus == "Semua"
                         ? _orders
                         : _orders.where((order) {
-                            final String status = (order['nama_status_pesanan'] ?? '').toString();
+                            final String status =
+                                (order['nama_status_pesanan'] ?? '').toString();
                             return status == selectedStatus;
                           }).toList();
 
@@ -230,6 +231,10 @@ class _MyOrderPageState extends State<MyOrderPage> {
     final List items = order['items'] ?? [];
     final int itemCount = items.length;
 
+    final String displayOrderId = publicId.length >= 8
+        ? publicId.substring(0, 8).toUpperCase()
+        : publicId.toUpperCase();
+
     bool isExpanded = _expandedOrderIds.contains(publicId);
 
     final List itemsToShow = isExpanded
@@ -258,9 +263,7 @@ class _MyOrderPageState extends State<MyOrderPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => OrderDetailPage(
-              noPesanan: publicId,
-            ),
+            builder: (context) => OrderDetailPage(noPesanan: publicId),
           ),
         );
       },
@@ -295,7 +298,7 @@ class _MyOrderPageState extends State<MyOrderPage> {
                         style: TextStyle(color: Colors.grey, fontSize: 10),
                       ),
                       Text(
-                        nomorPesanan,
+                        displayOrderId,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
@@ -368,7 +371,11 @@ class _MyOrderPageState extends State<MyOrderPage> {
                                   ),
                                 ),
                               )
-                            : const Icon(Icons.shopping_bag_outlined, color: Colors.grey, size: 20),
+                            : const Icon(
+                                Icons.shopping_bag_outlined,
+                                color: Colors.grey,
+                                size: 20,
+                              ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -464,14 +471,18 @@ class _MyOrderPageState extends State<MyOrderPage> {
                 ),
                 Row(
                   children: [
-                    if (statusAsli == "Belum Dibayar" || statusAsli == "Menunggu Pembayaran") ...[
+                    if (statusAsli == "Belum Dibayar" ||
+                        statusAsli == "Menunggu Pembayaran") ...[
                       SizedBox(
                         height: 30,
                         child: OutlinedButton(
                           onPressed: () => _cancelOrder(publicId),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.red,
-                            side: const BorderSide(color: Colors.red, width: 0.5),
+                            side: const BorderSide(
+                              color: Colors.red,
+                              width: 0.5,
+                            ),
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
@@ -479,7 +490,10 @@ class _MyOrderPageState extends State<MyOrderPage> {
                           ),
                           child: const Text(
                             "Batalkan",
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),

@@ -37,6 +37,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   Future<void> _fetchOrderDetail() async {
     try {
       final data = await _orderService.getOrderDetail(widget.noPesanan);
+      print("DETAIL PESANAN:");
+      print(data);
+
       if (mounted) {
         setState(() {
           _orderData = data;
@@ -80,24 +83,38 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        appBar: const BaseHeaderWidget(title: 'Detail Pesanan', leading: BackButton(color: Colors.white)),
-        body: const Center(child: CircularProgressIndicator(color: Color(0xFFAD510D))),
+        appBar: const BaseHeaderWidget(
+          title: 'Detail Pesanan',
+          leading: BackButton(color: Colors.white),
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(color: Color(0xFFAD510D)),
+        ),
       );
     }
 
     if (_errorMessage != null || _orderData == null) {
       return Scaffold(
-        appBar: const BaseHeaderWidget(title: 'Detail Pesanan', leading: BackButton(color: Colors.white)),
+        appBar: const BaseHeaderWidget(
+          title: 'Detail Pesanan',
+          leading: BackButton(color: Colors.white),
+        ),
         body: Center(child: Text(_errorMessage ?? "Pesanan tidak ditemukan")),
       );
     }
 
     final data = _orderData!;
+
     final items = (data['items'] as List? ?? []);
     final rincian = data['rincian_pembayaran'] as Map<String, dynamic>? ?? {};
     final status = data['nama_status_pesanan'] ?? 'Pending';
     final tujuan = data['tujuan_pengantaran'] as Map<String, dynamic>?;
     final kurir = data['kurir'] as Map<String, dynamic>?;
+    final String publicId = data['no_pesanan'] ?? '-';
+
+    final String displayOrderId = publicId.length >= 8
+        ? publicId.substring(0, 8).toUpperCase()
+        : publicId.toUpperCase();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F7),
@@ -132,7 +149,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        data['no_pesanan'] ?? widget.noPesanan,
+                        displayOrderId,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
@@ -164,9 +181,15 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             const SizedBox(height: 20),
 
             // --- DAFTAR BARANG ---
-            const Text(
-              "Daftar Produk",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            Row(
+              children: [
+                Icon(Icons.shopping_bag, color: const Color(0xFFAD510D)),
+                const SizedBox(width: 8),
+                const Text(
+                  "Daftar Produk",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             Container(
@@ -190,12 +213,19 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                         decoration: BoxDecoration(
                           color: Colors.grey[100],
                           borderRadius: BorderRadius.circular(12),
-                          image: item['gambar'] != null ? DecorationImage(
-                            image: NetworkImage(item['gambar']),
-                            fit: BoxFit.cover,
-                          ) : null,
+                          image: item['gambar'] != null
+                              ? DecorationImage(
+                                  image: NetworkImage(item['gambar']),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
                         ),
-                        child: item['gambar'] == null ? const Icon(Icons.shopping_bag_outlined, color: Colors.grey) : null,
+                        child: item['gambar'] == null
+                            ? const Icon(
+                                Icons.shopping_bag_outlined,
+                                color: Colors.grey,
+                              )
+                            : null,
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -212,7 +242,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                             if (item['varian'] != null)
                               Text(
                                 "Varian: ${item['varian']}",
-                                style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
                               ),
                             const SizedBox(height: 4),
                             Row(
@@ -226,7 +259,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                   ),
                                 ),
                                 Text(
-                                  _formatRupiah((item['harga_satuan'] ?? 0) * (item['jumlah'] ?? 0)),
+                                  _formatRupiah(
+                                    (item['harga_satuan'] ?? 0) *
+                                        (item['jumlah'] ?? 0),
+                                  ),
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 13,
@@ -246,9 +282,15 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             const SizedBox(height: 25),
 
             // --- METODE PEMBAYARAN ---
-            const Text(
-              "Informasi Pembayaran",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            Row(
+              children: [
+                Icon(Icons.receipt, color: const Color(0xFFAD510D)),
+                const SizedBox(width: 8),
+                const Text(
+                  "Informasi Pembayaran",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             Container(
@@ -263,16 +305,24 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text("Metode", style: TextStyle(color: Colors.grey, fontSize: 13)),
+                      const Text(
+                        "Metode",
+                        style: TextStyle(color: Colors.grey, fontSize: 13),
+                      ),
                       Text(
-                        (rincian['metode'] != null && rincian['metode'].toString().isNotEmpty) 
-                            ? rincian['metode'].toString().toUpperCase() 
+                        (rincian['metode'] != null &&
+                                rincian['metode'].toString().isNotEmpty)
+                            ? rincian['metode'].toString().toUpperCase()
                             : 'BELUM TERPILIH',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                   ),
-                  if (status == 'Belum Dibayar' || status == 'Menunggu Pembayaran') ...[
+                  if (status == 'Belum Dibayar' ||
+                      status == 'Menunggu Pembayaran') ...[
                     const Divider(height: 24),
                     const Text(
                       "Selesaikan pembayaran Anda segera untuk memproses pesanan ini.",
@@ -305,7 +355,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFAD510D),
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                           elevation: 0,
                         ),
                       ),
@@ -318,9 +370,15 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
             // --- TUJUAN PENGANTARAN ---
             if (tujuan != null) ...[
-              const Text(
-                "Tujuan Pengantaran",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              Row(
+                children: [
+                  Icon(Icons.location_on, color: const Color(0xFFAD510D)),
+                  const SizedBox(width: 8),
+                  const Text(
+                    "Tujuan Pengantaran",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               Container(
@@ -374,11 +432,15 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     CircleAvatar(
                       radius: 24,
                       backgroundColor: Colors.grey[200],
-                      backgroundImage: (kurir['foto_kurir'] != null && kurir['foto_kurir'].toString().isNotEmpty) 
-                          ? NetworkImage(kurir['foto_kurir']) 
+                      backgroundImage:
+                          (kurir['foto_kurir'] != null &&
+                              kurir['foto_kurir'].toString().isNotEmpty)
+                          ? NetworkImage(kurir['foto_kurir'])
                           : null,
-                      child: (kurir['foto_kurir'] == null || kurir['foto_kurir'].toString().isEmpty) 
-                          ? const Icon(Icons.person, color: Colors.grey) 
+                      child:
+                          (kurir['foto_kurir'] == null ||
+                              kurir['foto_kurir'].toString().isEmpty)
+                          ? const Icon(Icons.person, color: Colors.grey)
                           : null,
                     ),
                     const SizedBox(width: 14),
@@ -387,12 +449,18 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                       children: [
                         Text(
                           kurir['nama_kurir'] ?? "-",
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
                         ),
                         if (kurir['ekspedisi'] != null)
                           Text(
                             kurir['ekspedisi'],
-                            style: const TextStyle(color: Colors.blueGrey, fontSize: 11),
+                            style: const TextStyle(
+                              color: Colors.blueGrey,
+                              fontSize: 11,
+                            ),
                           ),
                       ],
                     ),
@@ -416,16 +484,25 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
               ),
               child: Column(
                 children: [
-                  _buildRowTotal("Subtotal Produk", _formatRupiah(rincian['subtotal_items'] ?? 0)),
+                  _buildRowTotal(
+                    "Subtotal Produk",
+                    _formatRupiah(rincian['subtotal_items'] ?? 0),
+                  ),
                   const SizedBox(height: 8),
-                  _buildRowTotal("Ongkos Kirim", _formatRupiah(rincian['ongkir'] ?? 0)),
+                  _buildRowTotal(
+                    "Ongkos Kirim",
+                    _formatRupiah(rincian['ongkir'] ?? 0),
+                  ),
                   const Divider(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
                         "Total Pembayaran",
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
                       Text(
                         _formatRupiah(rincian['total'] ?? 0),
@@ -454,12 +531,14 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     foregroundColor: Colors.red,
                     side: const BorderSide(color: Colors.red),
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: const Text("Batalkan Pesanan"),
                 ),
               ),
-            
+
             if (status == 'Dikirim')
               SizedBox(
                 width: double.infinity,
@@ -468,7 +547,8 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => OrderTrackingPage(noPesanan: widget.noPesanan),
+                        builder: (context) =>
+                            OrderTrackingPage(noPesanan: widget.noPesanan),
                       ),
                     );
                   },
@@ -478,7 +558,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     backgroundColor: const Color(0xFFAD510D),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     elevation: 0,
                   ),
                 ),
@@ -493,11 +575,15 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
         Text(
-          label,
-          style: const TextStyle(color: Colors.grey, fontSize: 13),
+          price,
+          style: const TextStyle(
+            color: Colors.black87,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
         ),
-        Text(price, style: const TextStyle(color: Colors.black87, fontSize: 13, fontWeight: FontWeight.w500)),
       ],
     );
   }

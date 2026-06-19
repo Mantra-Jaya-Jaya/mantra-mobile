@@ -464,8 +464,7 @@ class _HomeContentState extends State<HomeContent> {
               context,
               MaterialPageRoute(
                 builder: (context) => KategoriBarangPage(
-                  initialCategory: k.namaKategori, // Nama kategori yang diklik
-                  apiCategories: _kategoriList, // Kirim seluruh list kategori
+                  initialCategory: k.namaKategori,
                 ),
               ),
             );

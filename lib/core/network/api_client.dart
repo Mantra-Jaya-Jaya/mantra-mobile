@@ -6,7 +6,7 @@ typedef OnUnauthorized = void Function();
 class ApiClient {
   static const String baseUrl = String.fromEnvironment(
     'BASE_URL',
-    defaultValue: 'http://192.168.110.225:8080/api/v1',
+    defaultValue: 'http://172.16.160.135:8080/api/v1', // emulator Android
   );
 
   static OnUnauthorized? onUnauthorized;

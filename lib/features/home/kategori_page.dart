@@ -177,8 +177,6 @@ class _AllKategoriPageState extends State<AllKategoriPage> {
                 MaterialPageRoute(
                   builder: (context) => KategoriBarangPage(
                     initialCategory: kat.namaKategori,
-                    apiCategories:
-                        _allCategories, // Mengirim full list kategori terupdate
                   ),
                 ),
               );
