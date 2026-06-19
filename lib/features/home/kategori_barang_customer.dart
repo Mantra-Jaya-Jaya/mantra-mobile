@@ -2,78 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:frontend/core/widgets/base_header_widget.dart';
 
 class KategoriBarangPage extends StatefulWidget {
-  // Tambahkan parameter initialCategory (opsional, default 'Semua')
   final String initialCategory;
-  final List<dynamic> apiCategories;
 
-  const KategoriBarangPage({
-    Key? key,
-    this.initialCategory = 'Semua',
-    required this.apiCategories, // Wajib diisi saat pindah halaman
-  }) : super(key: key);
+  const KategoriBarangPage({Key? key, this.initialCategory = 'Semua'})
+    : super(key: key);
 
   @override
   State<KategoriBarangPage> createState() => _KategoriBarangPageState();
 }
 
 class _KategoriBarangPageState extends State<KategoriBarangPage> {
-  final ScrollController _scrollController = ScrollController();
-
-  // Biarkan kosong dulu, kita isi di initState
-  List<String> categories = [];
-  late String selectedCategory;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-
-    // 1. Masukkan opsi 'Semua' di awal slider
-    categories.add('Semua');
-
-    // 2. Ambil semua namaKategori dari database dan masukkan ke dalam list slider
-    for (var k in widget.apiCategories) {
-      categories.add(k.namaKategori);
-    }
-
-    // 3. Set kategori yang aktif sesuai yang diklik dari halaman Home
-    if (categories.contains(widget.initialCategory)) {
-      selectedCategory = widget.initialCategory;
-    } else {
-      selectedCategory = 'Semua';
-    }
-
-    // 2. Jalankan fungsi scroll otomatis setelah UI selesai digambar oleh Flutter
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToSelectedCategory();
-    });
   }
 
-  void _scrollToSelectedCategory() {
-    int index = categories.indexOf(selectedCategory);
-
-    // Jika index ditemukan dan bukan 'Semua' (index 0 tidak perlu digeser karena sudah di paling kiri)
-    if (index > 0) {
-      // 95.0 adalah estimasi lebar (lebar box + margin) tiap item kategori dalam pixel.
-      // Kamu bisa menaikkan/menurunkan angka ini sedikit agar pas di tengah layar.
-      double targetOffset = index * 95.0;
-
-      // Cek apakah posisi scroll saat ini belum melampaui batas maksimum scroll ListView
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          targetOffset,
-          duration: const Duration(
-            milliseconds: 300,
-          ), // Kecepatan geser (300 ms)
-          curve: Curves.easeInOut, // Efek animasi halus
-        );
-      }
-    }
-  }
-
-  // 4. Hapus controller dari memori saat halaman ditutup untuk mencegah memory leak
   @override
   void dispose() {
-    _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -120,16 +69,21 @@ class _KategoriBarangPageState extends State<KategoriBarangPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 3. Filter produk berdasarkan kategori yang dipilih
-    List<Map<String, dynamic>> filteredProducts = selectedCategory == 'Semua'
-        ? products
-        : products.where((p) => p['category'] == selectedCategory).toList();
+    // Filter produk berdasarkan kategori yang dipilih + search query
+    List<Map<String, dynamic>> filteredProducts = products.where((p) {
+      final matchCategory =
+          widget.initialCategory == 'Semua' ||
+          p['category'] == widget.initialCategory;
+      final matchSearch =
+          _searchQuery.isEmpty ||
+          p['title']!.toLowerCase().contains(_searchQuery.toLowerCase());
+      return matchCategory && matchSearch;
+    }).toList();
 
     return Scaffold(
       backgroundColor: Colors.white,
-      // Custom Header sesuai warna cokelat di gambar
       appBar: BaseHeaderWidget(
-        title: 'Kategori Barang',
+        title: widget.initialCategory,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
           onPressed: () => Navigator.pop(context),
@@ -138,56 +92,41 @@ class _KategoriBarangPageState extends State<KategoriBarangPage> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
-          // ==================== BOX KATEGORI HORIZONTAL ====================
-          SizedBox(
-            height: 40,
-            child: ListView.builder(
-              controller: _scrollController,
-              scrollDirection: Axis.horizontal,
-              itemCount: categories.length,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemBuilder: (context, index) {
-                bool isSelected = categories[index] == selectedCategory;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      selectedCategory = categories[index];
-                    });
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 10),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? const Color(0xFFAD510D)
-                          : Colors.grey[200],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected
-                            ? const Color(0xFFAD510D)
-                            : Colors.transparent,
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        categories[index],
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : Colors.black87,
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
+          // ==================== SEARCH BAR ====================
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
               },
+              decoration: InputDecoration(
+                hintText: 'Cari Produk...',
+                hintStyle: const TextStyle(color: Colors.grey),
+                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.cancel, color: Colors.grey),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _searchQuery = '';
+                          });
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.grey[100],
+                contentPadding: EdgeInsets.zero,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(25),
+                  borderSide: BorderSide.none,
+                ),
+              ),
             ),
           ),
 
@@ -201,11 +140,10 @@ class _KategoriBarangPageState extends State<KategoriBarangPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2, // 2 Kolom ke samping
+                          crossAxisCount: 2,
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
-                          childAspectRatio:
-                              0.75, // Mengatur rasio tinggi vs lebar card
+                          childAspectRatio: 0.75,
                         ),
                     itemCount: filteredProducts.length,
                     itemBuilder: (context, index) {
@@ -213,15 +151,12 @@ class _KategoriBarangPageState extends State<KategoriBarangPage> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Box Gambar dengan Border Rounded Grey tipis
                           Expanded(
                             child: Container(
                               width: double.infinity,
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(
-                                  24,
-                                ), // Sesuai lengkungan di gambar
+                                borderRadius: BorderRadius.circular(24),
                                 border: Border.all(
                                   color: Colors.blueGrey.shade100,
                                   width: 1,
@@ -243,7 +178,6 @@ class _KategoriBarangPageState extends State<KategoriBarangPage> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          // Nama Produk
                           Text(
                             item['title']!,
                             maxLines: 1,
@@ -254,7 +188,6 @@ class _KategoriBarangPageState extends State<KategoriBarangPage> {
                             ),
                           ),
                           const SizedBox(height: 2),
-                          // Harga Produk (Bold)
                           Text(
                             item['price']!,
                             style: const TextStyle(

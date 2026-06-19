@@ -61,132 +61,32 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
 
   Widget _buildDynamicMetodeList() {
     List<Widget> children = [];
+    List<Map<String, dynamic>> listVirtualAccount = [];
 
+    // 1. Kumpulkan semua data bank ber-kode 'va' ke dalam list khusus VA
+    for (var item in _daftarMetode) {
+      if (item['kode_metode'] == 'va') {
+        listVirtualAccount.add(item);
+      }
+    }
+
+    // 2. Render menu utama non-dropdown (Cash, QRIS, COD) - Tetap normal
     for (var item in _daftarMetode) {
       final kode = item['kode_metode'] ?? '';
       final nama = item['nama_metode'] ?? '';
+      final iconUrl = item['icon'] ?? '';
 
-      if (kode == 'cash') {
-        children.add(
-          _buildKategoriUtamaCard(
-            idKategori: 'cash',
-            nama: nama,
-            sub: 'Bayar tunai langsung',
-            icon: Icons.payments_outlined,
-            hasDropdown: false,
-            onTap: () {
-              setState(() {
-                _kategoriExpanded = 'cash';
-                _pembayaranTerpilih = {
-                  'kategori': 'cash',
-                  'id_metode': 'cash',
-                  'nama': nama,
-                  'sub': 'Bayar tunai langsung',
-                  'icon': Icons.payments_outlined,
-                };
-              });
-            },
-          ),
-        );
-      } else if (kode == 'va') {
-        children.add(
-          _buildKategoriUtamaCard(
-            idKategori: 'va',
-            nama: nama,
-            sub: 'Format otomatis & dicek otomatis',
-            icon: Icons.account_balance_rounded,
-            hasDropdown: true,
-            onTap: () {
-              setState(() {
-                _kategoriExpanded = _kategoriExpanded == 'va' ? null : 'va';
-              });
-            },
-          ),
-        );
-        if (_kategoriExpanded == 'va') {
-          children.add(
-            _buildSubDropdownContainer(
-              children: [
-                _buildSubMetodeTile(
-                  idKategori: 'va',
-                  idMetode: 'va_bni',
-                  nama: 'BNI Virtual Account',
-                  sub: 'Dicek otomatis',
-                ),
-                _buildSubMetodeTile(
-                  idKategori: 'va',
-                  idMetode: 'va_bri',
-                  nama: 'BRI Virtual Account',
-                  sub: 'Dicek otomatis',
-                ),
-                _buildSubMetodeTile(
-                  idKategori: 'va',
-                  idMetode: 'va_mandiri',
-                  nama: 'Mandiri Virtual Account',
-                  sub: 'Dicek otomatis',
-                ),
-                _buildSubMetodeTile(
-                  idKategori: 'va',
-                  idMetode: 'va_bca',
-                  nama: 'BCA Virtual Account',
-                  sub: 'Dicek otomatis',
-                ),
-              ],
-            ),
-          );
-        }
-      } else if (kode == 'qris') {
-        children.add(
-          _buildKategoriUtamaCard(
-            idKategori: 'qris',
-            nama: nama,
-            sub: 'Bayar instan pakai aplikasi bank',
-            icon: Icons.qr_code_scanner_rounded,
-            hasDropdown: false,
-            onTap: () {
-              setState(() {
-                _kategoriExpanded = 'qris';
-                _pembayaranTerpilih = {
-                  'kategori': 'qris',
-                  'id_metode': 'qris',
-                  'nama': nama,
-                  'sub': 'Scan kode QR untuk bayar',
-                  'icon': Icons.qr_code_scanner_rounded,
-                };
-              });
-            },
-          ),
-        );
-      } else if (kode == 'cod') {
-        children.add(
-          _buildKategoriUtamaCard(
-            idKategori: 'cod',
-            nama: nama,
-            sub: 'Bayar tunai langsung ke kurir saat barang sampai',
-            icon: Icons.handshake_rounded,
-            hasDropdown: false,
-            onTap: () {
-              setState(() {
-                _kategoriExpanded = 'cod';
-                _pembayaranTerpilih = {
-                  'kategori': 'cod',
-                  'id_metode': 'cod',
-                  'nama': nama,
-                  'sub': 'Bayar tunai di tempat',
-                  'icon': Icons.handshake_rounded,
-                };
-              });
-            },
-          ),
-        );
-      } else {
-        // Fallback untuk metode lain
+      if (kode == 'cash' || kode == 'qris' || kode == 'cod') {
         children.add(
           _buildKategoriUtamaCard(
             idKategori: kode,
             nama: nama,
-            sub: 'Bayar dengan $nama',
-            icon: Icons.payment_rounded,
+            sub: kode == 'cash'
+                ? 'Bayar tunai langsung'
+                : (kode == 'qris'
+                      ? 'Scan kode QR untuk bayar'
+                      : 'Bayar ke kurir saat barang sampai'),
+            iconUrl: iconUrl,
             hasDropdown: false,
             onTap: () {
               setState(() {
@@ -194,12 +94,66 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
                 _pembayaranTerpilih = {
                   'kategori': kode,
                   'id_metode': kode,
+                  'id_metode_pembayaran': item['id_metode_pembayaran']?.toString(),
                   'nama': nama,
-                  'sub': 'Bayar dengan $nama',
-                  'icon': Icons.payment_rounded,
+                  'sub': kode == 'cash'
+                      ? 'Bayar tunai langsung'
+                      : (kode == 'qris' ? 'Scan kode QR' : 'Bayar di tempat'),
+                  'icon': iconUrl,
                 };
               });
             },
+          ),
+        );
+      }
+    }
+
+    // 3. AMAN & TEPAT: Render SATU grup dropdown Virtual Account saja jika datanya ada
+    if (listVirtualAccount.isNotEmpty) {
+      final isVaExpanded =
+          _kategoriExpanded == 'group_va' || _kategoriExpanded == 'va';
+
+      children.add(
+        _buildKategoriUtamaCard(
+          idKategori: 'group_va',
+          nama: 'Virtual Account',
+          sub: 'Format otomatis & dicek otomatis',
+          iconUrl: 'phone_android_rounded',
+          hasDropdown: true,
+          onTap: () {
+            setState(() {
+              _kategoriExpanded = isVaExpanded ? null : 'group_va';
+            });
+          },
+        ),
+      );
+
+      // Jika dropdown dibuka, bongkar seluruh isi bank di dalamnya secara vertikal
+      if (isVaExpanded) {
+        children.add(
+          _buildSubDropdownContainer(
+            children: listVirtualAccount.map((bank) {
+              final namaBank = bank['nama_metode'] ?? '';
+              final iconBank = bank['icon'] ?? '';
+
+              // Mapping manual idMetode untuk frontend agar sinkron dengan sistem checkout lamamu
+              String idMetodeFrontend = 'va';
+              final namaLower = namaBank.toLowerCase();
+              if (namaLower.contains('bni')) idMetodeFrontend = 'va_bni';
+              if (namaLower.contains('bca')) idMetodeFrontend = 'va_bca';
+              if (namaLower.contains('mandiri'))
+                idMetodeFrontend = 'va_mandiri';
+              if (namaLower.contains('bri')) idMetodeFrontend = 'va_bri';
+
+              return _buildSubMetodeTile(
+                idKategori: 'va',
+                idMetode: idMetodeFrontend,
+                idMetodePembayaran: bank['id_metode_pembayaran']?.toString(),
+                nama: namaBank,
+                sub: 'Dicek otomatis',
+                iconUrl: iconBank,
+              );
+            }).toList(),
           ),
         );
       }
@@ -277,17 +231,20 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
     );
   }
 
-  // Widget Pembuat Box Kategori Utama (Mantra-pay, VA, E-Wallet, QRIS, COD)
+  // Widget Pembuat Box Kategori Utama (Telah diubah menggunakan String iconUrl dari internet)
   Widget _buildKategoriUtamaCard({
     required String idKategori,
     required String nama,
     required String sub,
-    required IconData icon,
+    required String iconUrl, // Berubah dari IconData menjadi String URL Gambar
     required bool hasDropdown,
     required VoidCallback onTap,
   }) {
-    final isCategoryActive = _kategoriExpanded == idKategori;
-    // Check apakah ini pembayaran final (untuk yang non-dropdown seperti Mantra-pay, QRIS, COD)
+    final isCategoryActive =
+        _kategoriExpanded == idKategori ||
+        (idKategori == 'group_va' &&
+            (_kategoriExpanded == 'group_va' || _kategoriExpanded == 'va'));
+
     final isChecked =
         _pembayaranTerpilih?['kategori'] == idKategori && !hasDropdown;
 
@@ -309,12 +266,26 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(6),
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
-                color: const Color(0xFFAD510D),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade100),
               ),
-              child: Icon(icon, color: Colors.white, size: 20),
+              child: Image.network(
+                iconUrl,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  // Fallback icon jika internet bermasalah/link mati
+                  return const Icon(
+                    Icons.payment_rounded,
+                    color: Color(0xFFAD510D),
+                    size: 20,
+                  );
+                },
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -336,7 +307,6 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
                 ],
               ),
             ),
-            // Indikator Kanan: Dropdown Arrow atau Checkbox Bulat
             if (hasDropdown)
               Icon(
                 isCategoryActive
@@ -368,7 +338,6 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
     );
   }
 
-  // Container Pembungkus Dropdown anak-anaknya agar terlihat rapi mengelompok
   Widget _buildSubDropdownContainer({required List<Widget> children}) {
     return Container(
       margin: const EdgeInsets.only(top: 4, left: 10, right: 10),
@@ -381,12 +350,14 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
     );
   }
 
-  // Baris Pilihan Bank atau E-Wallet Spesifik di dalam dropdown
+  // Widget Baris Pilihan Bank (Telah diubah menggunakan String iconUrl dari internet)
   Widget _buildSubMetodeTile({
     required String idKategori,
     required String idMetode,
+    required String? idMetodePembayaran,
     required String nama,
     required String sub,
+    required String iconUrl,
   }) {
     final isChecked = _isMetodeChecked(idMetode);
 
@@ -396,12 +367,10 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
           _pembayaranTerpilih = {
             'kategori': idKategori,
             'id_metode': idMetode,
+            'id_metode_pembayaran': idMetodePembayaran,
             'nama': nama,
             'sub': sub,
-            // Tentukan icon kustom saat tampil kembali di halaman Checkout
-            'icon': idKategori == 'va'
-                ? Icons.account_balance_rounded
-                : Icons.phone_android_rounded,
+            'icon': iconUrl,
           };
         });
       },
@@ -409,6 +378,28 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
         child: Row(
           children: [
+            // Tampilkan logo bank kecil secara dinamis di dalam dropdown anak
+            Container(
+              padding: const EdgeInsets.all(4),
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Image.network(
+                iconUrl,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(
+                    Icons.account_balance_rounded,
+                    size: 16,
+                    color: Colors.grey,
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -429,7 +420,6 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
                 ],
               ),
             ),
-            // Lingkaran Radio Button kecil penanda aktif
             Container(
               width: 18,
               height: 18,

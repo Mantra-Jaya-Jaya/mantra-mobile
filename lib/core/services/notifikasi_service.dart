@@ -38,6 +38,34 @@ class NotifikasiModel {
 class NotifikasiService {
   final ApiClient _apiClient = ApiClient();
 
+  Future<void> bacaNotifikasi(int id) async {
+    try {
+      await _apiClient.dio.patch('/customer/notifikasi/$id/baca');
+    } catch (e) {
+      print("Error bacaNotifikasi: $e");
+    }
+  }
+
+  Future<List<NotifikasiModel>> getNotifikasiCustomer() async {
+    try {
+      final response = await _apiClient.dio.get('/customer/notifikasi');
+
+      if (response.statusCode == 200) {
+        final dynamic rawData = response.data['data'];
+
+        if (rawData != null && rawData is List) {
+          return (rawData as List)
+              .map((json) => NotifikasiModel.fromJson(json))
+              .toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      print("Error pada getNotifikasiCustomer: $e");
+      throw Exception('Gagal memuat notifikasi: $e');
+    }
+  }
+
   Future<List<NotifikasiModel>> getNotifikasiKasir() async {
     try {
       final response = await _apiClient.dio.get('/kasir/notifikasi');

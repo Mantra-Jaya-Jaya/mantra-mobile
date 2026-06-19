@@ -12,11 +12,17 @@ class NotifikasiModel {
   });
 
   factory NotifikasiModel.fromJson(Map<String, dynamic> json) {
+    String extractStatus(dynamic data) {
+      if (data is String) return data;
+      if (data is Map<String, dynamic>) return data['nama_status'] as String? ?? 'unread';
+      return 'unread';
+    }
+
     return NotifikasiModel(
-      idNotifikasi: json['id_notifikasi'],
-      judul: json['judul'],
-      pesan: json['pesan'],
-      status: json['status'],
+      idNotifikasi: json['id_notifikasi'] ?? 0,
+      judul: json['judul'] ?? 'Tanpa Judul',
+      pesan: json['pesan'] ?? '',
+      status: extractStatus(json['status'] ?? json['status_notifikasi']),
     );
   }
 }

@@ -81,8 +81,10 @@ class _PembayaranDetailPageState extends State<PembayaranDetailPage> {
     final String billKey = (widget.data['bill_key'] ?? '').toString();
     final String billCode = (widget.data['bill_code'] ?? '').toString();
     final String orderId = (widget.data['order_id'] ?? '-').toString();
+    final String iconUrl = (widget.data['icon'] ?? '').toString();
 
-    bool isVA = vaNumber.isNotEmpty || (billKey.isNotEmpty && billCode.isNotEmpty);
+    bool isVA =
+        vaNumber.isNotEmpty || (billKey.isNotEmpty && billCode.isNotEmpty);
     bool isQRIS = qrUrl.isNotEmpty;
 
     return Scaffold(
@@ -173,16 +175,24 @@ class _PembayaranDetailPageState extends State<PembayaranDetailPage> {
                         border: Border.all(color: Colors.grey.shade300),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: qrUrl.startsWith('http') 
-                        ? Image.network(
-                            qrUrl,
-                            width: 200,
-                            height: 200,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(Icons.qr_code_2, size: 200, color: Colors.grey);
-                            },
-                          )
-                        : const Icon(Icons.qr_code_2, size: 200, color: Colors.grey),
+                      child: qrUrl.startsWith('http')
+                          ? Image.network(
+                              qrUrl,
+                              width: 200,
+                              height: 200,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(
+                                  Icons.qr_code_2,
+                                  size: 200,
+                                  color: Colors.grey,
+                                );
+                              },
+                            )
+                          : const Icon(
+                              Icons.qr_code_2,
+                              size: 200,
+                              color: Colors.grey,
+                            ),
                     ),
                     const SizedBox(height: 20),
                     const Text(
@@ -225,10 +235,24 @@ class _PembayaranDetailPageState extends State<PembayaranDetailPage> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const Icon(
-                          Icons.account_balance_rounded,
-                          color: Color(0xFFAD510D),
-                        ),
+                        iconUrl.isNotEmpty
+                            ? Image.network(
+                                iconUrl,
+                                width: 45, // sesuaikan ukuran lebar
+                                height: 30, // sesuaikan ukuran tinggi
+                                fit: BoxFit.contain,
+                                // Error builder jika gambar gagal di-load dari internet atau URL rusak
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(
+                                    Icons.account_balance_rounded,
+                                    color: Color(0xFFAD510D),
+                                  );
+                                },
+                              )
+                            : const Icon(
+                                Icons.account_balance_rounded,
+                                color: Color(0xFFAD510D),
+                              ),
                       ],
                     ),
                     const Divider(height: 32),
@@ -245,7 +269,9 @@ class _PembayaranDetailPageState extends State<PembayaranDetailPage> {
                       children: [
                         Expanded(
                           child: Text(
-                            vaNumber.isNotEmpty ? vaNumber : '$billCode\n$billKey',
+                            vaNumber.isNotEmpty
+                                ? vaNumber
+                                : '$billCode\n$billKey',
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -256,7 +282,9 @@ class _PembayaranDetailPageState extends State<PembayaranDetailPage> {
                         TextButton(
                           onPressed: () => _copyToClipboard(
                             context,
-                            vaNumber.isNotEmpty ? vaNumber : '$billCode$billKey',
+                            vaNumber.isNotEmpty
+                                ? vaNumber
+                                : '$billCode$billKey',
                           ),
                           child: const Text(
                             'SALIN',
@@ -269,36 +297,44 @@ class _PembayaranDetailPageState extends State<PembayaranDetailPage> {
                       ],
                     ),
                     if (billCode.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        const Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Biller Code',
-                            style: TextStyle(color: Colors.grey, fontSize: 13),
+                      const SizedBox(height: 12),
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Biller Code',
+                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          billCode,
+                          style: const TextStyle(
+                            color: Colors.black87,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            billCode,
-                            style: const TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Bill Key',
+                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          billKey,
+                          style: const TextStyle(
+                            color: Colors.black87,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        const Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Bill Key',
-                            style: TextStyle(color: Colors.grey, fontSize: 13),
-                          ),
-                        ),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            billKey,
-                            style: const TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                        ),
+                      ),
                     ],
                   ],
                 ],
@@ -322,7 +358,11 @@ class _PembayaranDetailPageState extends State<PembayaranDetailPage> {
                 children: [
                   _buildDetailRow('Order ID', orderId),
                   const SizedBox(height: 12),
-                  _buildDetailRow('Total Pembayaran', _formatRupiah(widget.totalBayar), isBold: true),
+                  _buildDetailRow(
+                    'Total Pembayaran',
+                    _formatRupiah(widget.totalBayar),
+                    isBold: true,
+                  ),
                   const SizedBox(height: 12),
                   _buildDetailRow('Metode Pembayaran', metode.toUpperCase()),
                 ],
