@@ -11,6 +11,7 @@ import 'package:frontend/features/home/search_page.dart';
 import 'package:frontend/features/home/detail_barang.dart';
 import 'package:frontend/features/home/kategori_page.dart';
 import 'package:intl/intl.dart';
+import 'package:frontend/core/services/push_notification_service.dart';
 
 // ✅ Deklarasi RouteObserver global untuk mendeteksi navigasi halaman
 final RouteObserver<Route> routeObserver = RouteObserver<Route>();
@@ -30,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    PushNotificationService.setRole('customer');
   }
 
   final List<Widget> _pages = [
