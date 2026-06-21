@@ -26,13 +26,33 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
   @override
   void initState() {
     super.initState();
-    _pembayaranTerpilih = widget.pembayaranSekarang;
+    _pembayaranTerpilih = _normalizePaymentSelection(widget.pembayaranSekarang);
 
     // Jika sebelumnya sudah ada pilihan, sesuaikan status expand kategori utamanya
     if (_pembayaranTerpilih != null) {
       _kategoriExpanded = _pembayaranTerpilih!['kategori'];
     }
     _ambilDaftarMetode();
+  }
+
+  Map<String, dynamic>? _normalizePaymentSelection(
+    Map<String, dynamic>? selection,
+  ) {
+    if (selection == null) return null;
+
+    final rawCode = (selection['kategori'] ?? selection['id_metode'] ?? '')
+        .toString()
+        .toLowerCase();
+
+    if (rawCode != 'cash') return selection;
+
+    return {
+      ...selection,
+      'kategori': 'cod',
+      'id_metode': 'cod',
+      'nama': 'COD',
+      'sub': 'Bayar ke kurir saat barang sampai',
+    };
   }
 
   Future<void> _ambilDaftarMetode() async {
@@ -72,11 +92,15 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
 
     // 2. Render menu utama non-dropdown (Cash, QRIS, COD) - Tetap normal
     for (var item in _daftarMetode) {
-      final kode = item['kode_metode'] ?? '';
+      final kode = (item['kode_metode'] ?? '').toString();
       final nama = item['nama_metode'] ?? '';
       final iconUrl = item['icon'] ?? '';
 
-      if (kode == 'cash' || kode == 'qris' || kode == 'cod') {
+      if (kode == 'cash') {
+        continue;
+      }
+
+      if (kode == 'qris' || kode == 'cod') {
         children.add(
           _buildKategoriUtamaCard(
             idKategori: kode,
@@ -236,7 +260,7 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
     required String idKategori,
     required String nama,
     required String sub,
-    required String iconUrl, // Berubah dari IconData menjadi String URL Gambar
+    required String iconUrl, // Bisa jadi nama icon (package_outlined) atau URL gambar
     required bool hasDropdown,
     required VoidCallback onTap,
   }) {
@@ -247,6 +271,9 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
 
     final isChecked =
         _pembayaranTerpilih?['kategori'] == idKategori && !hasDropdown;
+
+    // Deteksi apakah iconUrl adalah nama icon Flutter (bukan URL HTTP)
+    final bool isFlutterIcon = !iconUrl.startsWith('http') && !iconUrl.startsWith('https');
 
     return GestureDetector(
       onTap: onTap,
@@ -274,18 +301,24 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.grey.shade100),
               ),
-              child: Image.network(
-                iconUrl,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  // Fallback icon jika internet bermasalah/link mati
-                  return const Icon(
-                    Icons.payment_rounded,
-                    color: Color(0xFFAD510D),
-                    size: 20,
-                  );
-                },
-              ),
+              child: isFlutterIcon
+                  ? Icon(
+                      _getIconData(iconUrl),
+                      color: const Color(0xFFAD510D),
+                      size: 20,
+                    )
+                  : Image.network(
+                      iconUrl,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        // Fallback icon jika internet bermasalah/link mati
+                        return const Icon(
+                          Icons.payment_rounded,
+                          color: Color(0xFFAD510D),
+                          size: 20,
+                        );
+                      },
+                    ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -336,6 +369,21 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
         ),
       ),
     );
+  }
+
+  IconData _getIconData(String iconUrl) {
+    switch (iconUrl) {
+      case 'payments_outlined':
+        return Icons.payments_outlined;
+      case 'package_outlined':
+        return Icons.local_shipping_outlined;
+      case 'qr_code_scanner':
+        return Icons.qr_code_scanner;
+      case 'phone_android_rounded':
+        return Icons.phone_android_rounded;
+      default:
+        return Icons.payment_rounded;
+    }
   }
 
   Widget _buildSubDropdownContainer({required List<Widget> children}) {

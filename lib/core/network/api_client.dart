@@ -4,10 +4,16 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 typedef OnUnauthorized = void Function();
 
 class ApiClient {
-  static const String baseUrl = String.fromEnvironment(
+  static const String _fallbackBaseUrl =
+      'http://172.16.160.135:8080/api/v1'; // local dev fallback
+  static const String _configuredBaseUrl = String.fromEnvironment(
     'BASE_URL',
-    defaultValue: 'http://172.16.160.135:8080/api/v1', // emulator Android
+    defaultValue: '',
   );
+
+  static bool get hasExplicitBaseUrl => _configuredBaseUrl.isNotEmpty;
+  static String get baseUrl =>
+      hasExplicitBaseUrl ? _configuredBaseUrl : _fallbackBaseUrl;
 
   static OnUnauthorized? onUnauthorized;
 

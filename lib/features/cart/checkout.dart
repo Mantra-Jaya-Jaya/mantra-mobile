@@ -28,6 +28,7 @@ class _CheckoutState extends State<Checkout> {
   List<dynamic> _daftarEkspedisi = [];
   Map<String, dynamic>? _ekspedisiDipilih;
   Map<String, dynamic>? _layananDipilih;
+  int? _ekspedisiTerbukaIndex;
   final TextEditingController _catatanController = TextEditingController();
 
   int _tipeKurir = 1; // 1 = internal, 2 = external
@@ -134,6 +135,158 @@ class _CheckoutState extends State<Checkout> {
     }
   }
 
+  List<Map<String, dynamic>> _layananEkspedisi(Map<String, dynamic> ekspedisi) {
+    final rawList = (ekspedisi['layanan'] as List?) ?? [];
+    return rawList
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  int? _hargaTermurah(List<Map<String, dynamic>> layananList) {
+    int? hargaTerendah;
+    for (final layanan in layananList) {
+      final harga = layanan['harga'];
+      final nilai = harga is num
+          ? harga.toInt()
+          : int.tryParse(harga?.toString() ?? '');
+      if (nilai == null) continue;
+      if (hargaTerendah == null || nilai < hargaTerendah) {
+        hargaTerendah = nilai;
+      }
+    }
+    return hargaTerendah;
+  }
+
+  void _pilihEkspedisi(Map<String, dynamic> ekspedisi) {
+    final index = _daftarEkspedisi.indexWhere((item) {
+      if (item is! Map) return false;
+      final map = Map<String, dynamic>.from(item);
+      return map['id_ekspedisi'] == ekspedisi['id_ekspedisi'];
+    });
+    final layananList = _layananEkspedisi(ekspedisi);
+
+    setState(() {
+      _ekspedisiDipilih = ekspedisi;
+      _ekspedisiTerbukaIndex = index >= 0 ? index : null;
+      _layananDipilih = layananList.length == 1 ? layananList.first : null;
+    });
+  }
+
+  void _pilihLayanan(
+    Map<String, dynamic> ekspedisi,
+    Map<String, dynamic> layanan,
+  ) {
+    final index = _daftarEkspedisi.indexWhere((item) {
+      if (item is! Map) return false;
+      final map = Map<String, dynamic>.from(item);
+      return map['id_ekspedisi'] == ekspedisi['id_ekspedisi'];
+    });
+
+    setState(() {
+      _ekspedisiDipilih = ekspedisi;
+      _ekspedisiTerbukaIndex = index >= 0 ? index : null;
+      _layananDipilih = layanan;
+    });
+  }
+
+  Widget _buildSelectedShipmentSummary() {
+    if (_ekspedisiDipilih == null) {
+      return const SizedBox.shrink();
+    }
+
+    final namaEkspedisi = _stringValue(
+      _ekspedisiDipilih?['nama_ekspedisi'],
+      fallback: '-',
+    );
+    final namaLayanan = _stringValue(
+      _layananDipilih?['nama_layanan'],
+      fallback: 'Pilih layanan',
+    );
+    final harga = _layananDipilih?['harga'];
+    final hargaText = harga is num
+        ? _formatRupiah(harga.toInt())
+        : harga == null
+        ? '-'
+        : _formatRupiah(int.tryParse(harga.toString()) ?? 0);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFAD510D).withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFAD510D).withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.local_shipping_outlined, color: Color(0xFFAD510D)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ekspedisi terpilih',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  namaEkspedisi,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(namaLayanan, style: const TextStyle(fontSize: 12)),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                hargaText,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: Color(0xFFAD510D),
+                ),
+              ),
+              const SizedBox(height: 4),
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _ekspedisiDipilih = null;
+                    _layananDipilih = null;
+                    _ekspedisiTerbukaIndex = null;
+                  });
+                },
+                child: const Text(
+                  'Ubah',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFAD510D),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _stringValue(dynamic value, {String fallback = ''}) {
+    final text = value?.toString() ?? '';
+    return text.isEmpty ? fallback : text;
+  }
+
   int get subtotalProduk {
     int total = 0;
     for (var item in widget.selectedProducts) {
@@ -173,10 +326,14 @@ class _CheckoutState extends State<Checkout> {
 
     setState(() => _isSubmitting = true);
 
-    final items = widget.selectedProducts.map((p) => {
-      'id_spesifikasi_barang': p['id_spesifikasi_barang'] ?? p['id'],
-      'qty': p['quantity'],
-    }).toList();
+    final items = widget.selectedProducts
+        .map(
+          (p) => {
+            'id_spesifikasi_barang': p['id_spesifikasi_barang'] ?? p['id'],
+            'qty': p['quantity'],
+          },
+        )
+        .toList();
 
     try {
       final result = await _checkoutService.checkout(
@@ -238,6 +395,7 @@ class _CheckoutState extends State<Checkout> {
         _alamatDipilih = alamatBaruTerpilih;
         _ekspedisiDipilih = null;
         _layananDipilih = null;
+        _ekspedisiTerbukaIndex = null;
         _tipeKurir = 1;
       });
       _cekRadius();
@@ -695,6 +853,7 @@ class _CheckoutState extends State<Checkout> {
                         _tipeKurir = v!;
                         _ekspedisiDipilih = null;
                         _layananDipilih = null;
+                        _ekspedisiTerbukaIndex = null;
                       });
                       _cekRadius();
                     },
@@ -809,49 +968,40 @@ class _CheckoutState extends State<Checkout> {
             ],
           ),
           const SizedBox(height: 12),
+          _buildSelectedShipmentSummary(),
+          if (_ekspedisiDipilih != null) const SizedBox(height: 12),
           ...List.generate(_daftarEkspedisi.length, (i) {
-            final ekspedisi = _daftarEkspedisi[i] as Map<String, dynamic>;
-            final layananList = (ekspedisi['layanan'] as List?) ?? [];
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  ekspedisi['nama_ekspedisi'] ?? 'Ekspedisi',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
+            final ekspedisi = Map<String, dynamic>.from(
+              _daftarEkspedisi[i] as Map,
+            );
+            final layananList = _layananEkspedisi(ekspedisi);
+            final isSelectedCourier =
+                _ekspedisiDipilih?['id_ekspedisi'] == ekspedisi['id_ekspedisi'];
+            final isExpanded = _ekspedisiTerbukaIndex == i || isSelectedCourier;
+            final lowestPrice = _hargaTermurah(layananList);
+            final summaryPrice = lowestPrice != null
+                ? _formatRupiah(lowestPrice)
+                : 'Layanan belum tersedia';
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isSelectedCourier
+                      ? const Color(0xFFAD510D)
+                      : Colors.grey.shade300,
                 ),
-                const SizedBox(height: 4),
-                ...layananList.map((layanan) {
-                  final l = layanan as Map<String, dynamic>;
-                  final selected =
-                      _layananDipilih?['id_layanan_ekspedisi'] ==
-                      l['id_layanan_ekspedisi'];
-                  return InkWell(
-                    onTap: () {
-                      setState(() {
-                        _ekspedisiDipilih = ekspedisi;
-                        _layananDipilih = l;
-                      });
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? const Color(0x33AD510D)
-                            : Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: selected
-                              ? const Color(0xFFAD510D)
-                              : Colors.grey.shade300,
-                        ),
-                      ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  InkWell(
+                    onTap: () => _pilihEkspedisi(ekspedisi),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
                       child: Row(
                         children: [
                           Expanded(
@@ -859,38 +1009,107 @@ class _CheckoutState extends State<Checkout> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  l['nama_layanan'] ?? '',
+                                  ekspedisi['nama_ekspedisi'] ?? 'Ekspedisi',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 13,
                                   ),
                                 ),
-                                if (l['estimasi'] != null)
-                                  Text(
-                                    'Estimasi ${l['estimasi']}',
-                                    style: TextStyle(
-                                      color: Colors.grey.shade600,
-                                      fontSize: 11,
-                                    ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  layananList.isEmpty
+                                      ? 'Belum ada layanan'
+                                      : '${layananList.length} layanan • mulai $summaryPrice',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 11,
                                   ),
+                                ),
                               ],
                             ),
                           ),
-                          Text(
-                            _formatRupiah(l['harga'] ?? 0),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: Color(0xFFAD510D),
-                            ),
+                          Icon(
+                            isExpanded
+                                ? Icons.keyboard_arrow_up
+                                : Icons.keyboard_arrow_down,
+                            color: isSelectedCourier
+                                ? const Color(0xFFAD510D)
+                                : Colors.grey,
                           ),
                         ],
                       ),
                     ),
-                  );
-                }),
-                const SizedBox(height: 8),
-              ],
+                  ),
+                  if (isExpanded)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                      child: Column(
+                        children: layananList.map((layanan) {
+                          final selected =
+                              _layananDipilih?['id_layanan_ekspedisi'] ==
+                              layanan['id_layanan_ekspedisi'];
+                          return InkWell(
+                            onTap: () => _pilihLayanan(ekspedisi, layanan),
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: selected
+                                    ? const Color(0x33AD510D)
+                                    : Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: selected
+                                      ? const Color(0xFFAD510D)
+                                      : Colors.grey.shade300,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          layanan['nama_layanan'] ?? '',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        if (layanan['estimasi'] != null)
+                                          Text(
+                                            'Estimasi ${layanan['estimasi']}',
+                                            style: TextStyle(
+                                              color: Colors.grey.shade600,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    _formatRupiah(layanan['harga'] ?? 0),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: Color(0xFFAD510D),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                ],
+              ),
             );
           }),
         ],
@@ -907,6 +1126,9 @@ class _CheckoutState extends State<Checkout> {
         'phone_android_rounded': Icons.phone_android_rounded,
         'payment_rounded': Icons.payment_rounded,
         'account_balance_rounded': Icons.account_balance_rounded,
+        'payments_outlined': Icons.payments_outlined,
+        'package_outlined': Icons.local_shipping_outlined,
+        'qr_code_scanner': Icons.qr_code_scanner,
       };
       final mapped = iconMap[icon];
       if (mapped != null) {

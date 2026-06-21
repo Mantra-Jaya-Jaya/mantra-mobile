@@ -27,11 +27,13 @@ class PromoModel {
 // Model Kategori
 class KategoriModel {
   final int idKategori;
+  final String publicId;
   final String namaKategori;
   final String iconKategori;
 
   KategoriModel({
     required this.idKategori,
+    required this.publicId,
     required this.namaKategori,
     required this.iconKategori,
   });
@@ -39,6 +41,7 @@ class KategoriModel {
   factory KategoriModel.fromJson(Map<String, dynamic> json) {
     return KategoriModel(
       idKategori: json['id_kategori'] ?? 0,
+      publicId: json['public_id'] ?? '',
       namaKategori: json['nama_kategori'] ?? '',
       iconKategori: json['icon_kategori'] ?? '',
     );
@@ -168,10 +171,15 @@ class KatalogService {
   Future<List<BarangModel>> getDaftarBarang({
     int page = 1,
     int limit = 10,
+    String? idKategori,
   }) async {
+    final params = <String, dynamic>{'page': page, 'limit': limit};
+    if (idKategori != null) {
+      params['id_kategori'] = idKategori;
+    }
     final response = await _client.dio.get(
       '/customer/barang',
-      queryParameters: {'page': page, 'limit': limit},
+      queryParameters: params,
     );
     final List data = response.data['data'] ?? [];
     return data.map((e) => BarangModel.fromJson(e)).toList();

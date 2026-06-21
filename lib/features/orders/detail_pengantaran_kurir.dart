@@ -170,17 +170,17 @@ class _DetailPesananPageState extends State<DetailPesananPage> {
                                     vertical: 6,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: widget.isSedangDiantar
-                                        ? const Color(0xFFAD510D)
-                                        : widget.isSelesai
+                                    color: data.statusPesanan.toLowerCase() == 'selesai' || widget.isSelesai
                                         ? Colors.green
+                                        : data.statusPesanan.toLowerCase() == 'dikirim' || widget.isSedangDiantar
+                                        ? const Color(0xFFAD510D)
                                         : const Color(0xFF5B6B76),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
-                                    widget.isSelesai
+                                    data.statusPesanan.toLowerCase() == 'selesai' || widget.isSelesai
                                         ? 'Selesai'
-                                        : widget.isSedangDiantar
+                                        : data.statusPesanan.toLowerCase() == 'dikirim' || widget.isSedangDiantar
                                         ? 'Diantar'
                                         : 'Menunggu',
                                     style: const TextStyle(
@@ -428,13 +428,15 @@ class _DetailPesananPageState extends State<DetailPesananPage> {
             return const SizedBox.shrink();
           }
 
+          final data = snapshot.data!;
+
           return Container(
             color: Colors.white,
             padding: const EdgeInsets.all(24),
             child: SizedBox(
               width: double.infinity,
               height: 55,
-              child: widget.isSelesai
+              child: data.statusPesanan.toLowerCase() == 'selesai' || widget.isSelesai
                   // 🚀 STAGE 1: DARI TAB SELESAI -> Lihat Bukti
                   ? ElevatedButton(
                       onPressed: () async {
@@ -490,14 +492,21 @@ class _DetailPesananPageState extends State<DetailPesananPage> {
                   : widget.isDariPeta
                   // 🚀 STAGE 2: DARI PETA -> Upload Bukti
                   ? ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
+                      onPressed: () async {
+                        final result = await Navigator.push<bool>(
                           context,
                           MaterialPageRoute(
                             builder: (context) =>
                                 AmbilBuktiPage(publicId: widget.idPengantaran),
                           ),
                         );
+                        if (result == true && mounted) {
+                          setState(() {
+                            _detailFuture = _service.getDetailPesanan(
+                              widget.idPengantaran,
+                            );
+                          });
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFAD510D),
