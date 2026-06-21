@@ -173,9 +173,15 @@ class _CheckoutState extends State<Checkout> {
 
     setState(() => _isSubmitting = true);
 
+    final items = widget.selectedProducts.map((p) => {
+      'id_spesifikasi_barang': p['id_spesifikasi_barang'] ?? p['id'],
+      'qty': p['quantity'],
+    }).toList();
+
     try {
       final result = await _checkoutService.checkout(
         idAlamat: _alamatDipilih!['public_id'] ?? _alamatDipilih!['id_alamat'],
+        items: items,
         idEkspedisi: _tipeKurir == 2
             ? _ekspedisiDipilih!['id_ekspedisi']
             : null,
@@ -184,7 +190,7 @@ class _CheckoutState extends State<Checkout> {
             : null,
         ongkosKirim: _tipeKurir == 2 ? _layananDipilih!['harga'] : 0,
         catatan: _catatanController.text,
-        idMetodePembayaran: _pembayaranDipilih!['id_metode_pembayaran'],
+        idMetodePembayaran: _pembayaranDipilih!['id_metode'],
         idTipeKurir: _tipeKurir,
       );
 

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import '../network/api_client.dart';
 
 class NotifikasiModel {
@@ -48,7 +49,8 @@ class NotifikasiService {
 
   Future<List<NotifikasiModel>> getNotifikasiCustomer() async {
     try {
-      final response = await _apiClient.dio.get('/customer/notifikasi');
+      final response = await _apiClient.dio.get('/customer/notifikasi',
+          options: Options(headers: {'X-Skip-Auth-Redirect': 'true'}));
 
       if (response.statusCode == 200) {
         final dynamic rawData = response.data['data'];
@@ -68,7 +70,8 @@ class NotifikasiService {
 
   Future<List<NotifikasiModel>> getNotifikasiKasir() async {
     try {
-      final response = await _apiClient.dio.get('/kasir/notifikasi');
+      final response = await _apiClient.dio.get('/kasir/notifikasi',
+          options: Options(headers: {'X-Skip-Auth-Redirect': 'true'}));
       
       // --- TAMBAHAN LOGGING UNTUK DEBUGGING ---
       print("--- [NotifikasiService Debug] ---");
