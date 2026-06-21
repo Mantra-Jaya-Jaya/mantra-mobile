@@ -85,6 +85,13 @@ Gunakan mode ini saat backend berjalan secara lokal di laptop Anda.
 flutter run
 ```
 
+**Mode Lokal dengan HP Fisik (Backend di Laptop):**
+Gunakan mode ini saat backend berjalan di laptop dan Anda ingin pakai HP fisik (bukan emulator). Ganti `192.168.0.8` dengan IP Address laptop Anda (cek dengan `ipconfig`/`ifconfig`).
+
+```bash
+flutter run --dart-define=BASE_URL=http://192.168.0.8:8080/api/v1
+```
+
 **Mode Online Production (Konek ke mantra.web.id):**
 Gunakan mode ini untuk terhubung langsung ke server production. Sangat cocok untuk menguji fitur dengan data nyata.
 
