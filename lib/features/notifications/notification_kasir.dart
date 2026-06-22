@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/core/models/notifikasi_model.dart';
 import 'package:frontend/core/services/notifikasi_service.dart';
 import 'package:intl/intl.dart';
 

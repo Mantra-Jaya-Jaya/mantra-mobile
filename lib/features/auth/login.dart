@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:frontend/core/services/push_notification_service.dart';
 import '../../core/network/api_client.dart';
 import '../../core/utils/api_error.dart';
 import 'services/auth_service.dart';
@@ -68,6 +69,8 @@ class _LoginScreenState extends State<LoginScreen> {
           );
           break;
         case 'kurir':
+          PushNotificationService.setRole('kurir');
+          PushNotificationService.startPolling(); 
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const DashboardKurir()),

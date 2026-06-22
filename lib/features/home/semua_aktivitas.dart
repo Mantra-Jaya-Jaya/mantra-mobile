@@ -93,7 +93,7 @@ class _SemuaAktivitasPageState extends State<SemuaAktivitasPage> {
                           final item = _aktivitas[index];
                           return _transactionItem(
                             item.nomorInvoice,
-                            '${_capitalize(item.metodePembayaran)} ΓÇó ${item.waktu}',
+                            '${_capitalize(item.metodePembayaran)} \u2022 ${item.waktu}',
                             _currencyFormat.format(item.totalBayar),
                           );
                         },
@@ -108,25 +108,43 @@ class _SemuaAktivitasPageState extends State<SemuaAktivitasPage> {
   }
 
   Widget _transactionItem(String id, String subtitle, String price) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(vertical: 8),
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: const BoxDecoration(
-          color: Color(0xFFF0F4F7),
-          shape: BoxShape.circle,
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: Row(
+      // TAMBAHKAN INI: Memaksa isi Row sejajar di atas
+      crossAxisAlignment: CrossAxisAlignment.start, 
+      children: [
+        // Ikon
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: const BoxDecoration(
+            color: Color(0xFFF0F4F7),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.check_circle_outline, color: Colors.grey),
         ),
-        child: const Icon(Icons.check_circle_outline, color: Colors.grey),
-      ),
-      title: Text(
-        id,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-      ),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
-      trailing: Text(
-        price,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFFAD510D)),
-      ),
-    );
-  }
+        
+        const SizedBox(width: 12),
+        
+        // Bagian Teks
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(id, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              const SizedBox(height: 4), // Sedikit jarak antar baris teks
+              Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            ],
+          ),
+        ),
+        
+        // Harga
+        Text(
+          price,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFFAD510D)),
+        ),
+      ],
+    ),
+  );
+}
 }
