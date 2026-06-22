@@ -1,84 +1,64 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/core/widgets/base_header_widget.dart';
-import 'package:frontend/features/home/services/katalog_service.dart';
+import 'package:frontend/features/home/services/diskon_service.dart';
 import 'package:frontend/core/models/barang_model.dart';
+import 'package:frontend/features/home/services/katalog_service.dart';
 import 'package:frontend/features/home/detail_barang.dart';
 import 'package:intl/intl.dart';
 
-class KategoriBarangPage extends StatefulWidget {
-  final KategoriModel category;
+class DiskonBarangPage extends StatefulWidget {
+  final PromoModel promo;
 
-  const KategoriBarangPage({Key? key, required this.category}) : super(key: key);
+  const DiskonBarangPage({Key? key, required this.promo}) : super(key: key);
 
   @override
-  State<KategoriBarangPage> createState() => _KategoriBarangPageState();
+  State<DiskonBarangPage> createState() => _DiskonBarangPageState();
 }
 
-class _KategoriBarangPageState extends State<KategoriBarangPage> {
-  final KatalogService _katalogService = KatalogService();
-  final TextEditingController _searchController = TextEditingController();
+class _DiskonBarangPageState extends State<DiskonBarangPage> {
+  final DiskonService _diskonService = DiskonService();
   final _currencyFormat = NumberFormat.currency(
     locale: 'id_ID',
     symbol: 'Rp ',
     decimalDigits: 0,
   );
 
-  List<BarangModel> _allProducts = [];
-  List<BarangModel> _filteredProducts = [];
+  List<BarangModelCore> _barangList = [];
   bool _isLoading = true;
-  String? _errorMessage;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _fetchProducts();
+    _loadBarangDiskon();
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _fetchProducts() async {
+  Future<void> _loadBarangDiskon() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
+      _error = null;
     });
 
     try {
-      final data = await _katalogService.getBarang(idKategori: widget.category.publicId);
+      // Assuming idDiskon from PromoModel is actually the public_id, or backend accepts id_diskon directly.
+      // Wait, publicId isn't on PromoModel in katalog_service.dart!
+      // Let's check PromoModel: idDiskon, namaDiskon, bannerUrl, tglSelesai.
+      final data = await _diskonService.getBarangByDiskon(widget.promo.publicId);
       if (mounted) {
         setState(() {
-          _allProducts = data;
-          _filteredProducts = data;
+          _barangList = data;
           _isLoading = false;
         });
       }
     } catch (e) {
+      debugPrint("Error loading barang diskon: $e");
       if (mounted) {
         setState(() {
-          _errorMessage = 'Gagal memuat produk: $e';
+          _error = 'Gagal memuat barang diskon: $e';
           _isLoading = false;
         });
       }
     }
-  }
-
-  void _filterProducts(String query) {
-    if (query.trim().isEmpty) {
-      setState(() {
-        _filteredProducts = _allProducts;
-      });
-      return;
-    }
-
-    final lowerQuery = query.toLowerCase();
-    setState(() {
-      _filteredProducts = _allProducts.where((p) {
-        return p.namaBarang.toLowerCase().contains(lowerQuery);
-      }).toList();
-    });
   }
 
   @override
@@ -86,52 +66,13 @@ class _KategoriBarangPageState extends State<KategoriBarangPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: BaseHeaderWidget(
-        title: widget.category.namaKategori,
+        title: widget.promo.namaDiskon,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 12),
-          // SEARCH BAR
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: TextField(
-              controller: _searchController,
-              onChanged: _filterProducts,
-              decoration: InputDecoration(
-                hintText: 'Cari Produk...',
-                hintStyle: const TextStyle(color: Colors.grey),
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.cancel, color: Colors.grey),
-                        onPressed: () {
-                          _searchController.clear();
-                          _filterProducts('');
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: Colors.grey[100],
-                contentPadding: EdgeInsets.zero,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(25),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          // GRID BARANG
-          Expanded(
-            child: _buildBody(),
-          ),
-        ],
-      ),
+      body: _buildBody(),
     );
   }
 
@@ -142,17 +83,17 @@ class _KategoriBarangPageState extends State<KategoriBarangPage> {
       );
     }
 
-    if (_errorMessage != null) {
+    if (_error != null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.error_outline, size: 48, color: Colors.grey),
             const SizedBox(height: 10),
-            Text(_errorMessage!, style: const TextStyle(color: Colors.grey)),
+            Text(_error!, style: const TextStyle(color: Colors.grey)),
             const SizedBox(height: 10),
             ElevatedButton(
-              onPressed: _fetchProducts,
+              onPressed: _loadBarangDiskon,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFAD510D),
               ),
@@ -163,33 +104,45 @@ class _KategoriBarangPageState extends State<KategoriBarangPage> {
       );
     }
 
-    if (_filteredProducts.isEmpty) {
-      return const Center(child: Text('Tidak ada produk di kategori ini.'));
+    if (_barangList.isEmpty) {
+      return const Center(child: Text('Tidak ada barang pada promo ini.'));
     }
 
     return GridView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
         childAspectRatio: 0.75,
       ),
-      itemCount: _filteredProducts.length,
+      itemCount: _barangList.length,
       itemBuilder: (context, index) {
-        final item = _filteredProducts[index];
+        final item = _barangList[index];
         return _buildCard(item);
       },
     );
   }
 
-  Widget _buildCard(BarangModel barang) {
+  Widget _buildCard(BarangModelCore barang) {
     return GestureDetector(
       onTap: () {
+        // Map BarangModelCore back to KatalogService's BarangModel to use DetailBarangPage
+        final mappedBarang = BarangModel(
+            idBarang: barang.idBarang,
+            namaBarang: barang.namaBarang,
+            hargaTerendah: barang.hargaTerendah,
+            hargaTertinggi: barang.hargaTertinggi,
+            hargaDiskon: barang.hargaDiskon,
+            punyaDiskon: barang.punyaDiskon,
+            gambarBarang: barang.gambarBarang,
+            deskripsi: barang.deskripsi,
+            stok: barang.stok,
+        );
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => DetailBarangPage(barang: barang),
+            builder: (context) => DetailBarangPage(barang: mappedBarang),
           ),
         );
       },

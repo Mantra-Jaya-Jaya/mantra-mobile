@@ -84,9 +84,9 @@ class _MyOrderPageState extends State<MyOrderPage> {
         await _orderService.cancelOrder(publicId);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Pesanan berhasil dibatalkan'),
-              backgroundColor: Colors.green,
+            SnackBar(
+              content: const Text('Pesanan berhasil dibatalkan'),
+              backgroundColor: primaryBrown,
             ),
           );
           _fetchOrders(); // Refresh list
@@ -137,8 +137,11 @@ class _MyOrderPageState extends State<MyOrderPage> {
                     final filteredOrders = selectedStatus == "Semua"
                         ? _orders
                         : _orders.where((order) {
-                            final String status =
+                            String status =
                                 (order['nama_status_pesanan'] ?? '').toString();
+                            if (status == 'Menunggu Pembayaran') {
+                              status = 'Belum Dibayar';
+                            }
                             return status == selectedStatus;
                           }).toList();
 
@@ -226,7 +229,10 @@ class _MyOrderPageState extends State<MyOrderPage> {
   Widget _buildOrderCardFromData(Map<String, dynamic> order) {
     final String publicId = order['id_pesanan'] ?? '-';
     final String nomorPesanan = order['id_pesanan'] ?? publicId;
-    final String statusAsli = order['nama_status_pesanan'] ?? 'Belum Dibayar';
+    String statusAsli = order['nama_status_pesanan'] ?? 'Belum Dibayar';
+    if (statusAsli == 'Menunggu Pembayaran') {
+      statusAsli = 'Belum Dibayar';
+    }
     final int totalBayar = order['total_bayar'] ?? 0;
     final List items = order['items'] ?? [];
     final int itemCount = items.length;
