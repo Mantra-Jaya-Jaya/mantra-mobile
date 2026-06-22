@@ -2,8 +2,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:frontend/core/widgets/base_header_widget.dart';
-import '../home/home_customer.dart';
+import '../orders/services/customer_order_service.dart';
 import 'package:intl/intl.dart';
+import 'package:dio/dio.dart';
+import 'package:gal/gal.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'package:frontend/features/cart/sukses_bayar_customer.dart';
 
 class PembayaranDetailPage extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -20,8 +25,12 @@ class PembayaranDetailPage extends StatefulWidget {
 }
 
 class _PembayaranDetailPageState extends State<PembayaranDetailPage> {
+  final CustomerOrderService _orderService = CustomerOrderService();
+  bool _isChecking = false;
+
   Timer? _timer;
-  Duration _remainingTime = const Duration(hours: 23, minutes: 59, seconds: 59);
+  Duration _remainingTime = Duration.zero;
+  DateTime? _batasWaktu;
 
   @override
   void initState() {
@@ -35,26 +44,62 @@ class _PembayaranDetailPageState extends State<PembayaranDetailPage> {
     super.dispose();
   }
 
-  void _startTimer() {
-    // Simulasi hitung mundur dari 24 jam (bisa disesuaikan dengan data backend nanti)
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) {
-        setState(() {
-          if (_remainingTime.inSeconds > 0) {
-            _remainingTime -= const Duration(seconds: 1);
-          } else {
-            _timer?.cancel();
-          }
-        });
+  String _formatPaymentMethod(Map<String, dynamic> rincian) {
+    if (rincian['metode'] == null || rincian['metode'].toString().isEmpty) {
+      return 'BELUM TERPILIH';
+    }
+    
+    final String metode = rincian['metode'].toString();
+    final String namaBank = (rincian['nama_bank'] ?? '').toString();
+    
+    if (metode == 'bank_transfer' || metode == 'echannel') {
+      if (namaBank.isNotEmpty) {
+        return '$namaBank Virtual Account';
       }
-    });
+      return 'Transfer Bank';
+    } else if (metode == 'qris') {
+      return 'QRIS';
+    } else if (metode == 'gopay') {
+      return 'GoPay';
+    } else if (metode == 'tunai' || metode == 'cash') {
+      return 'Tunai (Cash)';
+    }
+    
+    return metode.toUpperCase();
+  }
+
+  void _startTimer() {
+    if (widget.data['batas_waktu'] != null) {
+      _batasWaktu = DateTime.parse(widget.data['batas_waktu'].toString()).toLocal();
+      _updateRemainingTime();
+      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (mounted) {
+          setState(() {
+            _updateRemainingTime();
+          });
+        }
+      });
+    }
+  }
+
+  void _updateRemainingTime() {
+    if (_batasWaktu != null) {
+      final now = DateTime.now();
+      if (_batasWaktu!.isAfter(now)) {
+        _remainingTime = _batasWaktu!.difference(now);
+      } else {
+        _remainingTime = Duration.zero;
+        _timer?.cancel();
+      }
+    }
   }
 
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, "0");
+    String twoDigitHours = twoDigits(duration.inHours);
     String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
     String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
-    return "${twoDigits(duration.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
+    return "$twoDigitHours:$twoDigitMinutes:$twoDigitSeconds";
   }
 
   String _formatRupiah(int number) {
@@ -93,13 +138,7 @@ class _PembayaranDetailPageState extends State<PembayaranDetailPage> {
         title: 'Detail Pembayaran',
         leading: IconButton(
           onPressed: () {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const HomeScreen(initialIndex: 2),
-              ),
-              (route) => false,
-            );
+            Navigator.pop(context);
           },
           icon: const Icon(Icons.close, color: Colors.white),
         ),
@@ -120,24 +159,37 @@ class _PembayaranDetailPageState extends State<PembayaranDetailPage> {
               ),
               child: Column(
                 children: [
-                  const Text(
-                    'Selesaikan Pembayaran Dalam',
-                    style: TextStyle(fontSize: 14, color: Colors.black87),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _formatDuration(_remainingTime),
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFFAD510D),
+                  if (_batasWaktu != null) ...[
+                    const Text(
+                      'Selesaikan Pembayaran Dalam',
+                      style: TextStyle(fontSize: 14, color: Colors.black87),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Batas akhir: ${DateFormat('dd MMM yyyy, HH:mm').format(DateTime.now().add(const Duration(days: 1)))}',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _formatDuration(_remainingTime),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFAD510D),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Batas akhir: ${DateFormat('dd MMM yyyy, HH:mm').format(_batasWaktu!)}',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ] else ...[
+                    const Text(
+                      'Segera Selesaikan Pembayaran',
+                      style: TextStyle(fontSize: 16, color: Colors.black87, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Pesanan Anda akan diproses setelah pembayaran berhasil diverifikasi.',
+                      style: TextStyle(fontSize: 13, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -204,16 +256,41 @@ class _PembayaranDetailPageState extends State<PembayaranDetailPage> {
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Gambar QR Berhasil Disimpan'),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
+                        onPressed: () async {
+                          try {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Mengunduh QR Code...'), backgroundColor: Color(0xFFAD510D)),
+                            );
+                            
+                            var response = await Dio().get(
+                              qrUrl,
+                              options: Options(responseType: ResponseType.bytes),
+                            );
+                            
+                            final tempDir = await getTemporaryDirectory();
+                            final file = File('${tempDir.path}/QR_MANTRA_$orderId.png');
+                            await file.writeAsBytes(response.data);
+                            
+                            // Minta permission jika belum dan simpan ke galeri
+                            if (!await Gal.hasAccess(toAlbum: true)) {
+                              await Gal.requestAccess(toAlbum: true);
+                            }
+                            await Gal.putImage(file.path);
+                            
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('QR Code berhasil disimpan ke Galeri!'), backgroundColor: Color(0xFFAD510D),
+                              ),
+                            );
+                          } catch (e) {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Gagal menyimpan QR Code: $e'), backgroundColor: Colors.grey),
+                            );
+                          }
                         },
                         icon: const Icon(Icons.download_rounded),
-                        label: const Text('Simpan QR Code'),
+                        label: const Text('Unduh QR Code'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFFAD510D),
                           side: const BorderSide(color: Color(0xFFAD510D)),
@@ -229,7 +306,7 @@ class _PembayaranDetailPageState extends State<PembayaranDetailPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          metode.toUpperCase(),
+                          _formatPaymentMethod(widget.data),
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -374,14 +451,39 @@ class _PembayaranDetailPageState extends State<PembayaranDetailPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const HomeScreen(initialIndex: 2),
-                    ),
-                    (route) => false,
-                  );
+                onPressed: _isChecking ? null : () async {
+                  setState(() => _isChecking = true);
+                  try {
+                    final publicIdPesanan = (widget.data['public_id_pesanan'] ?? '').toString();
+                    final orderDetail = await _orderService.getOrderDetail(publicIdPesanan);
+                    final statusP = orderDetail['nama_status_pesanan']?.toString().toLowerCase() ?? '';
+                    if (statusP == 'menunggu pembayaran' || statusP == 'belum dibayar') {
+                      await Future.delayed(const Duration(milliseconds: 500));
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Pembayaran belum diterima. Silakan cek kembali nanti.'),
+                          backgroundColor: Colors.grey,
+                        ),
+                      );
+                    } else {
+                      if (!mounted) return;
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SuksesBayarCustomerScreen(
+                            orderId: orderId,
+                            totalBayar: widget.totalBayar,
+                            metodePembayaran: metode.toUpperCase(),
+                          ),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    // Abaikan jika error
+                  } finally {
+                    if (mounted) setState(() => _isChecking = false);
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFAD510D),
@@ -390,14 +492,20 @@ class _PembayaranDetailPageState extends State<PembayaranDetailPage> {
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                child: const Text(
-                  'Cek Status Pesanan',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
+                child: _isChecking
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Text(
+                        'Cek Status Pesanan',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
               ),
             ),
           ],

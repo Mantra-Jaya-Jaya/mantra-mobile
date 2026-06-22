@@ -11,6 +11,7 @@ import 'package:frontend/features/home/kategori_barang_customer.dart';
 import 'package:frontend/features/home/search_page.dart';
 import 'package:frontend/features/home/detail_barang.dart';
 import 'package:frontend/features/home/kategori_page.dart';
+import 'package:frontend/features/home/diskon_barang_page.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/core/services/push_notification_service.dart';
 
@@ -35,9 +36,9 @@ class _HomeScreenState extends State<HomeScreen> {
     PushNotificationService.setRole('customer');
   }
 
-  final List<Widget> _pages = [
+  List<Widget> get _pages => [
     const HomeContent(),
-    const ScanPage(),
+    ScanPage(isActive: _currentIndex == 1),
     const MyOrderPage(),
     const Profil(),
   ];
@@ -355,41 +356,51 @@ class _HomeContentState extends State<HomeContent> {
               final promo = _promoList[index];
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: promo.bannerUrl.isNotEmpty
-                      ? Image.network(
-                          promo.bannerUrl,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          errorBuilder: (context, error, stackTrace) =>
-                              Container(
-                                color: Colors.orange.shade100,
-                                child: Center(
-                                  child: Text(
-                                    promo.namaDiskon,
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFFAD510D),
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DiskonBarangPage(promo: promo),
+                      ),
+                    );
+                  },
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: promo.bannerUrl.isNotEmpty
+                        ? Image.network(
+                            promo.bannerUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                                  color: Colors.orange.shade100,
+                                  child: Center(
+                                    child: Text(
+                                      promo.namaDiskon,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFFAD510D),
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                        )
-                      : Container(
-                          color: Colors.orange.shade100,
-                          child: Center(
-                            child: Text(
-                              promo.namaDiskon,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFFAD510D),
+                          )
+                        : Container(
+                            color: Colors.orange.shade100,
+                            child: Center(
+                              child: Text(
+                                promo.namaDiskon,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFAD510D),
+                                ),
                               ),
                             ),
                           ),
-                        ),
+                  ),
                 ),
               );
             },
@@ -472,8 +483,9 @@ class _HomeContentState extends State<HomeContent> {
                 ),
               ),
             );
+
           },
-          // Memanggil k.iconKategori dari service/model kamu dan mem-parsingnya ke package MdiIcons
+          // Memanggil k.iconKategori dari backend (URL atau Material icon string)
           child: _catItem(k.namaKategori, k.iconKategori),
         );
       },
@@ -689,53 +701,3 @@ class _HomeContentState extends State<HomeContent> {
   }
 }
 
-// Helper fungsi untuk mengambil ikon berdasarkan string dari DB
-IconData getIconFromString(String? iconName) {
-  if (iconName == null) return Icons.category_outlined;
-
-  switch (iconName.toLowerCase()) {
-    case 'food':
-    case 'makanan':
-    case 'fastfood':
-      return Icons.restaurant_outlined;
-    case 'drink':
-    case 'minuman':
-    case 'beverage':
-      return Icons.local_drink_outlined;
-    case 'snack':
-    case 'snacks':
-    case 'cemilan':
-      return Icons.cookie_outlined;
-    case 'fruit':
-    case 'buah':
-    case 'vegetable':
-    case 'sayur':
-      return Icons.spa_outlined;
-    case 'electronic':
-    case 'elektronik':
-      return Icons.electrical_services_outlined;
-    case 'fashion':
-    case 'pakaian':
-      return Icons.checkroom_outlined;
-    case 'sport':
-    case 'olahraga':
-      return Icons.sports_esports_outlined;
-    case 'health':
-    case 'kesehatan':
-      return Icons.health_and_safety_outlined;
-    case 'home':
-    case 'rumah':
-    case 'household':
-      return Icons.home_outlined;
-    case 'book':
-    case 'buku':
-    case 'stationery':
-    case 'alat tulis':
-      return Icons.menu_book_outlined;
-    case 'toy':
-    case 'mainan':
-      return Icons.toys_outlined;
-    default:
-      return Icons.category_outlined;
-  }
-}

@@ -77,7 +77,7 @@ class PushNotificationService {
   static void startPolling() {
     print("--- Polling Notifikasi Dimulai (role: $_role) ---");
     _pollingTimer?.cancel();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 15), (timer) async {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 60), (timer) async {
       await checkNewNotifications();
     });
   }

@@ -3,12 +3,14 @@ import 'package:frontend/core/network/api_client.dart';
 // Model Promo/Diskon
 class PromoModel {
   final int idDiskon;
+  final String publicId;
   final String namaDiskon;
   final String bannerUrl;
   final String tglSelesai;
 
   PromoModel({
     required this.idDiskon,
+    required this.publicId,
     required this.namaDiskon,
     required this.bannerUrl,
     required this.tglSelesai,
@@ -17,6 +19,7 @@ class PromoModel {
   factory PromoModel.fromJson(Map<String, dynamic> json) {
     return PromoModel(
       idDiskon: json['id_diskon'] ?? 0,
+      publicId: json['public_id'] ?? '',
       namaDiskon: json['nama_diskon'] ?? '',
       bannerUrl: json['banner_url'] ?? '',
       tglSelesai: json['tgl_selesai'] ?? '',
@@ -153,6 +156,25 @@ class KatalogService {
     final response = await _client.dio.get('/customer/promo');
     final List data = response.data['data'] ?? [];
     return data.map((e) => PromoModel.fromJson(e)).toList();
+  }
+
+  /// Ambil daftar barang dengan pagination.
+  /// Endpoint: GET /customer/katalog/barang
+  Future<List<BarangModel>> getBarang({String? idKategori, String? search}) async {
+    final queryParameters = <String, dynamic>{};
+    if (idKategori != null && idKategori.isNotEmpty) {
+      queryParameters['id_kategori'] = idKategori;
+    }
+    if (search != null && search.isNotEmpty) {
+      queryParameters['search'] = search;
+    }
+
+    final response = await _client.dio.get(
+      '/customer/barang',
+      queryParameters: queryParameters,
+    );
+    final List data = response.data['data'] ?? [];
+    return data.map((e) => BarangModel.fromJson(e)).toList();
   }
 
   /// Ambil daftar kategori barang.

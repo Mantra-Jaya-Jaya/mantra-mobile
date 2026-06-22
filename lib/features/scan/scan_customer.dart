@@ -9,7 +9,8 @@ import 'package:frontend/features/home/detail_barang.dart';
 import 'package:intl/intl.dart';
 
 class ScanPage extends StatefulWidget {
-  const ScanPage({super.key});
+  final bool isActive;
+  const ScanPage({super.key, this.isActive = true});
 
   @override
   State<ScanPage> createState() => _ScanPageState();
@@ -87,6 +88,18 @@ class _ScanPageState extends State<ScanPage>
         app.routeObserver.subscribe(this, route);
       }
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant ScanPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive != oldWidget.isActive) {
+      if (widget.isActive) {
+        scannerController.start();
+      } else {
+        scannerController.stop();
+      }
+    }
   }
 
   @override
