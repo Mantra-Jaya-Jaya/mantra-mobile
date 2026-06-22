@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/services/profile_service.dart';
 import '../../core/services/customer_checkout_service.dart';
 import '../../core/widgets/base_header_widget.dart';
+import '../orders/detailpesanan_customer.dart';
 import 'pilih_alamat.dart';
 import 'pilih_pembayaran.dart';
 
@@ -203,8 +204,13 @@ class _CheckoutState extends State<Checkout> {
       }
 
       if (mounted) {
-        _showSnackBar('Pesanan berhasil dibuat! ID: $idPesanan');
-        Navigator.pop(context);
+        _showSnackBar('Pesanan berhasil dibuat!');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => OrderDetailPage(noPesanan: idPesanan),
+          ),
+        );
       }
     } catch (e) {
       print("Error checkout: $e");
@@ -448,11 +454,17 @@ class _CheckoutState extends State<Checkout> {
   Widget _buildCheckoutProductTile(Map<String, dynamic> item) {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
-      height: 140,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFEEF3F4),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
       ),
       child: Row(
         children: [
@@ -540,11 +552,17 @@ class _CheckoutState extends State<Checkout> {
 
     if (_alamatDipilih == null || _alamatDipilih!.isEmpty) {
       return Container(
-        height: 140,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFFEEF3F4),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -570,11 +588,17 @@ class _CheckoutState extends State<Checkout> {
     }
 
     return Container(
-      height: 140,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFEEF3F4),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -639,8 +663,15 @@ class _CheckoutState extends State<Checkout> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFEEF3F4),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -720,12 +751,12 @@ class _CheckoutState extends State<Checkout> {
                         else if (_dalamRadius)
                           const Text(
                             'Gratis · Dalam jangkauan',
-                            style: TextStyle(color: Colors.green, fontSize: 12),
+                            style: TextStyle(color: Color(0xFFAD510D), fontSize: 12),
                           )
                         else
                           const Text(
                             'Di luar jangkauan',
-                            style: TextStyle(color: Colors.red, fontSize: 12),
+                            style: TextStyle(color: Colors.grey, fontSize: 12),
                           ),
                       ],
                     ),
@@ -788,8 +819,15 @@ class _CheckoutState extends State<Checkout> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFEEF3F4),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -826,8 +864,8 @@ class _CheckoutState extends State<Checkout> {
                 ...layananList.map((layanan) {
                   final l = layanan as Map<String, dynamic>;
                   final selected =
-                      _layananDipilih?['id_layanan_ekspedisi'] ==
-                      l['id_layanan_ekspedisi'];
+                      _ekspedisiDipilih == ekspedisi &&
+                      _layananDipilih == l;
                   return InkWell(
                     onTap: () {
                       setState(() {
@@ -918,50 +956,63 @@ class _CheckoutState extends State<Checkout> {
 
   Widget _buildPembayaranCard() {
     return Container(
-      height: _pembayaranDipilih != null ? 140 : 60,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFEEF3F4),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
       ),
       child: _pembayaranDipilih != null
           ? Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFAD510D),
-                        borderRadius: BorderRadius.circular(8),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFAD510D),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: _buildPaymentIcon(_pembayaranDipilih!['icon']),
                       ),
-                      child: _buildPaymentIcon(_pembayaranDipilih!['icon']),
-                    ),
-                    const SizedBox(width: 14),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          _pembayaranDipilih!['nama'] ?? 'Metode Pembayaran',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              _pembayaranDipilih!['nama'] ?? 'Metode Pembayaran',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              _pembayaranDipilih!['sub'] ?? '',
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          _pembayaranDipilih!['sub'] ?? '',
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 12),
                 GestureDetector(
                   onTap: _pindahKePilihPembayaran,
                   child: const Text(
@@ -1003,8 +1054,15 @@ class _CheckoutState extends State<Checkout> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFEEF3F4),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1041,8 +1099,15 @@ class _CheckoutState extends State<Checkout> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFEEF3F4),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
       ),
       child: Column(
         children: [

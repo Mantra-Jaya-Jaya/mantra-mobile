@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/features/home/services/katalog_service.dart';
 import 'package:frontend/features/home/kategori_barang_customer.dart';
-import 'package:frontend/features/home/home_customer.dart'; // Import lokasi getIconFromString kamu
 
 class AllKategoriPage extends StatefulWidget {
   final List<KategoriModel> initialCategories;
@@ -176,7 +175,7 @@ class _AllKategoriPageState extends State<AllKategoriPage> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => KategoriBarangPage(
-                    initialCategory: kat.namaKategori,
+                    category: kat,
                   ),
                 ),
               );
@@ -189,7 +188,7 @@ class _AllKategoriPageState extends State<AllKategoriPage> {
   }
 
   // Desain menyerupai komponen Beranda, namun dengan ukuran padding dan font yang dinaikkan
-  Widget _buildLargeCategoryItem(String label, String? iconName) {
+  Widget _buildLargeCategoryItem(String label, String? iconUrl) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -203,11 +202,15 @@ class _AllKategoriPageState extends State<AllKategoriPage> {
             ), // Border radius disesuaikan ukurannya
           ),
           // Ukuran icon dinaikkan dari 30 menjadi 36
-          child: Icon(
-            getIconFromString(iconName),
-            color: const Color(0xFFAD510D),
-            size: 36,
-          ),
+          child: iconUrl != null && iconUrl.isNotEmpty && iconUrl.startsWith('http')
+              ? Image.network(
+                  iconUrl,
+                  width: 36,
+                  height: 36,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.category_outlined, color: Color(0xFFAD510D), size: 36),
+                )
+              : const Icon(Icons.category_outlined, color: Color(0xFFAD510D), size: 36),
         ),
         const SizedBox(height: 8),
         Text(

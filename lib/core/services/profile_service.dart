@@ -36,6 +36,9 @@ class ProfileService {
     required String nama,
     required String telepon,
     required String alamatLengkap,
+    double? latitude,
+    double? longitude,
+    String? catatanLokasi,
     bool isUtama = false,
   }) async {
     final response = await _client.dio.post(
@@ -45,6 +48,9 @@ class ProfileService {
         'nama_penerima': nama,
         'no_telp_penerima': telepon,
         'alamat_lengkap': alamatLengkap,
+        'latitude': latitude,
+        'longitude': longitude,
+        'catatan_lokasi': catatanLokasi,
         'is_utama': isUtama,
       },
     );
@@ -58,6 +64,9 @@ class ProfileService {
     required String nama,
     required String telepon,
     required String alamatLengkap,
+    double? latitude,
+    double? longitude,
+    String? catatanLokasi,
     bool isUtama = false,
   }) async {
     final response = await _client.dio.put(
@@ -67,6 +76,9 @@ class ProfileService {
         'nama_penerima': nama,
         'no_telp_penerima': telepon,
         'alamat_lengkap': alamatLengkap,
+        'latitude': latitude,
+        'longitude': longitude,
+        'catatan_lokasi': catatanLokasi,
         'is_utama': isUtama,
       },
     );
