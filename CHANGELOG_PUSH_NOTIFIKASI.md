@@ -35,6 +35,7 @@ Perubahan ini menambahkan **push notification untuk role Customer** dan **memper
 ### 1. Bug Fix — Redirect tiap 15 detik ke Landing Page
 
 **Penyebab:**
+
 - `PushNotificationService.startPolling()` dipanggil di `main.dart` saat app start
 - Setiap 15 detik, Dio request `GET /kasir/notifikasi` dikirim
 - Sebelum login, tidak ada JWT token → response 401
@@ -42,6 +43,7 @@ Perubahan ini menambahkan **push notification untuk role Customer** dan **memper
 - Ini terjadi terus setiap 15 detik, menarik user keluar dari halaman manapun
 
 **Perbaikan:**
+
 - `api_client.dart:57-60` — cek header `X-Skip-Auth-Redirect`, jika ada lewati redirect
 - `notifikasi_service.dart:53,74` — semua request notifikasi (kasir & customer) kasih header `X-Skip-Auth-Redirect: true`
 
@@ -163,6 +165,7 @@ go func() {
 | Tap notifikasi | Navigasi ke `NotificationScreen` (kasir) | Navigasi ke screen sesuai `_role` |
 
 **Mekanisme:**
+
 - Role default `''` → `checkNewNotifications()` langsung return (tidak ada polling efektif)
 - Setiap home screen panggil `PushNotificationService.setRole('customer'/'kasir')` di `initState`
 - Setelah role di-set, polling mulai menggunakan API/channel yang sesuai

@@ -26,7 +26,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   bool _isFormValid = false;
 
-
   bool _isLoading = false;
   late final AuthService _authService;
 
@@ -36,11 +35,26 @@ class _LoginScreenState extends State<LoginScreen> {
     _authService = AuthService(ApiClient().dio, const FlutterSecureStorage());
     _usernameController.addListener(_validateForm);
     _passwordController.addListener(_validateForm);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!ApiClient.hasExplicitBaseUrl) {
+        _showNotice(
+          'BASE_URL belum diset. Jalankan dengan --dart-define=BASE_URL=http://<ip>:8080/api/v1',
+        );
+      }
+    });
   }
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  void _showNotice(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.orange),
     );
   }
 
@@ -85,13 +99,16 @@ class _LoginScreenState extends State<LoginScreen> {
     } on DioException catch (e) {
       final apiError = ApiError.fromDioException(e);
       _showError(apiError.userMessage);
+    } on FormatException catch (e) {
+      _showError(e.message);
+    } catch (_) {
+      _showError('Login gagal. Periksa koneksi atau coba lagi.');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
   }
-
 
   void _validateForm() {
     setState(() {
@@ -220,9 +237,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => const LupaPassword(),
+                                        builder: (context) =>
+                                            const LupaPassword(),
                                       ),
-                                      );
+                                    );
                                   },
                                   child: const Text(
                                     'Lupa password?',

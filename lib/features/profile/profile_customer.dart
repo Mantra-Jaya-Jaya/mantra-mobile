@@ -634,7 +634,7 @@ class _ProfilState extends State<Profil> {
             ),
           ),
           const SizedBox(height: 20),
-          ...List.generate(_daftarAlamat.length, (index) {
+              ...List.generate(_daftarAlamat.length, (index) {
             // 🌟 5. Sekarang 'item' sudah berupa cetakan AlamatModel, bukan Map lagi.
             final AlamatModel item = _daftarAlamat[index];
             return Column(
@@ -647,6 +647,8 @@ class _ProfilState extends State<Profil> {
                   telepon: item.noTelpPenerima,
                   alamat: item.alamatLengkap,
                   isPrimary: item.isUtama,
+                  latitude: item.latitude,
+                  longitude: item.longitude,
                 ),
                 if (index < _daftarAlamat.length - 1)
                   const SizedBox(height: 14),
@@ -690,6 +692,8 @@ class _ProfilState extends State<Profil> {
     required String telepon,
     required String alamat,
     required bool isPrimary,
+    double latitude = 0.0,
+    double longitude = 0.0,
   }) {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -735,12 +739,13 @@ class _ProfilState extends State<Profil> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => EditAlamat(
-                        idAlamat:
-                            idAlamat, // 🌟 Mengirim data bertipe String UUID ke halaman Edit
+                        idAlamat: idAlamat,
                         labelAwal: label,
                         namaAwal: nama,
                         teleponAwal: telepon,
                         alamatAwal: alamat,
+                        latitudeAwal: latitude,
+                        longitudeAwal: longitude,
                       ),
                     ),
                   );

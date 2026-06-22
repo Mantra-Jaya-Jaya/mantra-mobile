@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:frontend/features/cart/cart_customer.dart';
 import 'package:frontend/features/orders/order_customer.dart';
 import 'package:frontend/features/notifications/notification_customer.dart';
@@ -160,7 +161,7 @@ class _HomeContentState extends State<HomeContent> {
       _errorBarang = null;
     });
     try {
-      final data = await _katalogService.getDaftarBarang(limit: 6);
+      final data = await _katalogService.getDaftarBarang(limit: 8);
       if (mounted) {
         setState(() {
           _barangList = data;
@@ -477,12 +478,14 @@ class _HomeContentState extends State<HomeContent> {
               context,
               MaterialPageRoute(
                 builder: (context) => KategoriBarangPage(
-                  category: k,
+                  kategoriPublicId: k.publicId,
+                  kategoriNama: k.namaKategori,
                 ),
               ),
             );
+
           },
-          // Memanggil icon_kategori yang berisi URL dari backend
+          // Memanggil k.iconKategori dari backend (URL atau Material icon string)
           child: _catItem(k.namaKategori, k.iconKategori),
         );
       },
@@ -552,21 +555,36 @@ class _HomeContentState extends State<HomeContent> {
   }
 
   Widget _catItem(String label, String iconUrl) {
+    debugPrint('🖼️ ICON: label=$label, iconUrl=\'$iconUrl\'');
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: iconUrl.isNotEmpty ? null : const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: const Color(0xFFAD510D).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: iconUrl.isNotEmpty && iconUrl.startsWith('http')
-              ? Image.network(
-                  iconUrl,
-                  width: 30,
-                  height: 30,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.category_outlined, color: Color(0xFFAD510D), size: 30),
+          child: iconUrl.isNotEmpty
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: iconUrl.toLowerCase().endsWith('.svg')
+                      ? SvgPicture.network(iconUrl,
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                          placeholderBuilder: (_) => const Icon(
+                              Icons.category_outlined,
+                              color: Color(0xFFAD510D),
+                              size: 30),
+                        )
+                      : Image.network(iconUrl,
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(
+                              Icons.category_outlined,
+                              color: Color(0xFFAD510D),
+                              size: 30)),
                 )
               : const Icon(Icons.category_outlined, color: Color(0xFFAD510D), size: 30),
         ),

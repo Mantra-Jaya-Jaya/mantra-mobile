@@ -1,37 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/core/widgets/base_header_widget.dart';
 import 'package:frontend/features/home/services/katalog_service.dart';
-import 'package:frontend/core/models/barang_model.dart';
-import 'package:frontend/features/home/detail_barang.dart';
 import 'package:intl/intl.dart';
+import 'package:frontend/features/home/detail_barang.dart';
 
 class KategoriBarangPage extends StatefulWidget {
-  final KategoriModel category;
+  final String kategoriPublicId;
+  final String kategoriNama;
 
-  const KategoriBarangPage({Key? key, required this.category}) : super(key: key);
+  const KategoriBarangPage({
+    Key? key,
+    required this.kategoriPublicId,
+    this.kategoriNama = 'Semua',
+  }) : super(key: key);
 
   @override
   State<KategoriBarangPage> createState() => _KategoriBarangPageState();
 }
 
 class _KategoriBarangPageState extends State<KategoriBarangPage> {
-  final KatalogService _katalogService = KatalogService();
   final TextEditingController _searchController = TextEditingController();
-  final _currencyFormat = NumberFormat.currency(
-    locale: 'id_ID',
-    symbol: 'Rp ',
-    decimalDigits: 0,
-  );
+  final KatalogService _katalogService = KatalogService();
+  final NumberFormat _currencyFormat =
+      NumberFormat.currency(locale: 'id_ID', symbol: 'Rp. ', decimalDigits: 0);
 
-  List<BarangModel> _allProducts = [];
-  List<BarangModel> _filteredProducts = [];
+  List<BarangModel> _barangList = [];
   bool _isLoading = true;
-  String? _errorMessage;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _fetchProducts();
+    _loadBarang();
   }
 
   @override
@@ -40,53 +40,46 @@ class _KategoriBarangPageState extends State<KategoriBarangPage> {
     super.dispose();
   }
 
-  Future<void> _fetchProducts() async {
+  Future<void> _loadBarang() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
+      _error = null;
     });
-
     try {
-      final data = await _katalogService.getBarang(idKategori: widget.category.publicId);
+      final data = await _katalogService.getDaftarBarang(
+        limit: 50,
+        idKategori: widget.kategoriPublicId,
+      );
       if (mounted) {
         setState(() {
-          _allProducts = data;
-          _filteredProducts = data;
+          _barangList = data;
           _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Gagal memuat produk: $e';
+          _error = 'Gagal memuat produk';
           _isLoading = false;
         });
       }
     }
   }
 
-  void _filterProducts(String query) {
-    if (query.trim().isEmpty) {
-      setState(() {
-        _filteredProducts = _allProducts;
-      });
-      return;
-    }
-
-    final lowerQuery = query.toLowerCase();
-    setState(() {
-      _filteredProducts = _allProducts.where((p) {
-        return p.namaBarang.toLowerCase().contains(lowerQuery);
-      }).toList();
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
+    final filteredProducts = _barangList.where((b) {
+      final matchSearch = _searchController.text.isEmpty ||
+          b.namaBarang
+              .toLowerCase()
+              .contains(_searchController.text.toLowerCase());
+      return matchSearch;
+    }).toList();
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: BaseHeaderWidget(
-        title: widget.category.namaKategori,
+        title: widget.kategoriNama,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
           onPressed: () => Navigator.pop(context),
@@ -96,12 +89,13 @@ class _KategoriBarangPageState extends State<KategoriBarangPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 12),
-          // SEARCH BAR
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TextField(
               controller: _searchController,
-              onChanged: _filterProducts,
+              onChanged: (value) {
+                setState(() {});
+              },
               decoration: InputDecoration(
                 hintText: 'Cari Produk...',
                 hintStyle: const TextStyle(color: Colors.grey),
@@ -111,7 +105,7 @@ class _KategoriBarangPageState extends State<KategoriBarangPage> {
                         icon: const Icon(Icons.cancel, color: Colors.grey),
                         onPressed: () {
                           _searchController.clear();
-                          _filterProducts('');
+                          setState(() {});
                         },
                       )
                     : null,
@@ -126,45 +120,43 @@ class _KategoriBarangPageState extends State<KategoriBarangPage> {
             ),
           ),
           const SizedBox(height: 16),
-          // GRID BARANG
-          Expanded(
-            child: _buildBody(),
-          ),
+          Expanded(child: _buildContent(filteredProducts)),
         ],
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildContent(List<BarangModel> products) {
     if (_isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: Color(0xFFAD510D)),
       );
     }
 
-    if (_errorMessage != null) {
+    if (_error != null) {
       return Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.grey),
-            const SizedBox(height: 10),
-            Text(_errorMessage!, style: const TextStyle(color: Colors.grey)),
-            const SizedBox(height: 10),
+            const Icon(Icons.wifi_off, size: 48, color: Colors.grey),
+            const SizedBox(height: 8),
+            Text(_error!, style: const TextStyle(color: Colors.grey)),
+            const SizedBox(height: 8),
             ElevatedButton(
-              onPressed: _fetchProducts,
+              onPressed: _loadBarang,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFAD510D),
               ),
-              child: const Text('Coba Lagi', style: TextStyle(color: Colors.white)),
+              child: const Text('Coba Lagi',
+                  style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
       );
     }
 
-    if (_filteredProducts.isEmpty) {
-      return const Center(child: Text('Tidak ada produk di kategori ini.'));
+    if (products.isEmpty) {
+      return const Center(child: Text('Belum ada produk di kategori ini.'));
     }
 
     return GridView.builder(
@@ -175,15 +167,15 @@ class _KategoriBarangPageState extends State<KategoriBarangPage> {
         mainAxisSpacing: 16,
         childAspectRatio: 0.75,
       ),
-      itemCount: _filteredProducts.length,
+      itemCount: products.length,
       itemBuilder: (context, index) {
-        final item = _filteredProducts[index];
-        return _buildCard(item);
+        final item = products[index];
+        return _buildProductCard(item);
       },
     );
   }
 
-  Widget _buildCard(BarangModel barang) {
+  Widget _buildProductCard(BarangModel barang) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -193,46 +185,43 @@ class _KategoriBarangPageState extends State<KategoriBarangPage> {
           ),
         );
       },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.blueGrey.shade100, width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 5,
-              spreadRadius: 1,
-            )
-          ]
-        ),
+      child: Card(
+        color: Colors.white,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        elevation: 2,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(15),
+                  topRight: Radius.circular(15),
                 ),
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                  child: barang.gambarBarang.isNotEmpty
-                      ? Image.network(
-                          barang.gambarBarang,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.image, color: Colors.grey),
-                        )
-                      : Container(
+                child: barang.gambarBarang.isNotEmpty
+                    ? Image.network(
+                        barang.gambarBarang,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        errorBuilder: (context, error, stackTrace) =>
+                            Container(
                           color: Colors.grey.shade100,
-                          child: const Icon(Icons.inventory_2_outlined, color: Colors.grey),
+                          child: const Icon(Icons.image_not_supported,
+                              color: Colors.grey),
                         ),
-                ),
+                      )
+                    : Container(
+                        color: Colors.grey.shade100,
+                        child: const Center(
+                          child: Icon(Icons.inventory_2_outlined,
+                              color: Colors.grey, size: 40),
+                        ),
+                      ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(12.0),
+              padding: const EdgeInsets.all(8.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -240,18 +229,14 @@ class _KategoriBarangPageState extends State<KategoriBarangPage> {
                     barang.namaBarang,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.black87,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: const TextStyle(fontSize: 13),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   if (barang.punyaDiskon) ...[
                     Text(
                       _currencyFormat.format(barang.hargaTerendah),
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         color: Colors.grey,
                         decoration: TextDecoration.lineThrough,
                       ),
@@ -259,21 +244,21 @@ class _KategoriBarangPageState extends State<KategoriBarangPage> {
                     Text(
                       _currencyFormat.format(barang.hargaDiskon),
                       style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w800,
                         color: Color(0xFFAD510D),
+                        fontSize: 13,
                       ),
                     ),
                   ] else ...[
                     Text(
                       _currencyFormat.format(barang.hargaTerendah),
                       style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
                         color: Color(0xFFAD510D),
                       ),
                     ),
-                  ]
+                  ],
                 ],
               ),
             ),
