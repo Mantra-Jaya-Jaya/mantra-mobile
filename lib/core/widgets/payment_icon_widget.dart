@@ -9,12 +9,14 @@ import 'package:flutter_svg/flutter_svg.dart';
 ///    → ditampilkan langsung sebagai Material [Icon].
 class PaymentIconWidget extends StatelessWidget {
   final String iconValue;
+  final String? paymentName;
   final double size;
   final Color? color;
 
   const PaymentIconWidget({
     super.key,
     required this.iconValue,
+    this.paymentName,
     this.size = 28,
     this.color,
   });
@@ -39,6 +41,39 @@ class PaymentIconWidget extends StatelessWidget {
 
   IconData get _materialIcon => _materialIconMap[iconValue] ?? _defaultIcon;
 
+  IconData get _fallbackIcon {
+    final lowerVal = iconValue.toLowerCase();
+    final lowerName = (paymentName ?? '').toLowerCase();
+
+    if (lowerVal.contains('cod') ||
+        lowerVal.contains('package') ||
+        lowerName.contains('cod') ||
+        lowerName.contains('tempat')) {
+      return Icons.local_shipping_outlined;
+    }
+    if (lowerVal.contains('qris') ||
+        lowerVal.contains('qr') ||
+        lowerName.contains('qris') ||
+        lowerName.contains('qr')) {
+      return Icons.qr_code_scanner;
+    }
+    if (lowerVal.contains('va') ||
+        lowerVal.contains('bank') ||
+        lowerVal.contains('bca') ||
+        lowerVal.contains('bni') ||
+        lowerVal.contains('bri') ||
+        lowerVal.contains('mandiri') ||
+        lowerName.contains('va') ||
+        lowerName.contains('bank') ||
+        lowerName.contains('bca') ||
+        lowerName.contains('bni') ||
+        lowerName.contains('bri') ||
+        lowerName.contains('mandiri')) {
+      return Icons.account_balance;
+    }
+    return _defaultIcon;
+  }
+
   @override
   Widget build(BuildContext context) {
     final iconColor = color ?? const Color(0xFFAD510D);
@@ -53,7 +88,7 @@ class PaymentIconWidget extends StatelessWidget {
         width: size,
         height: size,
         fit: BoxFit.contain,
-        placeholderBuilder: (_) => Icon(_defaultIcon, size: size, color: iconColor),
+        placeholderBuilder: (_) => Icon(_fallbackIcon, size: size, color: iconColor),
       );
     }
 
@@ -62,7 +97,7 @@ class PaymentIconWidget extends StatelessWidget {
       width: size,
       height: size,
       fit: BoxFit.contain,
-      errorBuilder: (_, __, ___) => Icon(_defaultIcon, size: size, color: iconColor),
+      errorBuilder: (_, __, ___) => Icon(_fallbackIcon, size: size, color: iconColor),
       loadingBuilder: (_, child, loadingProgress) {
         if (loadingProgress == null) return child;
         return SizedBox(

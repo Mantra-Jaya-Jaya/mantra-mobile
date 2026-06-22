@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:frontend/core/widgets/base_header_widget.dart';
+import 'package:frontend/core/widgets/payment_icon_widget.dart';
 import '../orders/services/customer_order_service.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
@@ -312,24 +313,11 @@ class _PembayaranDetailPageState extends State<PembayaranDetailPage> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        iconUrl.isNotEmpty
-                            ? Image.network(
-                                iconUrl,
-                                width: 45, // sesuaikan ukuran lebar
-                                height: 30, // sesuaikan ukuran tinggi
-                                fit: BoxFit.contain,
-                                // Error builder jika gambar gagal di-load dari internet atau URL rusak
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(
-                                    Icons.account_balance_rounded,
-                                    color: Color(0xFFAD510D),
-                                  );
-                                },
-                              )
-                            : const Icon(
-                                Icons.account_balance_rounded,
-                                color: Color(0xFFAD510D),
-                              ),
+                        PaymentIconWidget(
+                          iconValue: iconUrl.isNotEmpty ? iconUrl : 'account_balance',
+                          paymentName: _formatPaymentMethod(widget.data),
+                          size: 32,
+                        ),
                       ],
                     ),
                     const Divider(height: 32),

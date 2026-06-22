@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/services/profile_service.dart';
 import '../../core/services/customer_checkout_service.dart';
 import '../../core/widgets/base_header_widget.dart';
+import '../../core/widgets/payment_icon_widget.dart';
 import 'pilih_alamat.dart';
 import 'pilih_pembayaran.dart';
 
@@ -1117,28 +1118,10 @@ class _CheckoutState extends State<Checkout> {
     );
   }
 
-  Widget _buildPaymentIcon(dynamic icon) {
-    if (icon is String) {
-      if (icon.startsWith('http')) {
-        return Image.network(icon, width: 20, height: 20, color: Colors.white);
-      }
-      const iconMap = {
-        'phone_android_rounded': Icons.phone_android_rounded,
-        'payment_rounded': Icons.payment_rounded,
-        'account_balance_rounded': Icons.account_balance_rounded,
-        'payments_outlined': Icons.payments_outlined,
-        'package_outlined': Icons.local_shipping_outlined,
-        'qr_code_scanner': Icons.qr_code_scanner,
-      };
-      final mapped = iconMap[icon];
-      if (mapped != null) {
-        return Icon(mapped, color: Colors.white, size: 20);
-      }
-    }
-    return const Icon(Icons.payment_rounded, color: Colors.white, size: 20);
-  }
-
   Widget _buildPembayaranCard() {
+    final iconVal = _pembayaranDipilih?['icon'] ?? '';
+    final isUrl = iconVal is String && (iconVal.startsWith('http://') || iconVal.startsWith('https://'));
+
     return Container(
       height: _pembayaranDipilih != null ? 140 : 60,
       padding: const EdgeInsets.all(16),
@@ -1154,12 +1137,20 @@ class _CheckoutState extends State<Checkout> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: EdgeInsets.all(isUrl ? 4 : 8),
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFAD510D),
+                        color: isUrl ? Colors.white : const Color(0xFFAD510D),
                         borderRadius: BorderRadius.circular(8),
+                        border: isUrl ? Border.all(color: Colors.grey.shade300, width: 0.5) : null,
                       ),
-                      child: _buildPaymentIcon(_pembayaranDipilih!['icon']),
+                      child: PaymentIconWidget(
+                        iconValue: iconVal.toString(),
+                        paymentName: _pembayaranDipilih!['nama'] ?? '',
+                        size: isUrl ? 28 : 20,
+                        color: isUrl ? null : Colors.white,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Column(

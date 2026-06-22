@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/widgets/base_header_widget.dart';
+import '../../core/widgets/payment_icon_widget.dart';
 import '../orders/services/customer_order_service.dart';
 
 class PilihPembayaranPage extends StatefulWidget {
@@ -272,9 +273,6 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
     final isChecked =
         _pembayaranTerpilih?['kategori'] == idKategori && !hasDropdown;
 
-    // Deteksi apakah iconUrl adalah nama icon Flutter (bukan URL HTTP)
-    final bool isFlutterIcon = !iconUrl.startsWith('http') && !iconUrl.startsWith('https');
-
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -301,24 +299,11 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.grey.shade100),
               ),
-              child: isFlutterIcon
-                  ? Icon(
-                      _getIconData(iconUrl),
-                      color: const Color(0xFFAD510D),
-                      size: 20,
-                    )
-                  : Image.network(
-                      iconUrl,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        // Fallback icon jika internet bermasalah/link mati
-                        return const Icon(
-                          Icons.payment_rounded,
-                          color: Color(0xFFAD510D),
-                          size: 20,
-                        );
-                      },
-                    ),
+              child: PaymentIconWidget(
+                iconValue: iconUrl,
+                paymentName: nama,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -371,21 +356,6 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
     );
   }
 
-  IconData _getIconData(String iconUrl) {
-    switch (iconUrl) {
-      case 'payments_outlined':
-        return Icons.payments_outlined;
-      case 'package_outlined':
-        return Icons.local_shipping_outlined;
-      case 'qr_code_scanner':
-        return Icons.qr_code_scanner;
-      case 'phone_android_rounded':
-        return Icons.phone_android_rounded;
-      default:
-        return Icons.payment_rounded;
-    }
-  }
-
   Widget _buildSubDropdownContainer({required List<Widget> children}) {
     return Container(
       margin: const EdgeInsets.only(top: 4, left: 10, right: 10),
@@ -435,16 +405,11 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: Image.network(
-                iconUrl,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(
-                    Icons.account_balance_rounded,
-                    size: 16,
-                    color: Colors.grey,
-                  );
-                },
+              child: PaymentIconWidget(
+                iconValue: iconUrl,
+                paymentName: nama,
+                size: 24,
+                color: Colors.grey,
               ),
             ),
             const SizedBox(width: 12),
