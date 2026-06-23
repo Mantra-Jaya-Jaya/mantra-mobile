@@ -4,7 +4,7 @@
 
 Kode `scan_customer.dart` telah dimodifikasi untuk memastikan permintaan izin kamera hanya muncul ketika pengguna benar-benar masuk ke halaman scan, bukan saat aplikasi dibuka.
 
-### Perubahan Utama:
+### Perubahan Utama
 
 1. ✅ Menambahkan `RouteAware` mixin untuk mendeteksi navigasi
 2. ✅ Menambahkan `didPush()` - camera dimulai saat halaman ditampilkan
@@ -24,7 +24,7 @@ Untuk membuat `RouteAware` berfungsi, **Anda perlu menambahkan `RouteObserver` d
 cd frontend/lib
 ```
 
-### 2. Tambahkan perubahan berikut:
+### 2. Tambahkan perubahan berikut
 
 ```dart
 import 'package:flutter/material.dart';
@@ -76,7 +76,7 @@ void initState() {
 
 ## 🔄 Alur Kerja Setelah Konfigurasi
 
-```
+```text
 1. User membuka aplikasi
    ↓
 2. Halaman lain ditampilkan (belum ada izin kamera)

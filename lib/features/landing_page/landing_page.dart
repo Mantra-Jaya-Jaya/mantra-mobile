@@ -3,7 +3,6 @@ import 'package:frontend/features/landing_page/onboarding_page.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/network/api_client.dart';
 import '../auth/services/auth_service.dart';
-import 'package:frontend/features/auth/login.dart';
 import 'package:frontend/features/home/home_customer.dart';
 import 'package:frontend/features/home/home_kasir.dart';
 
@@ -36,13 +35,19 @@ class _LandingPageState extends State<LandingPage> {
 
     final role = await _authService.getSavedRole();
     if (!mounted) return;
-    
+
     switch (role) {
       case 'customer':
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomeScreen()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
         break;
       case 'kasir':
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const DashboardKasirPage()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const DashboardKasirPage()),
+        );
         break;
       case 'admin':
         // Navigator.pushReplacementNamed(context, '/admin/home');
@@ -51,7 +56,6 @@ class _LandingPageState extends State<LandingPage> {
         setState(() => _isLoading = false);
     }
   }
-
 
   // 2. Data konten untuk masing-masing halaman
   final List<Map<String, String>> _landingData = [

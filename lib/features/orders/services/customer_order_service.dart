@@ -18,9 +18,7 @@ class CustomerOrderService {
 
     final response = await _client.dio.get(
       '/customer/pesanan',
-      queryParameters: backendStatus != null
-          ? {'status': backendStatus}
-          : null,
+      queryParameters: backendStatus != null ? {'status': backendStatus} : null,
     );
     final List data = response.data['data'] ?? [];
     return List<Map<String, dynamic>>.from(data);
@@ -66,6 +64,43 @@ class CustomerOrderService {
   /// Info lacak pengiriman
   Future<Map<String, dynamic>> getTrackingInfo(String publicId) async {
     final response = await _client.dio.get('/customer/pesanan/$publicId/lacak');
-    return response.data['data'];
+    final raw = response.data;
+    final Map<String, dynamic> map = raw is Map<String, dynamic>
+        ? raw
+        : raw is Map
+        ? Map<String, dynamic>.from(raw)
+        : throw const FormatException('Format respons tracking tidak valid');
+
+    final data = map['data'];
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) return Map<String, dynamic>.from(data);
+
+    throw const FormatException('Data tracking tidak ditemukan');
+  }
+
+  /// Cek status order Biteship
+  Future<Map<String, dynamic>> getBiteshipOrderStatus(String publicId) async {
+    final response = await _client.dio.get(
+      '/customer/pesanan/$publicId/status-biteship',
+    );
+    final raw = response.data;
+    final Map<String, dynamic> map = raw is Map<String, dynamic>
+        ? raw
+        : raw is Map
+        ? Map<String, dynamic>.from(raw)
+        : throw const FormatException(
+            'Format respons status Biteship tidak valid',
+          );
+
+    final data = map['data'];
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) return Map<String, dynamic>.from(data);
+
+    throw const FormatException('Data status Biteship tidak ditemukan');
+  }
+
+  /// Batalkan pengiriman Biteship
+  Future<void> cancelBiteshipShipment(String publicId) async {
+    await _client.dio.post('/customer/pesanan/$publicId/cancel-shipment');
   }
 }

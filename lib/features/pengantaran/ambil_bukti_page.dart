@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; 
 import 'package:camera/camera.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../core/services/pengantaran_service.dart';
 import '../../core/widgets/global_appbar_kurir.dart';
 
@@ -14,31 +15,91 @@ class AmbilBuktiPage extends StatefulWidget {
   State<AmbilBuktiPage> createState() => _AmbilBuktiPageState();
 }
 
-class _AmbilBuktiPageState extends State<AmbilBuktiPage> {
+class _AmbilBuktiPageState extends State<AmbilBuktiPage> with WidgetsBindingObserver {
   CameraController? _cameraController;
   List<CameraDescription>? _cameras;
   XFile? _imageFile;
   bool _isUploading = false;
+  bool _cameraError = false;
+  String _cameraErrorMessage = '';
 
   final DetailPengantaranService _service = DetailPengantaranService();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initCamera();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final CameraController? cameraController = _cameraController;
+
+    // Jika controller belum ada atau belum inisialisasi, skip saja
+    if (cameraController == null || !cameraController.value.isInitialized) {
+      return;
+    }
+
+    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+      // Free up camera resources ketika app minimize / background
+      cameraController.dispose();
+    } else if (state == AppLifecycleState.resumed) {
+      // Re-initialize kamera ketika app dibuka kembali
+      _initCamera();
+    }
+  }
+
   Future<void> _initCamera() async {
-    _cameras = await availableCameras();
-    if (_cameras != null && _cameras!.isNotEmpty) {
-      // Ambil kamera belakang (default)
-      _cameraController = CameraController(
+    try {
+      final status = await Permission.camera.request();
+      if (status != PermissionStatus.granted) {
+        if (mounted) {
+          setState(() {
+            _cameraError = true;
+            _cameraErrorMessage = 'Izin kamera tidak diberikan.';
+          });
+        }
+        return;
+      }
+
+      _cameras = await availableCameras();
+      if (_cameras == null || _cameras!.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _cameraError = true;
+            _cameraErrorMessage = 'Tidak ada kamera tersedia.';
+          });
+        }
+        return;
+      }
+
+      final newController = CameraController(
         _cameras![0],
         ResolutionPreset.high,
         enableAudio: false,
       );
-      await _cameraController!.initialize();
-      if (mounted) setState(() {});
+
+      await newController.initialize();
+
+      // Mencegah memory leak & black screen:
+      // Jika user keburu pencet "Back" sebelum kamera selesai loading,
+      // kita harus segera dispose controller yang baru terbuat ini.
+      if (!mounted) {
+        newController.dispose();
+        return;
+      }
+
+      _cameraController = newController;
+      setState(() {});
+    } catch (e) {
+      debugPrint('Camera init error: $e');
+      if (mounted) {
+        setState(() {
+          _cameraError = true;
+          _cameraErrorMessage = 'Gagal mengakses kamera: ${e.toString()}';
+        });
+      }
     }
   }
 
@@ -53,17 +114,29 @@ class _AmbilBuktiPageState extends State<AmbilBuktiPage> {
     );
 
     await _cameraController!.dispose();
-    _cameraController = CameraController(
+    
+    final newController = CameraController(
       newCamera,
       ResolutionPreset.high,
       enableAudio: false,
     );
-    await _cameraController!.initialize();
-    if (mounted) setState(() {});
+    
+    try {
+      await newController.initialize();
+      if (!mounted) {
+        newController.dispose();
+        return;
+      }
+      _cameraController = newController;
+      setState(() {});
+    } catch (e) {
+      debugPrint('Switch camera error: $e');
+    }
   }
 
   Future<void> _takePicture() async {
-    if (!_cameraController!.value.isInitialized ||
+    if (_cameraController == null ||
+        !_cameraController!.value.isInitialized ||
         _cameraController!.value.isTakingPicture) {
       return;
     }
@@ -137,12 +210,8 @@ class _AmbilBuktiPageState extends State<AmbilBuktiPage> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      // 🚀 KELUAR DARI DIALOG, KELUAR DARI KAMERA, BALIK KE DAFTAR TUGAS
                       Navigator.of(context).pop(); // Tutup Dialog
-                      Navigator.of(context).pop(); // Tutup Halaman Kamera
-                      Navigator.of(context).pop(); // Tutup Halaman Detail
-                      Navigator.of(context).pop(); // Tutup Halaman Peta
-                      // (Bisa disesuaikan pakai pushAndRemoveUntil kalau lu mau balik ke Home langsung)
+                      Navigator.of(context).pop(true); // Tutup Kamera + kirim hasil sukses ke Detail
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFAD510D),
@@ -171,6 +240,7 @@ class _AmbilBuktiPageState extends State<AmbilBuktiPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _cameraController?.dispose();
     super.dispose();
   }
@@ -220,6 +290,47 @@ class _AmbilBuktiPageState extends State<AmbilBuktiPage> {
                   ),
                   child: _imageFile != null
                       ? Image.file(File(_imageFile!.path), fit: BoxFit.cover)
+                      : _cameraError
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.camera_alt_outlined,
+                                  color: Colors.white54,
+                                  size: 64,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  _cameraErrorMessage,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    setState(() {
+                                      _cameraError = false;
+                                      _cameraErrorMessage = '';
+                                    });
+                                    _initCamera();
+                                  },
+                                  icon: const Icon(Icons.refresh, size: 18),
+                                  label: const Text('Coba Lagi'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFAD510D),
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
                       : (_cameraController != null &&
                             _cameraController!.value.isInitialized)
                       ? CameraPreview(_cameraController!)
