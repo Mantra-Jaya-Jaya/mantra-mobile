@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../core/services/profile_service.dart';
 import 'package:frontend/core/widgets/base_header_widget.dart';
-import 'widgets/map_picker_widget.dart';
 
 class AlamatBaru extends StatefulWidget {
   const AlamatBaru({super.key});
@@ -18,13 +20,13 @@ class AlamatBaruState extends State<AlamatBaru> {
   final TextEditingController _catatanController = TextEditingController();
 
   final ProfileService _profileService = ProfileService();
-  final GlobalKey<MapPickerWidgetState> _mapPickerKey = GlobalKey();
-
+  final MapController _mapController = MapController();
+  
+  // Default to Lubuk Linggau center
+  LatLng _selectedLocation = const LatLng(-3.2941, 102.8647);
+  
   bool _isFormValid = false;
   bool _isLoading = false;
-  bool _showMapPicker = false;
-  double? _selectedLat;
-  double? _selectedLng;
 
   @override
   void initState() {
@@ -34,6 +36,45 @@ class AlamatBaruState extends State<AlamatBaru> {
     _namaController.addListener(_validateForm);
     _teleponController.addListener(_validateForm);
     _alamatController.addListener(_validateForm);
+    
+    _getCurrentLocation();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return;
+    }
+
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      
+      if (mounted) {
+        setState(() {
+          _selectedLocation = LatLng(position.latitude, position.longitude);
+        });
+        _mapController.move(_selectedLocation, 15.0);
+      }
+    } catch (e) {
+      debugPrint("Error getting location: $e");
+    }
   }
 
   void _validateForm() {
@@ -53,6 +94,7 @@ class AlamatBaruState extends State<AlamatBaru> {
     _teleponController.dispose();
     _alamatController.dispose();
     _catatanController.dispose();
+    _mapController.dispose();
     super.dispose();
   }
 
@@ -119,118 +161,72 @@ class AlamatBaruState extends State<AlamatBaru> {
                     "Detail alamat...",
                     maxLines: 3,
                   ),
+
+                  const SizedBox(height: 15),
+
+                  _buildInputRow(
+                    Icons.note_alt_outlined,
+                    "Catatan Lokasi (Opsional)",
+                    _catatanController,
+                    "Warna rumah, patokan, dll",
+                    maxLines: 2,
+                  ),
                 ],
               ),
             ),
 
             const SizedBox(height: 20),
 
-            // Map Picker Toggle
-            GestureDetector(
-              onTap: () {
-                setState(() => _showMapPicker = !_showMapPicker);
-              },
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEAEFEF),
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(
-                    color: _showMapPicker
-                        ? const Color(0xFFAF510C)
-                        : Colors.transparent,
-                  ),
-                ),
-                child: Row(
+            const Text(
+              "Tandai Lokasi di Peta",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              height: 250,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: Stack(
                   children: [
-                    const Icon(
-                      Icons.map_outlined,
-                      color: Color(0xFFAF510C),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        _selectedLat != null
-                            ? '📍 Lokasi dipilih (${_selectedLat!.toStringAsFixed(4)}, ${_selectedLng!.toStringAsFixed(4)})'
-                            : '📍 Pilih Lokasi di Peta',
-                        style: TextStyle(
-                          color: _selectedLat != null
-                              ? Colors.black87
-                              : Colors.grey.shade600,
-                        ),
+                    FlutterMap(
+                      mapController: _mapController,
+                      options: MapOptions(
+                        initialCenter: _selectedLocation,
+                        initialZoom: 15.0,
+                        onPositionChanged: (position, hasGesture) {
+                          if (position.center != null) {
+                            setState(() {
+                              _selectedLocation = position.center!;
+                            });
+                          }
+                        },
                       ),
+                      children: [
+                        TileLayer(
+                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.example.frontend',
+                        ),
+                      ],
                     ),
-                    Icon(
-                      _showMapPicker
-                          ? Icons.expand_less
-                          : Icons.expand_more,
-                      color: const Color(0xFFAF510C),
+                    const Center(
+                      child: Icon(
+                        Icons.location_on,
+                        color: Color(0xFFAD510D),
+                        size: 40,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-
-            if (_showMapPicker) ...[
-              const SizedBox(height: 12),
-              MapPickerWidget(
-                key: _mapPickerKey,
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFAF510C),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  icon: const Icon(Icons.check, size: 18),
-                  label: const Text('Konfirmasi Lokasi'),
-                  onPressed: () {
-                  final picker = _mapPickerKey.currentState;
-                  if (picker != null) {
-                    setState(() {
-                      _selectedLat = picker.selectedLatitude;
-                      _selectedLng = picker.selectedLongitude;
-                      _showMapPicker = false;
-                    });
-                  }
-                },
-              ),
-            ),
-            ],
-
-            const SizedBox(height: 20),
-
-            // Catatan Lokasi
-            const Text(
-              "Catatan Lokasi (opsional)",
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
             const SizedBox(height: 8),
-            TextField(
-              controller: _catatanController,
-              maxLines: 2,
-              decoration: InputDecoration(
-                hintText: "Contoh: Depan gang, samping masjid, dll.",
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 15,
-                  vertical: 12,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Color(0xFFAF510C)),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Color(0xFFAF510C), width: 2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
+            Text(
+              "Koordinat: ${_selectedLocation.latitude.toStringAsFixed(5)}, ${_selectedLocation.longitude.toStringAsFixed(5)}",
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
 
             const SizedBox(height: 30),
@@ -248,10 +244,10 @@ class AlamatBaruState extends State<AlamatBaru> {
                             nama: _namaController.text,
                             telepon: _teleponController.text,
                             alamatLengkap: _alamatController.text,
-                            isUtama: false,
-                            latitude: _selectedLat,
-                            longitude: _selectedLng,
-                            catatanLokasi: _catatanController.text,
+                            latitude: _selectedLocation.latitude,
+                            longitude: _selectedLocation.longitude,
+                            catatanLokasi: _catatanController.text.isNotEmpty ? _catatanController.text : null,
+                            isUtama: false, // Default
                           );
                           if (mounted) Navigator.pop(context, true);
                         } catch (e) {
