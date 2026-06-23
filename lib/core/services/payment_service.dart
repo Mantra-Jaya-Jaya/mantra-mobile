@@ -158,8 +158,6 @@ class PaymentService {
     }
   }
 
-  Future<Object?> getDetailPesanan(int idPesanan) async {}
-
   // ----------------------------------------------------------
   // Ambil metode pembayaran aktif dari database
   // ----------------------------------------------------------
