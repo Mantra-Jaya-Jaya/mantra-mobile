@@ -227,13 +227,8 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
     final tipeEkspedisi = (data['tipe_ekspedisi'] ?? 'internal').toString();
     final kurir = data['kurir'];
 
-    // Belum ada data kurir / tracking → show waiting state
-    final noTrackingData = (tipeEkspedisi == 'internal' && kurir == null) ||
-        (tipeEkspedisi != 'internal' &&
-            (data['nomor_resi'] == null ||
-                data['nomor_resi'].toString().isEmpty) &&
-            (data['history'] == null ||
-                (data['history'] as List?)?.isEmpty == true));
+    // Belum ada data kurir internal → show waiting state
+    final noTrackingData = tipeEkspedisi == 'internal' && kurir == null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
