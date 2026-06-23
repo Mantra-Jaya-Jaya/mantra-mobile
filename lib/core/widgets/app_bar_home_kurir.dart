@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; 
 // Import Model dan Service lu
+// Tambahkan import ini di paling atas
+import 'package:frontend/features/notifications/notification_kurir.dart';
 import '../../core/models/profil_kurir_model.dart';
 import '../../core/services/kurir_profile_service.dart';
 
@@ -92,7 +94,16 @@ class _AppBarHomeKurirState extends State<AppBarHomeKurir> {
           ),
 
           // Icon Lonceng Notifikasi (Tetep sama)
-          Stack(
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NotificationKurirPage(),
+                ),
+              );
+            },
+            child: Stack(
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
@@ -123,6 +134,7 @@ class _AppBarHomeKurirState extends State<AppBarHomeKurir> {
                 ),
               ),
             ],
+          ),
           ),
         ],
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/core/models/notifikasi_model.dart';
 import 'package:frontend/core/services/notifikasi_service.dart';
 import 'package:frontend/core/widgets/base_header_widget.dart';
 
@@ -57,7 +58,7 @@ class _NotificationCustomerPageState extends State<NotificationCustomerPage> {
   Future<void> _markAsRead(NotifikasiModel item) async {
     if (item.status == 'read') return;
 
-    await _service.bacaNotifikasi(item.idNotifikasi);
+    await _service.bacaNotifikasiCustomer(item.idNotifikasi);
     final index = _notifications.indexWhere(
       (n) => n.idNotifikasi == item.idNotifikasi,
     );
