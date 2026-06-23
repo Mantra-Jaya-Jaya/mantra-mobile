@@ -130,6 +130,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     } else if (metode == 'gopay') {
       return 'GoPay';
     } else if (metode == 'tunai' || metode == 'cash') {
+      if (rincian['kanal_pembayaran'] == 'cod') {
+        return 'COD (Bayar di Tempat)';
+      }
       return 'Tunai (Cash)';
     }
     
@@ -169,6 +172,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     final status = _normalizeStatusLabel(
       (data['nama_status_pesanan'] ?? 'Pending').toString(),
     );
+    final isCashPayment = (rincian['metode'] ?? '').toString().toLowerCase() == 'cash';
     final tujuan = data['tujuan_pengantaran'] as Map<String, dynamic>?;
     final kurir = data['kurir'] as Map<String, dynamic>?;
     final String publicId = data['no_pesanan'] ?? '-';
@@ -442,72 +446,96 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     ],
                   ),
                   if (status == 'Belum Dibayar' ||
-                      status == 'Menunggu Pembayaran') ...[
+                      status == 'Menunggu Pembayaran' || isCashPayment) ...[
                     const Divider(height: 30, color: Colors.black12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFAD510D).withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.info_outline, color: Color(0xFFAD510D), size: 18),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              "Selesaikan pembayaran Anda segera untuk memproses pesanan ini.",
-                              style: TextStyle(fontSize: 12, color: Colors.black87),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => PembayaranDetailPage(
-                                data: {
-                                  'metode': rincian['metode'],
-                                  'nama_bank': rincian['nama_bank'],
-                                  'kanal_pembayaran': rincian['kanal_pembayaran'],
-                                  'va_number': rincian['va_number'],
-                                  'qr_url': rincian['qr_url'],
-                                  'bill_key': rincian['bill_key'],
-                                  'bill_code': rincian['bill_code'],
-                                  'order_id': rincian['order_id'],
-                                  'public_id_pesanan': widget.noPesanan,
-                                  'batas_waktu': rincian['batas_waktu'],
-                                },
-                                totalBayar: rincian['total'] ?? 0,
+                    if (isCashPayment) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFAD510D).withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.money_outlined, color: Color(0xFFAD510D), size: 18),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                "Bayar saat kurir tiba menggunakan uang tunai.\n"
+                                "Siapkan uang pas untuk memudahkan transaksi.",
+                                style: TextStyle(fontSize: 12, color: Colors.black87, height: 1.4),
                               ),
                             ),
-                          );
-                          if (result == true) {
-                            _fetchOrderDetail();
-                          }
-                        },
-                        icon: const Icon(Icons.payment_rounded, size: 18),
-                        label: const Text(
-                          "Lihat Instruksi Pembayaran",
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFAD510D),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
+                          ],
                         ),
                       ),
-                    ),
+                    ] else ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFAD510D).withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.info_outline, color: Color(0xFFAD510D), size: 18),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                "Selesaikan pembayaran Anda segera untuk memproses pesanan ini.",
+                                style: TextStyle(fontSize: 12, color: Colors.black87),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => PembayaranDetailPage(
+                                  data: {
+                                    'metode': rincian['metode'],
+                                    'nama_bank': rincian['nama_bank'],
+                                    'kanal_pembayaran': rincian['kanal_pembayaran'],
+                                    'va_number': rincian['va_number'],
+                                    'qr_url': rincian['qr_url'],
+                                    'bill_key': rincian['bill_key'],
+                                    'bill_code': rincian['bill_code'],
+                                    'order_id': rincian['order_id'],
+                                    'public_id_pesanan': widget.noPesanan,
+                                    'batas_waktu': rincian['batas_waktu'],
+                                  },
+                                  totalBayar: rincian['total'] ?? 0,
+                                ),
+                              ),
+                            );
+                            if (result == true) {
+                              _fetchOrderDetail();
+                            }
+                          },
+                          icon: const Icon(Icons.payment_rounded, size: 18),
+                          label: const Text(
+                            "Lihat Instruksi Pembayaran",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFAD510D),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ],
               ),
@@ -788,7 +816,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                 ),
               ),
 
-            if (status == 'Dikemas')
+            if (status == 'Dikemas' && !isCashPayment)
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
