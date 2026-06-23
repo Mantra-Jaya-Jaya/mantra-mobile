@@ -859,7 +859,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                 ),
               ),
               
-            if (status == 'Selesai' && rincian['kurir'] != null && rincian['kurir']['foto_bukti_pengiriman'] != null && rincian['kurir']['foto_bukti_pengiriman'].toString().isNotEmpty)
+            if (status == 'Selesai' && kurir != null && kurir['foto_bukti_pengiriman'] != null && kurir['foto_bukti_pengiriman'].toString().isNotEmpty)
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
@@ -892,7 +892,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                 ),
                               ),
                               Image.network(
-                                rincian['kurir']['foto_bukti_pengiriman'],
+                                kurir['foto_bukti_pengiriman'],
                                 fit: BoxFit.contain,
                                 errorBuilder: (context, error, stackTrace) {
                                   return const Padding(
