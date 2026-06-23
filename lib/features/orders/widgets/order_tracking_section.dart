@@ -91,7 +91,7 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
 
   void _startPolling() {
     _pollingTimer ??= Timer.periodic(
-      const Duration(seconds: 15),
+      const Duration(seconds: 30),
       (_) => _backgroundFetch(),
     );
   }
@@ -225,6 +225,15 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
   Widget _buildContent() {
     final data = _trackingData ?? <String, dynamic>{};
     final tipeEkspedisi = (data['tipe_ekspedisi'] ?? 'internal').toString();
+    final kurir = data['kurir'];
+
+    // Belum ada data kurir / tracking → show waiting state
+    final noTrackingData = (tipeEkspedisi == 'internal' && kurir == null) ||
+        (tipeEkspedisi != 'internal' &&
+            (data['nomor_resi'] == null ||
+                data['nomor_resi'].toString().isEmpty) &&
+            (data['history'] == null ||
+                (data['history'] as List?)?.isEmpty == true));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -246,13 +255,46 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
           ],
         ),
         const SizedBox(height: 12),
-        _buildModeBadge(tipeEkspedisi),
-        const SizedBox(height: 16),
-        if (tipeEkspedisi == 'internal')
-          _buildInternalTracking(data)
-        else
-          _buildExternalTracking(data),
+        if (noTrackingData)
+          _buildWaitingState()
+        else ...[
+          _buildModeBadge(tipeEkspedisi),
+          const SizedBox(height: 16),
+          if (tipeEkspedisi == 'internal')
+            _buildInternalTracking(data)
+          else
+            _buildExternalTracking(data),
+        ],
       ],
+    );
+  }
+
+  Widget _buildWaitingState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.inventory_2_outlined, size: 48, color: Colors.orange[700]),
+          const SizedBox(height: 12),
+          const Text(
+            'Pesanan Sedang Dikemas',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Pesanan Anda sedang dipersiapkan.\n'
+            'Kurir akan segera ditugaskan setelah barang siap.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey, fontSize: 13, height: 1.5),
+          ),
+        ],
+      ),
     );
   }
 
@@ -288,7 +330,8 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (latitude != null && longitude != null) ...[
+        if (latitude != null && longitude != null &&
+            !(latitude == 0 && longitude == 0)) ...[
           _buildMapCard(latitude, longitude),
           const SizedBox(height: 16),
         ] else
