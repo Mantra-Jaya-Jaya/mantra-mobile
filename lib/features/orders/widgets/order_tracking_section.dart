@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -24,6 +26,8 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
   String? _errorMessage;
   Map<String, dynamic>? _trackingData;
   Map<String, dynamic>? _biteshipStatus;
+  Timer? _pollingTimer;
+  final MapController _mapController = MapController();
 
   @override
   void initState() {
@@ -49,6 +53,8 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
         _trackingData = data;
         _isLoading = false;
       });
+      _startPolling();
+      _updateMapPosition();
     } on DioException catch (e) {
       if (!mounted) return;
       final apiError = ApiError.fromDioException(e);
@@ -81,6 +87,46 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
         _isLoading = false;
       });
     }
+  }
+
+  void _startPolling() {
+    _pollingTimer ??= Timer.periodic(
+      const Duration(seconds: 15),
+      (_) => _backgroundFetch(),
+    );
+  }
+
+  void _stopPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+  }
+
+  Future<void> _backgroundFetch() async {
+    try {
+      final data = await _orderService.getTrackingInfo(widget.noPesanan);
+      if (!mounted) return;
+      setState(() {
+        _trackingData = data;
+      });
+      _updateMapPosition();
+    } catch (_) {
+      // silently fail on background refresh
+    }
+  }
+
+  void _updateMapPosition() {
+    final lokasi = _asMap(_trackingData?['lokasi_kurir']);
+    final lat = _asDouble(lokasi?['latitude']);
+    final lng = _asDouble(lokasi?['longitude']);
+    if (lat != null && lng != null) {
+      _mapController.move(LatLng(lat, lng), 15);
+    }
+  }
+
+  @override
+  void dispose() {
+    _stopPolling();
+    super.dispose();
   }
 
   Future<void> _checkBiteshipStatus() async {
@@ -450,6 +496,7 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
         child: Stack(
           children: [
             FlutterMap(
+              mapController: _mapController,
               options: MapOptions(
                 initialCenter: LatLng(latitude, longitude),
                 initialZoom: 15,
