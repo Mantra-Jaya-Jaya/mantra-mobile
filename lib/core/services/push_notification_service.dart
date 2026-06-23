@@ -5,8 +5,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/core/services/notifikasi_service.dart';
+import 'package:frontend/core/models/notifikasi_model.dart';
 import 'package:frontend/features/notifications/notification_kasir.dart';
 import 'package:frontend/features/notifications/notification_customer.dart';
+import 'package:frontend/features/notifications/notification_kurir.dart';
 
 class PushNotificationService {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
@@ -31,10 +33,10 @@ class PushNotificationService {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const InitializationSettings initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-    );
+    const InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
 
+    // FIX 1: initialize() pakai positional argument, bukan named 'settings'
     await _notificationsPlugin.initialize(
       settings: initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
@@ -42,6 +44,8 @@ class PushNotificationService {
           Widget targetPage;
           if (_role == 'customer') {
             targetPage = const NotificationCustomerPage();
+          } else if (_role == 'kurir') {
+            targetPage = const NotificationKurirPage();
           } else {
             targetPage = const NotificationScreen();
           }
@@ -59,10 +63,18 @@ class PushNotificationService {
       importance: Importance.max,
     );
 
-    const AndroidNotificationChannel customerChannel = AndroidNotificationChannel(
+    const AndroidNotificationChannel customerChannel =
+        AndroidNotificationChannel(
       'customer_notif_channel',
       'Notifikasi Customer',
       description: 'Channel untuk notifikasi pesanan customer',
+      importance: Importance.max,
+    );
+
+    const AndroidNotificationChannel kurirChannel = AndroidNotificationChannel(
+      'kurir_notif_channel',
+      'Notifikasi Kurir',
+      description: 'Channel untuk notifikasi pengantaran kurir',
       importance: Importance.max,
     );
 
@@ -72,6 +84,7 @@ class PushNotificationService {
 
     await plugin?.createNotificationChannel(kasirChannel);
     await plugin?.createNotificationChannel(customerChannel);
+    await plugin?.createNotificationChannel(kurirChannel);
   }
 
   static void startPolling() {
@@ -91,9 +104,13 @@ class PushNotificationService {
     if (_role.isEmpty) return;
 
     try {
-      final List<NotifikasiModel> notifList;
+      // FIX 2: deklarasi List<NotifikasiModel> langsung
+      List<NotifikasiModel> notifList = [];
+
       if (_role == 'customer') {
         notifList = await _notifikasiService.getNotifikasiCustomer();
+      } else if (_role == 'kurir') {
+        notifList = await _notifikasiService.getNotifikasiKurir();
       } else {
         notifList = await _notifikasiService.getNotifikasiKasir();
       }
@@ -103,9 +120,12 @@ class PushNotificationService {
       final prefs = await SharedPreferences.getInstance();
       final lastId = prefs.getInt('last_notification_id_$_role') ?? 0;
 
-      final newNotifs = notifList.where((n) => n.idNotifikasi > lastId).toList();
+      // FIX 3: idNotifikasi diakses langsung tanpa null check
+      final newNotifs =
+          notifList.where((n) => n.idNotifikasi > lastId).toList();
 
-      print("Polling ($_role): Ditemukan ${notifList.length} total, ${newNotifs.length} baru (Last ID: $lastId)");
+      print(
+          "Polling ($_role): Ditemukan ${notifList.length} total, ${newNotifs.length} baru (Last ID: $lastId)");
 
       if (newNotifs.isNotEmpty) {
         newNotifs.sort((a, b) => a.idNotifikasi.compareTo(b.idNotifikasi));
@@ -118,7 +138,8 @@ class PushNotificationService {
           );
         }
 
-        await prefs.setInt('last_notification_id_$_role', newNotifs.last.idNotifikasi);
+        await prefs.setInt(
+            'last_notification_id_$_role', newNotifs.last.idNotifikasi);
       }
     } catch (e) {
       print("Polling error ($_role): $e");
@@ -130,10 +151,22 @@ class PushNotificationService {
     required String title,
     required String body,
   }) async {
-    final channelId = _role == 'customer' ? 'customer_notif_channel' : 'kasir_notif_channel';
-    final channelName = _role == 'customer' ? 'Notifikasi Customer' : 'Notifikasi Kasir';
+    final String channelId;
+    final String channelName;
 
-    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    if (_role == 'customer') {
+      channelId = 'customer_notif_channel';
+      channelName = 'Notifikasi Customer';
+    } else if (_role == 'kurir') {
+      channelId = 'kurir_notif_channel';
+      channelName = 'Notifikasi Kurir';
+    } else {
+      channelId = 'kasir_notif_channel';
+      channelName = 'Notifikasi Kasir';
+    }
+
+    final AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       channelId,
       channelName,
       channelDescription: channelName,
@@ -143,10 +176,10 @@ class PushNotificationService {
       icon: '@mipmap/ic_launcher',
     );
 
-    final NotificationDetails platformDetails = NotificationDetails(
-      android: androidDetails,
-    );
+    final NotificationDetails platformDetails =
+        NotificationDetails(android: androidDetails);
 
+    // FIX 4: show() pakai positional arguments, bukan named parameter
     await _notificationsPlugin.show(
       id: id,
       title: title,
