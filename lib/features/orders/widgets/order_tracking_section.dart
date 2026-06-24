@@ -91,7 +91,7 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
 
   void _startPolling() {
     _pollingTimer ??= Timer.periodic(
-      const Duration(seconds: 30),
+      const Duration(seconds: 15),
       (_) => _backgroundFetch(),
     );
   }
@@ -322,20 +322,19 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
     final jarakMeter = _asInt(data['jarak_meter']);
     final estimasiTiba = (data['estimasi_tiba'] ?? '').toString();
 
+    final hasValidLocation = latitude != null && longitude != null &&
+        !(latitude == 0 && longitude == 0);
+    final mapLat = hasValidLocation ? latitude! : -6.2088;
+    final mapLng = hasValidLocation ? longitude! : 106.8456;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (latitude != null && longitude != null &&
-            !(latitude == 0 && longitude == 0)) ...[
-          _buildMapCard(latitude, longitude),
-          const SizedBox(height: 16),
-        ] else
-          _buildEmptyCard(
-            icon: Icons.location_off_outlined,
-            title: 'Lokasi kurir belum tersedia',
-            subtitle:
-                'Pesanan masih dipersiapkan atau kurir belum mengirim lokasi.',
-          ),
+        _buildMapCard(
+          mapLat,
+          mapLng,
+          showWaitingOverlay: !hasValidLocation,
+        ),
         const SizedBox(height: 16),
         _buildInfoCard(
           title: 'Informasi Kurir',
@@ -526,7 +525,7 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
     );
   }
 
-  Widget _buildMapCard(double latitude, double longitude) {
+  Widget _buildMapCard(double latitude, double longitude, {bool showWaitingOverlay = false}) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: SizedBox(
@@ -534,6 +533,7 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
         child: Stack(
           children: [
             FlutterMap(
+              key: const ValueKey('tracking-map'),
               mapController: _mapController,
               options: MapOptions(
                 initialCenter: LatLng(latitude, longitude),
@@ -581,9 +581,11 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
                   color: Colors.black.withValues(alpha: 0.65),
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: const Text(
-                  'Lokasi kurir realtime',
-                  style: TextStyle(
+                child: Text(
+                  showWaitingOverlay
+                      ? 'Menunggu lokasi kurir...'
+                      : 'Lokasi kurir realtime',
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
