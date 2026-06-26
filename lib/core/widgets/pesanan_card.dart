@@ -126,7 +126,7 @@ class PesananCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      data.namaCustomer.toUpperCase(),
+                      'Ambil di: Toko Mantra Basecamp',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -135,14 +135,14 @@ class PesananCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      data.alamatLengkap,
+                      'Kirim ke: ${data.namaCustomer.toUpperCase()}\n${data.alamatLengkap}',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade600,
                         height: 1.5,
                         fontWeight: FontWeight.bold,
                       ),
-                      maxLines: 2,
+                      maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],

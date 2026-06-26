@@ -5,7 +5,8 @@ import '../../core/services/pengantaran_service.dart';
 import '../../core/models/pengantaran_model.dart';
 
 class TugasKurirPage extends StatefulWidget {
-  const TugasKurirPage({super.key});
+  final bool initialTabIsSelesai;
+  const TugasKurirPage({super.key, this.initialTabIsSelesai = false});
 
   @override
   State<TugasKurirPage> createState() => _TugasKurirPageState();
@@ -13,20 +14,23 @@ class TugasKurirPage extends StatefulWidget {
 
 class _TugasKurirPageState extends State<TugasKurirPage> {
   // State untuk toggle tab (true = Pengantaran, false = Selesai)
-  bool _isPengantaran = true;
+  late bool _isPengantaran;
 
   late Future<List<PengantaranModel>> _pengantaranFuture;
 
   @override
   void initState() {
     super.initState();
+    _isPengantaran = !widget.initialTabIsSelesai;
     _fetchData();
   }
 
   void _fetchData() {
     final filter = _isPengantaran ? "aktif" : "selesai";
     setState(() {
-      _pengantaranFuture = PengantaranService().getDaftarPengantaran(status: filter);
+      _pengantaranFuture = PengantaranService().getDaftarPengantaran(
+        status: filter,
+      );
     });
   }
 

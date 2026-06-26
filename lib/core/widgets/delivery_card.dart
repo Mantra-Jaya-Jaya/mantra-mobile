@@ -80,7 +80,7 @@ class DeliveryCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      data?.namaCustomer.toUpperCase() ?? 'NAMA CUSTOMER',
+                      _getCardHeader(),
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -89,14 +89,14 @@ class DeliveryCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      data?.alamatLengkap ?? 'Alamat tidak ditemukan',
+                      _getCardSubHeader(),
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade600,
                         height: 1.5,
                         fontWeight: FontWeight.bold,
                       ),
-                      maxLines: 2,
+                      maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
@@ -135,6 +135,24 @@ class DeliveryCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _getCardHeader() {
+    final status = (data?.statusLabel ?? '').toLowerCase();
+    if (status == 'menunggu') {
+      return 'Ambil di: Toko Mantra Basecamp';
+    } else if (status == 'selesai') {
+      return 'Selesai Dikirim ke: ${(data?.namaCustomer ?? 'CUSTOMER').toUpperCase()}';
+    }
+    return 'Kirim ke: ${(data?.namaCustomer ?? 'CUSTOMER').toUpperCase()}';
+  }
+
+  String _getCardSubHeader() {
+    final status = (data?.statusLabel ?? '').toLowerCase();
+    if (status == 'menunggu') {
+      return 'Kirim ke: ${(data?.namaCustomer ?? 'CUSTOMER').toUpperCase()}\n${data?.alamatLengkap ?? ''}';
+    }
+    return data?.alamatLengkap ?? 'Alamat tidak ditemukan';
   }
 
   Widget _buildBadge() {

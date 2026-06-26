@@ -13,26 +13,40 @@ import '../profile/profile_kurir.dart';
 // 1. WIDGET INDUK (Pegang Bottom Nav & Routing)
 // ==========================================
 class DashboardKurir extends StatefulWidget {
-  const DashboardKurir({super.key});
+  final int initialIndex;
+  final bool tugasInitialTabIsSelesai;
+
+  const DashboardKurir({
+    super.key,
+    this.initialIndex = 0,
+    this.tugasInitialTabIsSelesai = false,
+  });
 
   @override
   State<DashboardKurir> createState() => _DashboardKurirState();
 }
 
 class _DashboardKurirState extends State<DashboardKurir> {
-  int _currentIndex = 0;
+  late int _currentIndex;
 
-  final List<Widget> _pages = [
-    const DashboardContent(),
-    const TugasKurirPage(),
-    const ProfileKurirPage(),
-  ];
+  late List<Widget> _pages;
 
   final List<NavMenuModel> _menus = [
     NavMenuModel(label: 'Home', icon: Icons.home_filled, index: 0),
     NavMenuModel(label: 'Tugas', icon: Icons.local_shipping_outlined, index: 1),
     NavMenuModel(label: 'Profile', icon: Icons.person_outline, index: 2),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pages = [
+      const DashboardContent(),
+      TugasKurirPage(initialTabIsSelesai: widget.tugasInitialTabIsSelesai),
+      const ProfileKurirPage(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -299,7 +313,7 @@ class _DashboardContentState extends State<DashboardContent> {
     );
   }
 
-// 🚀 DESAIN KOTAK LAPORAN BARU (MODERN LIST TILE)
+  // 🚀 DESAIN KOTAK LAPORAN BARU (MODERN LIST TILE)
   Widget _buildLaporanTile(
     IconData icon,
     String title,
