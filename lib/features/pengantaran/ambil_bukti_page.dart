@@ -217,7 +217,7 @@ class _AmbilBuktiPageState extends State<AmbilBuktiPage>
                         MaterialPageRoute(
                           builder: (context) => const DashboardKurir(
                             initialIndex: 1,
-                            tugasInitialTabIsSelesai: true,
+                            tugasInitialTabIndex: 1,
                           ),
                         ),
                         (route) => false,

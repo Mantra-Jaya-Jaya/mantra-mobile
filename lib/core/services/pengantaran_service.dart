@@ -90,4 +90,16 @@ class DetailPengantaranService {
       return null;
     }
   }
+
+  Future<bool> konfirmasiPembayaran(String publicId) async {
+    try {
+      final response = await _apiClient.dio.put(
+        '/kurir/pengantaran/$publicId/pembayaran',
+      );
+      return response.statusCode == 200;
+    } on DioException catch (e) {
+      print('❌ Gagal konfirmasi pembayaran: ${e.response?.statusCode} - ${e.message}');
+      return false;
+    }
+  }
 }

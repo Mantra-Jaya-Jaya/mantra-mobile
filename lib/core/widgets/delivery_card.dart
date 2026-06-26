@@ -6,14 +6,16 @@ enum CardVariant { newOrder, history, done }
 
 class DeliveryCard extends StatelessWidget {
   final CardVariant variant;
-  final PengantaranModel? data; 
   final String idPengantaran;
+  final PengantaranModel? data;
+  final bool isTibaDiTujuan;
 
   const DeliveryCard({
     super.key,
     required this.idPengantaran,
     this.variant = CardVariant.newOrder,
     this.data,
+    this.isTibaDiTujuan = false,
   });
 
   @override
@@ -116,8 +118,9 @@ class DeliveryCard extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (context) => DetailPesananPage(
                       idPengantaran: idPengantaran,
-                      isSedangDiantar: variant == CardVariant.history,
+                      isSedangDiantar: variant == CardVariant.history && !isTibaDiTujuan,
                       isSelesai: variant == CardVariant.done,
+                      isTibaDiTujuan: isTibaDiTujuan,
                     ),
                   ),
                 );
@@ -157,9 +160,15 @@ class DeliveryCard extends StatelessWidget {
 
   Widget _buildBadge() {
     String text = data?.statusLabel ?? 'Menunggu';
+    
+    // Sesuaikan warna dengan palet coklat
     Color bgColor = variant == CardVariant.done
-        ? Colors.grey.shade300
-        : const Color(0xFFAD510D).withOpacity(0.6);
+        ? const Color(0xFFAD510D).withOpacity(0.15) // Light brown for done
+        : const Color(0xFFAD510D); // Solid brown for active
+
+    Color textColor = variant == CardVariant.done
+        ? const Color(0xFFAD510D)
+        : Colors.white;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -169,10 +178,10 @@ class DeliveryCard extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.bold,
-          color: Colors.white,
+          color: textColor,
         ),
       ),
     );

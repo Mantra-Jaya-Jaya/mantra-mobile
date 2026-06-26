@@ -100,6 +100,8 @@ class DetailPengantaranModel {
   final Penerima penerima;
   final Tujuan tujuan;
   final String? fotoBukti;
+  final int idMetodePembayaran;
+  final int idStatusTransaksi;
 
   DetailPengantaranModel({
     required this.idPengantaran,
@@ -109,6 +111,8 @@ class DetailPengantaranModel {
     required this.penerima,
     required this.tujuan,
     this.fotoBukti,
+    this.idMetodePembayaran = 0,
+    this.idStatusTransaksi = 0,
   });
 
   factory DetailPengantaranModel.fromJson(Map<String, dynamic> json) {
@@ -121,6 +125,8 @@ class DetailPengantaranModel {
       penerima: Penerima.fromJson(json['penerima'] ?? {}),
       tujuan: Tujuan.fromJson(json['tujuan'] ?? {}),
       fotoBukti: json['foto_bukti'],
+      idMetodePembayaran: json['id_metode_pembayaran'] ?? 0,
+      idStatusTransaksi: json['id_status_transaksi'] ?? 0,
     );
   }
 }

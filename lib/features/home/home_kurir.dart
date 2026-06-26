@@ -14,12 +14,12 @@ import '../profile/profile_kurir.dart';
 // ==========================================
 class DashboardKurir extends StatefulWidget {
   final int initialIndex;
-  final bool tugasInitialTabIsSelesai;
+  final int tugasInitialTabIndex;
 
   const DashboardKurir({
     super.key,
     this.initialIndex = 0,
-    this.tugasInitialTabIsSelesai = false,
+    this.tugasInitialTabIndex = 0,
   });
 
   @override
@@ -43,7 +43,7 @@ class _DashboardKurirState extends State<DashboardKurir> {
     _currentIndex = widget.initialIndex;
     _pages = [
       const DashboardContent(),
-      TugasKurirPage(initialTabIsSelesai: widget.tugasInitialTabIsSelesai),
+      TugasKurirPage(initialTabIndex: widget.tugasInitialTabIndex),
       const ProfileKurirPage(),
     ];
   }

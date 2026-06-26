@@ -14,6 +14,7 @@ class DetailPesananPage extends StatefulWidget {
   final bool isSedangDiantar;
   final bool isDariPeta;
   final bool isSelesai;
+  final bool isTibaDiTujuan;
 
   const DetailPesananPage({
     super.key,
@@ -21,6 +22,7 @@ class DetailPesananPage extends StatefulWidget {
     this.isSedangDiantar = false,
     this.isDariPeta = false,
     this.isSelesai = false,
+    this.isTibaDiTujuan = false,
   });
 
   @override
@@ -171,7 +173,7 @@ class _DetailPesananPageState extends State<DetailPesananPage> {
                                   ),
                                   decoration: BoxDecoration(
                                     color: data.statusPesanan.toLowerCase() == 'selesai' || widget.isSelesai
-                                        ? Colors.green
+                                        ? const Color(0xFFAD510D).withOpacity(0.15)
                                         : data.statusPesanan.toLowerCase() == 'dikirim' || widget.isSedangDiantar
                                         ? const Color(0xFFAD510D)
                                         : const Color(0xFF5B6B76),
@@ -183,10 +185,12 @@ class _DetailPesananPageState extends State<DetailPesananPage> {
                                         : data.statusPesanan.toLowerCase() == 'dikirim' || widget.isSedangDiantar
                                         ? 'Diantar'
                                         : 'Menunggu',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.white,
+                                      color: data.statusPesanan.toLowerCase() == 'selesai' || widget.isSelesai
+                                          ? const Color(0xFFAD510D)
+                                          : Colors.white,
                                     ),
                                   ),
                                 ),
@@ -433,146 +437,225 @@ class _DetailPesananPageState extends State<DetailPesananPage> {
           return Container(
             color: Colors.white,
             padding: const EdgeInsets.all(24),
-            child: SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: data.statusPesanan.toLowerCase() == 'selesai' || widget.isSelesai
-                  // 🚀 STAGE 1: DARI TAB SELESAI -> Lihat Bukti
-                  ? ElevatedButton(
-                      onPressed: () async {
-                        // 1. Kasih feedback loading ke kurir
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Mengambil foto bukti...'),
-                            duration: Duration(seconds: 1),
+            child: data.statusPesanan.toLowerCase() == 'selesai' || widget.isSelesai || widget.isTibaDiTujuan
+                  // 🚀 STAGE 1: DARI TAB SELESAI / TIBA DI TUJUAN -> Lihat Bukti
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (widget.isTibaDiTujuan && data.metodeBayar.idMetodeBayar == "1") ...[
+                          SizedBox(
+                            width: double.infinity,
+                            height: 55,
+                            child: data.metodeBayar.idStatusTransaksi == 1 
+                              ? ElevatedButton(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Konfirmasi Pembayaran', style: TextStyle(fontWeight: FontWeight.bold)),
+                                        content: const Text('Apakah Anda yakin telah menerima pembayaran tunai dari customer?'),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                        actions: [
+                                          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal', style: TextStyle(color: Colors.grey))),
+                                          ElevatedButton(
+                                            onPressed: () async {
+                                              Navigator.pop(context);
+                                              final success = await DetailPengantaranService().konfirmasiPembayaran(widget.idPengantaran);
+                                              if (success && mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pembayaran berhasil dikonfirmasi!')));
+                                                setState(() { _detailFuture = _service.getDetailPesanan(widget.idPengantaran); });
+                                              } else if (mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gagal konfirmasi pembayaran!')));
+                                              }
+                                            },
+                                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFAD510D), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                                            child: const Text('Ya, Konfirmasi', style: TextStyle(color: Colors.white)),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      side: const BorderSide(color: Color(0xFFAD510D), width: 1.5),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Konfirmasi Pembayaran',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFFAD510D),
+                                    ),
+                                  ),
+                                )
+                              : ElevatedButton(
+                                  onPressed: null,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.grey.shade200,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Telah Dibayar',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ),
                           ),
-                        );
+                          const SizedBox(height: 12),
+                        ],
+                        SizedBox(
+                          width: double.infinity,
+                          height: 55,
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              // 1. Kasih feedback loading ke kurir
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Mengambil foto bukti...'),
+                                  duration: Duration(seconds: 1),
+                                ),
+                              );
 
-                        // 🚀 2. TEMBAKAN SNIPER: Tarik data dari Model Pengantaran!
-                        final detailPengantaran =
-                            await DetailPengantaranService()
-                                .getDetailPengantaran(widget.idPengantaran);
+                              // 🚀 2. TEMBAKAN SNIPER: Tarik data dari Model Pengantaran!
+                              final detailPengantaran = await DetailPengantaranService().getDetailPengantaran(widget.idPengantaran);
 
-                        // 3. Cek hasil tembakannya, apakah fotoBukti-nya ada isinya?
-                        if (detailPengantaran != null &&
-                            detailPengantaran.fotoBukti != null &&
-                            detailPengantaran.fotoBukti!.isNotEmpty) {
-                          // Buka dialog dan lempar URL fotonya
-                          _showBuktiDialog(
-                            context,
-                            detailPengantaran.fotoBukti!,
-                          );
-                        } else {
-                          // Kalau null atau kosong
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Bukti foto belum ada atau gagal dimuat!',
+                              // 3. Cek hasil tembakannya, apakah fotoBukti-nya ada isinya?
+                              if (detailPengantaran != null &&
+                                  detailPengantaran.fotoBukti != null &&
+                                  detailPengantaran.fotoBukti!.isNotEmpty) {
+                                // Buka dialog dan lempar URL fotonya
+                                _showBuktiDialog(
+                                  context,
+                                  detailPengantaran.fotoBukti!,
+                                );
+                              } else {
+                                // Kalau null atau kosong
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Bukti foto belum ada atau gagal dimuat!'),
+                                  ),
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFAD510D),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
                               ),
                             ),
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFAD510D),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                            child: const Text(
+                              'Lihat Bukti Pengiriman',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                      child: const Text(
-                        'Lihat Bukti Pengiriman',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
+                      ],
                     )
                   : widget.isDariPeta
                   // 🚀 STAGE 2: DARI PETA -> Upload Bukti
-                  ? ElevatedButton(
-                      onPressed: () async {
-                        final result = await Navigator.push<bool>(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                AmbilBuktiPage(publicId: widget.idPengantaran),
+                  ? SizedBox(
+                      width: double.infinity,
+                      height: 55,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          final result = await Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AmbilBuktiPage(publicId: widget.idPengantaran),
+                            ),
+                          );
+                          if (result == true && mounted) {
+                            setState(() {
+                              _detailFuture = _service.getDetailPesanan(widget.idPengantaran);
+                            });
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFAD510D),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                        );
-                        if (result == true && mounted) {
-                          setState(() {
-                            _detailFuture = _service.getDetailPesanan(
-                              widget.idPengantaran,
-                            );
-                          });
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFAD510D),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
                         ),
-                      ),
-                      child: const Text(
-                        'Upload Bukti Pengiriman',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                        child: const Text(
+                          'Upload Bukti Pengiriman',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     )
                   : widget.isSedangDiantar
                   // 🚀 STAGE 3: DARI DAFTAR TUGAS -> Lihat Rute Peta
-                  ? ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => RutePengantaranPage(
-                              idPengantaran: widget.idPengantaran,
+                  ? SizedBox(
+                      width: double.infinity,
+                      height: 55,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => RutePengantaranPage(idPengantaran: widget.idPengantaran),
                             ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFAD510D),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFAD510D),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
                         ),
-                      ),
-                      child: const Text(
-                        'Lihat Rute Pengantaran',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                        child: const Text(
+                          'Lihat Rute Pengantaran',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     )
                   // 🚀 STAGE 4: DARI BERANDA -> Terima Pesanan
-                  : ElevatedButton(
-                      onPressed: () => _showLocationPermissionDialog(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFAD510D),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                  : SizedBox(
+                      width: double.infinity,
+                      height: 55,
+                      child: ElevatedButton(
+                        onPressed: () => _showLocationPermissionDialog(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFAD510D),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
-                      ),
-                      child: const Text(
-                        'Terima Pesanan',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                        child: const Text(
+                          'Terima Pesanan',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
-            ),
           );
         },
       ),
