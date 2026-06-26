@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:frontend/features/home/services/katalog_service.dart';
 import 'package:frontend/features/home/kategori_barang_customer.dart';
-
 
 class AllKategoriPage extends StatefulWidget {
   final List<KategoriModel> initialCategories;
@@ -177,8 +175,7 @@ class _AllKategoriPageState extends State<AllKategoriPage> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => KategoriBarangPage(
-                    kategoriPublicId: kat.publicId,
-                    kategoriNama: kat.namaKategori,
+                    category: kat,
                   ),
                 ),
               );
@@ -191,56 +188,40 @@ class _AllKategoriPageState extends State<AllKategoriPage> {
   }
 
   // Desain menyerupai komponen Beranda, namun dengan ukuran padding dan font yang dinaikkan
-  Widget _buildLargeCategoryItem(String label, String iconUrl) {
-    debugPrint('🖼️ ICON ALL: label=$label, iconUrl=\'$iconUrl\'');
+  Widget _buildLargeCategoryItem(String label, String? iconUrl) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Container(
-          padding: iconUrl.isNotEmpty ? EdgeInsets.zero : const EdgeInsets.all(18),
+          // Menaikkan padding dari 10 ke 18 agar box lingkar luar terlihat lebih besar
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: const Color(0xFFAD510D).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(
+              15,
+            ), // Border radius disesuaikan ukurannya
           ),
-          child: iconUrl.isNotEmpty
-              ? ClipRRect(
-                  borderRadius: BorderRadius.circular(15),
-                  child: iconUrl.toLowerCase().endsWith('.svg')
-                      ? SvgPicture.network(iconUrl,
-                          width: 72,
-                          height: 72,
-                          fit: BoxFit.cover,
-                          placeholderBuilder: (_) => const Icon(
-                            Icons.category_outlined,
-                            color: Color(0xFFAD510D),
-                            size: 36,
-                          ),
-                        )
-                      : Image.network(iconUrl,
-                          width: 72,
-                          height: 72,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.category_outlined,
-                            color: Color(0xFFAD510D),
-                            size: 36,
-                          )),
+          // Ukuran icon dinaikkan dari 30 menjadi 36
+          child: iconUrl != null && iconUrl.isNotEmpty && iconUrl.startsWith('http')
+              ? Image.network(
+                  iconUrl,
+                  width: 36,
+                  height: 36,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.category_outlined, color: Color(0xFFAD510D), size: 36),
                 )
-              : const Icon(
-                  Icons.category_outlined,
-                  color: Color(0xFFAD510D),
-                  size: 36,
-                ),
+              : const Icon(Icons.category_outlined, color: Color(0xFFAD510D), size: 36),
         ),
         const SizedBox(height: 8),
         Text(
           label,
           style: const TextStyle(
-            fontSize: 13,
+            fontSize: 13, // Ukuran teks dinaikkan dari 11 ke 13
             fontWeight: FontWeight.w500,
           ),
           textAlign: TextAlign.center,
-          maxLines: 2,
+          maxLines:
+              2, // Diubah ke 2 baris jika nama kategori panjang akibat card membesar
           overflow: TextOverflow.ellipsis,
         ),
       ],

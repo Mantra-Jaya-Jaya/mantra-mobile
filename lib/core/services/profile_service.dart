@@ -36,24 +36,24 @@ class ProfileService {
     required String nama,
     required String telepon,
     required String alamatLengkap,
-    bool isUtama = false,
     double? latitude,
     double? longitude,
     String? catatanLokasi,
+    bool isUtama = false,
   }) async {
-    final data = <String, dynamic>{
-      'label_alamat': label,
-      'nama_penerima': nama,
-      'no_telp_penerima': telepon,
-      'alamat_lengkap': alamatLengkap,
-      'is_utama': isUtama,
-    };
-    if (latitude != null) data['latitude'] = latitude;
-    if (longitude != null) data['longitude'] = longitude;
-    if (catatanLokasi != null && catatanLokasi.isNotEmpty) {
-      data['catatan_lokasi'] = catatanLokasi;
-    }
-    final response = await _client.dio.post('/customer/alamat', data: data);
+    final response = await _client.dio.post(
+      '/customer/alamat',
+      data: {
+        'label_alamat': label,
+        'nama_penerima': nama,
+        'no_telp_penerima': telepon,
+        'alamat_lengkap': alamatLengkap,
+        'latitude': latitude,
+        'longitude': longitude,
+        'catatan_lokasi': catatanLokasi,
+        'is_utama': isUtama,
+      },
+    );
     return response.data['data'];
   }
 
@@ -64,24 +64,24 @@ class ProfileService {
     required String nama,
     required String telepon,
     required String alamatLengkap,
-    bool isUtama = false,
     double? latitude,
     double? longitude,
     String? catatanLokasi,
+    bool isUtama = false,
   }) async {
-    final data = <String, dynamic>{
-      'label_alamat': label,
-      'nama_penerima': nama,
-      'no_telp_penerima': telepon,
-      'alamat_lengkap': alamatLengkap,
-      'is_utama': isUtama,
-    };
-    if (latitude != null) data['latitude'] = latitude;
-    if (longitude != null) data['longitude'] = longitude;
-    if (catatanLokasi != null && catatanLokasi.isNotEmpty) {
-      data['catatan_lokasi'] = catatanLokasi;
-    }
-    final response = await _client.dio.put('/customer/alamat/$idAlamat', data: data);
+    final response = await _client.dio.put(
+      '/customer/alamat/$idAlamat',
+      data: {
+        'label_alamat': label,
+        'nama_penerima': nama,
+        'no_telp_penerima': telepon,
+        'alamat_lengkap': alamatLengkap,
+        'latitude': latitude,
+        'longitude': longitude,
+        'catatan_lokasi': catatanLokasi,
+        'is_utama': isUtama,
+      },
+    );
     return response.data['data'];
   }
 
