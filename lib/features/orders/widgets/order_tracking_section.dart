@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -24,6 +26,8 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
   String? _errorMessage;
   Map<String, dynamic>? _trackingData;
   Map<String, dynamic>? _biteshipStatus;
+  Timer? _pollingTimer;
+  final MapController _mapController = MapController();
 
   @override
   void initState() {
@@ -49,6 +53,8 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
         _trackingData = data;
         _isLoading = false;
       });
+      _startPolling();
+      _updateMapPosition();
     } on DioException catch (e) {
       if (!mounted) return;
       final apiError = ApiError.fromDioException(e);
@@ -81,6 +87,46 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
         _isLoading = false;
       });
     }
+  }
+
+  void _startPolling() {
+    _pollingTimer ??= Timer.periodic(
+      const Duration(seconds: 15),
+      (_) => _backgroundFetch(),
+    );
+  }
+
+  void _stopPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+  }
+
+  Future<void> _backgroundFetch() async {
+    try {
+      final data = await _orderService.getTrackingInfo(widget.noPesanan);
+      if (!mounted) return;
+      setState(() {
+        _trackingData = data;
+      });
+      _updateMapPosition();
+    } catch (_) {
+      // silently fail on background refresh
+    }
+  }
+
+  void _updateMapPosition() {
+    final lokasi = _asMap(_trackingData?['lokasi_kurir']);
+    final lat = _asDouble(lokasi?['latitude']);
+    final lng = _asDouble(lokasi?['longitude']);
+    if (lat != null && lng != null) {
+      _mapController.move(LatLng(lat, lng), 15);
+    }
+  }
+
+  @override
+  void dispose() {
+    _stopPolling();
+    super.dispose();
   }
 
   Future<void> _checkBiteshipStatus() async {
@@ -179,6 +225,10 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
   Widget _buildContent() {
     final data = _trackingData ?? <String, dynamic>{};
     final tipeEkspedisi = (data['tipe_ekspedisi'] ?? 'internal').toString();
+    final kurir = data['kurir'];
+
+    // Belum ada data kurir internal → show waiting state
+    final noTrackingData = tipeEkspedisi == 'internal' && kurir == null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,13 +250,46 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
           ],
         ),
         const SizedBox(height: 12),
-        _buildModeBadge(tipeEkspedisi),
-        const SizedBox(height: 16),
-        if (tipeEkspedisi == 'internal')
-          _buildInternalTracking(data)
-        else
-          _buildExternalTracking(data),
+        if (noTrackingData)
+          _buildWaitingState()
+        else ...[
+          _buildModeBadge(tipeEkspedisi),
+          const SizedBox(height: 16),
+          if (tipeEkspedisi == 'internal')
+            _buildInternalTracking(data)
+          else
+            _buildExternalTracking(data),
+        ],
       ],
+    );
+  }
+
+  Widget _buildWaitingState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.inventory_2_outlined, size: 48, color: Colors.orange[700]),
+          const SizedBox(height: 12),
+          const Text(
+            'Pesanan Sedang Dikemas',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Pesanan Anda sedang dipersiapkan.\n'
+            'Kurir akan segera ditugaskan setelah barang siap.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey, fontSize: 13, height: 1.5),
+          ),
+        ],
+      ),
     );
   }
 
@@ -239,19 +322,19 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
     final jarakMeter = _asInt(data['jarak_meter']);
     final estimasiTiba = (data['estimasi_tiba'] ?? '').toString();
 
+    final hasValidLocation = latitude != null && longitude != null &&
+        !(latitude == 0 && longitude == 0);
+    final mapLat = hasValidLocation ? latitude! : -6.2088;
+    final mapLng = hasValidLocation ? longitude! : 106.8456;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (latitude != null && longitude != null) ...[
-          _buildMapCard(latitude, longitude),
-          const SizedBox(height: 16),
-        ] else
-          _buildEmptyCard(
-            icon: Icons.location_off_outlined,
-            title: 'Lokasi kurir belum tersedia',
-            subtitle:
-                'Pesanan masih dipersiapkan atau kurir belum mengirim lokasi.',
-          ),
+        _buildMapCard(
+          mapLat,
+          mapLng,
+          showWaitingOverlay: !hasValidLocation,
+        ),
         const SizedBox(height: 16),
         _buildInfoCard(
           title: 'Informasi Kurir',
@@ -442,7 +525,7 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
     );
   }
 
-  Widget _buildMapCard(double latitude, double longitude) {
+  Widget _buildMapCard(double latitude, double longitude, {bool showWaitingOverlay = false}) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: SizedBox(
@@ -450,6 +533,8 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
         child: Stack(
           children: [
             FlutterMap(
+              key: const ValueKey('tracking-map'),
+              mapController: _mapController,
               options: MapOptions(
                 initialCenter: LatLng(latitude, longitude),
                 initialZoom: 15,
@@ -496,9 +581,11 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
                   color: Colors.black.withValues(alpha: 0.65),
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: const Text(
-                  'Lokasi kurir realtime',
-                  style: TextStyle(
+                child: Text(
+                  showWaitingOverlay
+                      ? 'Menunggu lokasi kurir...'
+                      : 'Lokasi kurir realtime',
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'services/customer_order_service.dart';
 import '../../core/widgets/base_header_widget.dart';
 import '../cart/pembayaran_detail.dart';
-import 'order_tracking_page.dart';
-import 'package:intl/intl.dart';
+import 'widgets/order_tracking_section.dart';
 
 class OrderDetailPage extends StatefulWidget {
   final String noPesanan; // Ini adalah Public ID UUID
@@ -24,6 +24,8 @@ class OrderDetailPage extends StatefulWidget {
 
 class _OrderDetailPageState extends State<OrderDetailPage> {
   final CustomerOrderService _orderService = CustomerOrderService();
+  final GlobalKey<OrderTrackingSectionState> _trackingSectionKey =
+      GlobalKey<OrderTrackingSectionState>();
   bool _isLoading = true;
   Map<String, dynamic>? _orderData;
   String? _errorMessage;
@@ -37,13 +39,11 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   Future<void> _fetchOrderDetail() async {
     try {
       final data = await _orderService.getOrderDetail(widget.noPesanan);
-      print("DETAIL PESANAN:");
-      print(data);
-
       if (mounted) {
         setState(() {
           _orderData = data;
           _isLoading = false;
+          _errorMessage = null;
         });
       }
     } catch (e) {
@@ -56,6 +56,23 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     }
   }
 
+  Future<void> _refreshPage() async {
+    await _fetchOrderDetail();
+    await (_trackingSectionKey.currentState?.refresh() ?? Future.value());
+  }
+
+  void _scrollToTrackingSection() {
+    final trackingContext = _trackingSectionKey.currentContext;
+    if (trackingContext == null) return;
+
+    Scrollable.ensureVisible(
+      trackingContext,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeInOut,
+      alignment: 0.05,
+    );
+  }
+
   String _formatRupiah(int number) {
     final formatter = NumberFormat("#,###", "pt_BR");
     return 'Rp. ${formatter.format(number).replaceAll(',', '.')}';
@@ -64,16 +81,34 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'selesai':
-        return Colors.black87; // Neutral dark for completion
+        return Colors.black87;
       case 'menunggu pembayaran':
       case 'belum dibayar':
       case 'dikemas':
       case 'dikirim':
-        return const Color(0xFFAD510D); // Brand color for active states
+        return const Color(0xFFAD510D);
       case 'dibatalkan':
-        return Colors.grey.shade600; // Neutral grey for canceled
+        return Colors.grey.shade600;
       default:
         return Colors.grey;
+    }
+  }
+
+  String _normalizeStatusLabel(String status) {
+    switch (status.toLowerCase()) {
+      case 'menunggu pembayaran':
+      case 'belum dibayar':
+        return 'Belum Dibayar';
+      case 'dikemas':
+        return 'Dikemas';
+      case 'dikirim':
+        return 'Dikirim';
+      case 'selesai':
+        return 'Selesai';
+      case 'dibatalkan':
+        return 'Dibatalkan';
+      default:
+        return status;
     }
   }
 
@@ -95,6 +130,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     } else if (metode == 'gopay') {
       return 'GoPay';
     } else if (metode == 'tunai' || metode == 'cash') {
+      if (rincian['kanal_pembayaran'] == 'cod') {
+        return 'COD (Bayar di Tempat)';
+      }
       return 'Tunai (Cash)';
     }
     
@@ -131,7 +169,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
     final items = (data['items'] as List? ?? []);
     final rincian = data['rincian_pembayaran'] as Map<String, dynamic>? ?? {};
-    final status = data['nama_status_pesanan'] ?? 'Pending';
+    final status = _normalizeStatusLabel(
+      (data['nama_status_pesanan'] ?? 'Pending').toString(),
+    );
+    final isCashPayment = (rincian['metode'] ?? '').toString().toLowerCase() == 'cash';
     final tujuan = data['tujuan_pengantaran'] as Map<String, dynamic>?;
     final kurir = data['kurir'] as Map<String, dynamic>?;
     final String publicId = data['no_pesanan'] ?? '-';
@@ -149,12 +190,16 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- NOMOR PESANAN & STATUS ---
+      body: RefreshIndicator(
+        onRefresh: _refreshPage,
+        color: const Color(0xFFAD510D),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- NOMOR PESANAN & STATUS ---
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -218,6 +263,12 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
               ),
             ),
             const SizedBox(height: 20),
+
+            OrderTrackingSection(
+              key: _trackingSectionKey,
+              noPesanan: widget.noPesanan,
+            ),
+            const SizedBox(height: 25),
 
             // --- DAFTAR BARANG ---
             Row(
@@ -395,72 +446,96 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     ],
                   ),
                   if (status == 'Belum Dibayar' ||
-                      status == 'Menunggu Pembayaran') ...[
+                      status == 'Menunggu Pembayaran' || isCashPayment) ...[
                     const Divider(height: 30, color: Colors.black12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFAD510D).withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.info_outline, color: Color(0xFFAD510D), size: 18),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              "Selesaikan pembayaran Anda segera untuk memproses pesanan ini.",
-                              style: TextStyle(fontSize: 12, color: Colors.black87),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => PembayaranDetailPage(
-                                data: {
-                                  'metode': rincian['metode'],
-                                  'nama_bank': rincian['nama_bank'],
-                                  'kanal_pembayaran': rincian['kanal_pembayaran'],
-                                  'va_number': rincian['va_number'],
-                                  'qr_url': rincian['qr_url'],
-                                  'bill_key': rincian['bill_key'],
-                                  'bill_code': rincian['bill_code'],
-                                  'order_id': rincian['order_id'],
-                                  'public_id_pesanan': widget.noPesanan,
-                                  'batas_waktu': rincian['batas_waktu'],
-                                },
-                                totalBayar: rincian['total'] ?? 0,
+                    if (isCashPayment) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFAD510D).withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.money_outlined, color: Color(0xFFAD510D), size: 18),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                "Bayar saat kurir tiba menggunakan uang tunai.\n"
+                                "Siapkan uang pas untuk memudahkan transaksi.",
+                                style: TextStyle(fontSize: 12, color: Colors.black87, height: 1.4),
                               ),
                             ),
-                          );
-                          if (result == true) {
-                            _fetchOrderDetail();
-                          }
-                        },
-                        icon: const Icon(Icons.payment_rounded, size: 18),
-                        label: const Text(
-                          "Lihat Instruksi Pembayaran",
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFAD510D),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
+                          ],
                         ),
                       ),
-                    ),
+                    ] else ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFAD510D).withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.info_outline, color: Color(0xFFAD510D), size: 18),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                "Selesaikan pembayaran Anda segera untuk memproses pesanan ini.",
+                                style: TextStyle(fontSize: 12, color: Colors.black87),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => PembayaranDetailPage(
+                                  data: {
+                                    'metode': rincian['metode'],
+                                    'nama_bank': rincian['nama_bank'],
+                                    'kanal_pembayaran': rincian['kanal_pembayaran'],
+                                    'va_number': rincian['va_number'],
+                                    'qr_url': rincian['qr_url'],
+                                    'bill_key': rincian['bill_key'],
+                                    'bill_code': rincian['bill_code'],
+                                    'order_id': rincian['order_id'],
+                                    'public_id_pesanan': widget.noPesanan,
+                                    'batas_waktu': rincian['batas_waktu'],
+                                  },
+                                  totalBayar: rincian['total'] ?? 0,
+                                ),
+                              ),
+                            );
+                            if (result == true) {
+                              _fetchOrderDetail();
+                            }
+                          },
+                          icon: const Icon(Icons.payment_rounded, size: 18),
+                          label: const Text(
+                            "Lihat Instruksi Pembayaran",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFAD510D),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ],
               ),
@@ -684,11 +759,51 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                 width: double.infinity,
                 child: OutlinedButton(
                   onPressed: () async {
-                    // Logika batalkan pesanan
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text("Batalkan Pesanan"),
+                        content: const Text(
+                          "Apakah Anda yakin ingin membatalkan pesanan ini?",
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: const Text("Tidak"),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, true),
+                            child: const Text("Ya, Batalkan"),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      try {
+                        await _orderService.cancelOrder(widget.noPesanan);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Pesanan berhasil dibatalkan"),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                        _fetchOrderDetail();
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text("Gagal membatalkan: $e"),
+                            ),
+                          );
+                        }
+                      }
+                    }
                   },
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.grey[700],
-                    side: BorderSide(color: Colors.grey.shade300),
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -701,19 +816,32 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                 ),
               ),
 
+            if (status == 'Dikemas' && !isCashPayment)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _showCancelShipmentDialog(context),
+                  icon: const Icon(Icons.cancel_outlined, size: 18),
+                  label: const Text(
+                    "Batalkan Pengiriman",
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.orange,
+                    side: const BorderSide(color: Colors.orange),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+
             if (status == 'Dikirim')
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            OrderTrackingPage(noPesanan: widget.noPesanan),
-                      ),
-                    );
-                  },
+                  onPressed: _scrollToTrackingSection,
                   icon: const Icon(Icons.local_shipping_outlined),
                   label: const Text(
                     "Lacak Pesanan",
@@ -731,7 +859,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                 ),
               ),
               
-            if (status == 'Selesai' && rincian['kurir'] != null && rincian['kurir']['foto_bukti_pengiriman'] != null && rincian['kurir']['foto_bukti_pengiriman'].toString().isNotEmpty)
+            if (status == 'Selesai' && kurir != null && kurir['foto_bukti_pengiriman'] != null && kurir['foto_bukti_pengiriman'].toString().isNotEmpty)
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
@@ -764,7 +892,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                 ),
                               ),
                               Image.network(
-                                rincian['kurir']['foto_bukti_pengiriman'],
+                                kurir['foto_bukti_pengiriman'],
                                 fit: BoxFit.contain,
                                 errorBuilder: (context, error, stackTrace) {
                                   return const Padding(
@@ -808,6 +936,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -828,6 +957,53 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
           ),
         ),
       ],
+    );
+  }
+
+  void _showCancelShipmentDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("Batalkan Pengiriman"),
+        content: const Text(
+          "Apakah Anda yakin ingin membatalkan pengiriman pesanan ini? "
+          "Pesanan akan tetap ada tapi pengiriman via ekspedisi akan dibatalkan.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text("Tidak"),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              try {
+                await _orderService.cancelBiteshipShipment(widget.noPesanan);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Pengiriman berhasil dibatalkan"),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  _fetchOrderDetail();
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("Gagal membatalkan: ${e.toString()}"),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text("Ya, Batalkan"),
+          ),
+        ],
+      ),
     );
   }
 }
