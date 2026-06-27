@@ -57,10 +57,10 @@ dependencies:
   path_provider: ^2.1.2
 
 
+  mobile_scanner: any
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  mobile_scanner: ^7.2.0
   flutter_launcher_icons: ^0.14.1
   flutter_lints: ^6.0.0
 

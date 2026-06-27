@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'services/customer_order_service.dart';
@@ -181,6 +183,16 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         ? publicId.substring(0, 8).toUpperCase()
         : publicId.toUpperCase();
 
+    final String namaStatusPesanan = (data['nama_status_pesanan'] ?? '').toString().toLowerCase();
+    final int idStatusTransaksi = rincian['id_status_transaksi'] ?? 0;
+    final bool isDikirim = namaStatusPesanan == 'dikirim';
+    final bool showKonfirmasiBtn = isDikirim && idStatusTransaksi != 1;
+    final String waktuTibaRaw = data['waktu_tiba'] ?? '';
+    DateTime? waktuTiba;
+    if (waktuTibaRaw.isNotEmpty) {
+      waktuTiba = DateTime.tryParse(waktuTibaRaw)?.toLocal();
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F7),
       appBar: BaseHeaderWidget(
@@ -190,6 +202,113 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
         ),
       ),
+      bottomNavigationBar: showKonfirmasiBtn
+          ? Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 10,
+                    offset: Offset(0, -5),
+                  )
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (waktuTiba != null)
+                    _AutoSelesaiCountdown(
+                      waktuTiba: waktuTiba,
+                      onTimerFinish: () => _refreshPage(),
+                    ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      backgroundColor: Colors.white,
+                      title: const Row(
+                        children: [
+                          Icon(Icons.check_circle_outline, color: Color(0xFFAD510D)),
+                          SizedBox(width: 8),
+                          Text("Konfirmasi Pesanan", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        ],
+                      ),
+                      content: const Text(
+                        "Apakah Anda yakin telah menerima pesanan ini dengan baik?",
+                        style: TextStyle(color: Colors.black87),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text("Batal", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFAD510D),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text("Ya, Terima"),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirm == true) {
+                    setState(() => _isLoading = true);
+                    final success = await _orderService.selesaikanPesanan(publicId);
+                    if (mounted) {
+                      setState(() => _isLoading = false);
+                      if (success) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Pesanan berhasil diselesaikan!', style: TextStyle(color: Colors.white)),
+                            backgroundColor: Color(0xFFAD510D),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                        _refreshPage();
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Gagal menyelesaikan pesanan.', style: TextStyle(color: Colors.white)),
+                            backgroundColor: Colors.redAccent,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFAD510D),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  "Konfirmasi Pesanan Diterima",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ),
+            ),
+          ],
+        ),
+      )
+          : null,
       body: RefreshIndicator(
         onRefresh: _refreshPage,
         color: const Color(0xFFAD510D),
@@ -207,7 +326,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: Colors.black.withValues(alpha: 0.04),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   )
@@ -244,10 +363,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: _getStatusColor(status).withOpacity(0.1),
+                      color: _getStatusColor(status).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: _getStatusColor(status).withOpacity(0.3),
+                        color: _getStatusColor(status).withValues(alpha: 0.3),
                       ),
                     ),
                     child: Text(
@@ -264,11 +383,13 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             ),
             const SizedBox(height: 20),
 
-            OrderTrackingSection(
-              key: _trackingSectionKey,
-              noPesanan: widget.noPesanan,
-            ),
-            const SizedBox(height: 25),
+            if (status == 'Dikirim') ...[
+              OrderTrackingSection(
+                key: _trackingSectionKey,
+                noPesanan: widget.noPesanan,
+              ),
+              const SizedBox(height: 25),
+            ],
 
             // --- DAFTAR BARANG ---
             Row(
@@ -293,7 +414,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: Colors.black.withValues(alpha: 0.04),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   )
@@ -415,7 +536,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: Colors.black.withValues(alpha: 0.04),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   )
@@ -452,7 +573,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFAD510D).withOpacity(0.05),
+                          color: const Color(0xFFAD510D).withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Row(
@@ -474,7 +595,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFAD510D).withOpacity(0.05),
+                          color: const Color(0xFFAD510D).withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Row(
@@ -567,7 +688,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
+                      color: Colors.black.withValues(alpha: 0.04),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     )
@@ -623,13 +744,14 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
+                      color: Colors.black.withValues(alpha: 0.04),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     )
                   ],
                 ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
                       width: 50,
@@ -655,6 +777,8 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             kurir['nama_kurir'] ?? "-",
@@ -664,7 +788,18 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                               color: Colors.black87,
                             ),
                           ),
-                          if (kurir['ekspedisi'] != null) ...[
+                          if (kurir['no_telp_kurir'] != null && kurir['no_telp_kurir'].toString().isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              kurir['no_telp_kurir'],
+                              style: TextStyle(
+                                color: Colors.grey[700],
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                          if (kurir['ekspedisi'] != null && kurir['ekspedisi'].toString().isNotEmpty) ...[
                             const SizedBox(height: 2),
                             Text(
                               kurir['ekspedisi'],
@@ -706,7 +841,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: Colors.black.withValues(alpha: 0.04),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   )
@@ -753,90 +888,6 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             ),
             const SizedBox(height: 30),
 
-            // --- TOMBOL AKSI ---
-            if (status == 'Belum Dibayar')
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () async {
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text("Batalkan Pesanan"),
-                        content: const Text(
-                          "Apakah Anda yakin ingin membatalkan pesanan ini?",
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: const Text("Tidak"),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text("Ya, Batalkan"),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (confirm == true) {
-                      try {
-                        await _orderService.cancelOrder(widget.noPesanan);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Pesanan berhasil dibatalkan"),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                        }
-                        _fetchOrderDetail();
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text("Gagal membatalkan: $e"),
-                            ),
-                          );
-                        }
-                      }
-                    }
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    "Batalkan Pesanan",
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
-
-            if (status == 'Dikemas' && !isCashPayment)
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => _showCancelShipmentDialog(context),
-                  icon: const Icon(Icons.cancel_outlined, size: 18),
-                  label: const Text(
-                    "Batalkan Pengiriman",
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.orange,
-                    side: const BorderSide(color: Colors.orange),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-
             if (status == 'Dikirim')
               SizedBox(
                 width: double.infinity,
@@ -859,7 +910,8 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                 ),
               ),
               
-            if (status == 'Selesai' && kurir != null && kurir['foto_bukti_pengiriman'] != null && kurir['foto_bukti_pengiriman'].toString().isNotEmpty)
+            if ((status == 'Selesai' || status == 'Dikirim') && data['id_tipe_kurir'] == 1 && kurir != null && kurir['foto_bukti_pengiriman'] != null && kurir['foto_bukti_pengiriman'].toString().isNotEmpty) ...[
+              const SizedBox(height: 14),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
@@ -932,6 +984,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                   ),
                 ),
               ),
+            ],
             const SizedBox(height: 40),
           ],
         ),
@@ -960,50 +1013,104 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     );
   }
 
-  void _showCancelShipmentDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text("Batalkan Pengiriman"),
-        content: const Text(
-          "Apakah Anda yakin ingin membatalkan pengiriman pesanan ini? "
-          "Pesanan akan tetap ada tapi pengiriman via ekspedisi akan dibatalkan.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text("Tidak"),
+
+}
+
+class _AutoSelesaiCountdown extends StatefulWidget {
+  final DateTime waktuTiba;
+  final VoidCallback onTimerFinish;
+  const _AutoSelesaiCountdown({required this.waktuTiba, required this.onTimerFinish});
+
+  @override
+  State<_AutoSelesaiCountdown> createState() => _AutoSelesaiCountdownState();
+}
+
+class _AutoSelesaiCountdownState extends State<_AutoSelesaiCountdown> {
+  Timer? _timer;
+  late Duration _remaining;
+
+  @override
+  void initState() {
+    super.initState();
+    _calculateRemaining();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      _calculateRemaining();
+    });
+  }
+
+  void _calculateRemaining() {
+    final now = DateTime.now();
+    final deadline = widget.waktuTiba.add(const Duration(hours: 24));
+    final diff = deadline.difference(now);
+    if (diff.isNegative) {
+      _timer?.cancel();
+      if (mounted) {
+        setState(() { _remaining = Duration.zero; });
+      }
+      widget.onTimerFinish();
+    } else {
+      if (mounted) {
+        setState(() { _remaining = diff; });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_remaining.inSeconds <= 0) {
+      return const SizedBox.shrink();
+    }
+    
+    final h = _remaining.inHours.toString().padLeft(2, '0');
+    final m = (_remaining.inMinutes % 60).toString().padLeft(2, '0');
+    final s = (_remaining.inSeconds % 60).toString().padLeft(2, '0');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4ED),
+        border: Border.all(color: const Color(0xFFFDE0CB)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.timer_outlined, color: Color(0xFFAD510D), size: 20),
+          const SizedBox(width: 8),
+          const Text(
+            "Otomatis selesai dalam ",
+            style: TextStyle(
+              color: Color(0xFF8A400A),
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              try {
-                await _orderService.cancelBiteshipShipment(widget.noPesanan);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Pengiriman berhasil dibatalkan"),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                  _fetchOrderDetail();
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("Gagal membatalkan: ${e.toString()}"),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text("Ya, Batalkan"),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: const Color(0xFFAD510D),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              "$h:$m:$s",
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                letterSpacing: 1,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 }
+

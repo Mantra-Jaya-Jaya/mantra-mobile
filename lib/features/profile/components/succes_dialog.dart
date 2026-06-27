@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 
 void showSuccessDialog(BuildContext context, {required String title, required String message}) {

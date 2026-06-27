@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -203,7 +204,7 @@ class _KasirPosScreenState extends State<KasirPosScreen> {
           ),
           if (_loadingUpdate)
             Container(
-              color: Colors.black.withOpacity(0.18),
+              color: Colors.black.withValues(alpha: 0.18),
               child: const Center(
                 child: CircularProgressIndicator(color: Color(0xFFAF510C)),
               ),
@@ -247,7 +248,7 @@ PreferredSizeWidget _buildAppBar() {
         color: Color(0xFFAF510C),
         borderRadius: BorderRadius.zero,
         boxShadow: [
-          BoxShadow(color: Color(0xFFAF510C).withOpacity(0.25), blurRadius: 12, offset: const Offset(0, 4)),
+          BoxShadow(color: Color(0xFFAF510C).withValues(alpha: 0.25), blurRadius: 12, offset: const Offset(0, 4)),
         ],
       ),
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
@@ -258,7 +259,7 @@ PreferredSizeWidget _buildAppBar() {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 2))],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 2))],
               ),
               child: TextField(
                 controller: _searchCtrl,
@@ -266,7 +267,7 @@ PreferredSizeWidget _buildAppBar() {
                 style: const TextStyle(fontSize: 14, color: _K.black),
                 decoration: InputDecoration(
                   hintText: 'Cari nama atau kode barang…',
-                  hintStyle: TextStyle(color: _K.grey600.withOpacity(0.7), fontSize: 14),
+                  hintStyle: TextStyle(color: _K.grey600.withValues(alpha: 0.7), fontSize: 14),
                   prefixIcon: _loadingCari
                       ? const Padding(
                           padding: EdgeInsets.all(12),
@@ -287,7 +288,7 @@ PreferredSizeWidget _buildAppBar() {
               decoration: BoxDecoration(
                 color: _K.orangeDark,
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 6, offset: const Offset(0, 2))],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 6, offset: const Offset(0, 2))],
               ),
               child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 24),
             ),
@@ -305,7 +306,7 @@ PreferredSizeWidget _buildAppBar() {
         color: _K.white,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 16, offset: const Offset(0, 4)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 4)),
         ],
       ),
       constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.42),
@@ -320,7 +321,7 @@ PreferredSizeWidget _buildAppBar() {
                 shrinkWrap: true,
                 padding: EdgeInsets.zero,
                 itemCount: _hasilCari.length,
-                separatorBuilder: (_, __) => Divider(height: 1, color: _K.grey300),
+                separatorBuilder: (_, _) => Divider(height: 1, color: _K.grey300),
                 itemBuilder: (context, i) => _buildProdukTile(_hasilCari[i]),
               ),
       ),
@@ -444,7 +445,7 @@ PreferredSizeWidget _buildAppBar() {
             color: _K.white,
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2)),
+              BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2)),
             ],
           ),
           child: Padding(
@@ -527,7 +528,7 @@ PreferredSizeWidget _buildAppBar() {
       color: Colors.white, // Latar belakang area pembayaran jadi putih
       borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       boxShadow: [
-        BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, -2)),
+        BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 10, offset: const Offset(0, -2)),
       ],
     ),
     padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
@@ -594,7 +595,7 @@ PreferredSizeWidget _buildAppBar() {
   }
 
   void _kePembayaran() async {
-    print("KasirPosScreen mengirim ID Pesanan = $_currentIdPesanan");
+    debugPrint("KasirPosScreen mengirim ID Pesanan = $_currentIdPesanan");
 
     await Navigator.push(
       context,
@@ -619,7 +620,7 @@ PreferredSizeWidget _buildAppBar() {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -638,7 +639,7 @@ PreferredSizeWidget _buildAppBar() {
             // ⬛ Overlay Gelap di luar area scan
             ColorFiltered(
               colorFilter: ColorFilter.mode(
-                Colors.black.withOpacity(0.5),
+                Colors.black.withValues(alpha: 0.5),
                 BlendMode.srcOut,
               ),
               child: Stack(
@@ -690,7 +691,7 @@ PreferredSizeWidget _buildAppBar() {
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.6),
+                        color: Colors.black.withValues(alpha: 0.6),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -706,7 +707,7 @@ PreferredSizeWidget _buildAppBar() {
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.6),
+                        color: Colors.black.withValues(alpha: 0.6),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(

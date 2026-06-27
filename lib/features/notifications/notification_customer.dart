@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:frontend/core/models/notifikasi_model.dart';
 import 'package:frontend/core/services/notifikasi_service.dart';
@@ -179,14 +180,14 @@ class _NotificationCustomerPageState extends State<NotificationCustomerPage> {
           boxShadow: isUnread
               ? [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: Colors.black.withValues(alpha: 0.04),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
                 ]
               : null,
           border: Border.all(
-            color: isUnread ? const Color(0xFFAD510D).withOpacity(0.3) : Colors.grey.shade200,
+            color: isUnread ? const Color(0xFFAD510D).withValues(alpha: 0.3) : Colors.grey.shade200,
           ),
         ),
         child: Row(

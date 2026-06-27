@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -198,11 +199,9 @@ class AlamatBaruState extends State<AlamatBaru> {
                         initialCenter: _selectedLocation,
                         initialZoom: 15.0,
                         onPositionChanged: (position, hasGesture) {
-                          if (position.center != null) {
-                            setState(() {
-                              _selectedLocation = position.center!;
-                            });
-                          }
+                          setState(() {
+                            _selectedLocation = position.center;
+                          });
                         },
                       ),
                       children: [

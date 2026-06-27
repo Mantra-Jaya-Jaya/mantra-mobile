@@ -1,14 +1,14 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:frontend/core/widgets/base_header_widget.dart';
 import 'package:frontend/features/home/services/katalog_service.dart';
-import 'package:frontend/core/models/barang_model.dart';
 import 'package:frontend/features/home/detail_barang.dart';
 import 'package:intl/intl.dart';
 
 class KategoriBarangPage extends StatefulWidget {
   final KategoriModel category;
 
-  const KategoriBarangPage({Key? key, required this.category}) : super(key: key);
+  const KategoriBarangPage({super.key, required this.category});
 
   @override
   State<KategoriBarangPage> createState() => _KategoriBarangPageState();
@@ -200,7 +200,7 @@ class _KategoriBarangPageState extends State<KategoriBarangPage> {
           border: Border.all(color: Colors.blueGrey.shade100, width: 1),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 5,
               spreadRadius: 1,
             )

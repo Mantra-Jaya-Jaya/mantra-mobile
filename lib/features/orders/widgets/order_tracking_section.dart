@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -10,7 +11,6 @@ import '../services/customer_order_service.dart';
 
 class OrderTrackingSection extends StatefulWidget {
   final String noPesanan;
-
   const OrderTrackingSection({super.key, required this.noPesanan});
 
   @override
@@ -21,13 +21,13 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
   final CustomerOrderService _orderService = CustomerOrderService();
 
   bool _isLoading = true;
-  bool _isCheckingBiteship = false;
   String? _errorCode;
   String? _errorMessage;
   Map<String, dynamic>? _trackingData;
   Map<String, dynamic>? _biteshipStatus;
   Timer? _pollingTimer;
   final MapController _mapController = MapController();
+  List<LatLng> _routePoints = [];
 
   @override
   void initState() {
@@ -48,9 +48,28 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
 
     try {
       final data = await _orderService.getTrackingInfo(widget.noPesanan);
+      
+      Map<String, dynamic>? newBiteshipStatus;
+      final nomorResi = data['nomor_resi']?.toString() ?? data['waybill_id']?.toString() ?? '';
+      
+      if (nomorResi.startsWith('MOCK-BITE-')) {
+        newBiteshipStatus = {
+          'status': 'confirmed',
+          'waybill_id': nomorResi,
+          'ekspedisi': data['ekspedisi'] ?? 'Ekspedisi (Sandbox)',
+        };
+      } else if (nomorResi.isNotEmpty) {
+        try {
+          newBiteshipStatus = await _orderService.getBiteshipOrderStatus(widget.noPesanan);
+        } catch (_) {}
+      }
+
       if (!mounted) return;
       setState(() {
         _trackingData = data;
+        if (newBiteshipStatus != null) {
+          _biteshipStatus = newBiteshipStatus;
+        }
         _isLoading = false;
       });
       _startPolling();
@@ -118,8 +137,47 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
     final lokasi = _asMap(_trackingData?['lokasi_kurir']);
     final lat = _asDouble(lokasi?['latitude']);
     final lng = _asDouble(lokasi?['longitude']);
+
+    final lokasiTujuan = _asMap(_trackingData?['lokasi_tujuan']);
+    final destLat = _asDouble(lokasiTujuan?['latitude']);
+    final destLng = _asDouble(lokasiTujuan?['longitude']);
+
     if (lat != null && lng != null) {
-      _mapController.move(LatLng(lat, lng), 15);
+      if (destLat != null && destLng != null && _routePoints.isEmpty) {
+        _getRoute(LatLng(lat, lng), LatLng(destLat, destLng));
+      }
+
+      try {
+        _mapController.move(LatLng(lat, lng), 15);
+      } catch (e) {
+        // Map controller might not be attached yet, which is fine since initialCenter will handle it.
+      }
+    }
+  }
+
+  Future<void> _getRoute(LatLng start, LatLng end) async {
+    try {
+      final dio = Dio();
+      final url =
+          'https://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson';
+
+      final response = await dio.get(url);
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        final List<dynamic> coords =
+            data['routes'][0]['geometry']['coordinates'];
+
+        if (mounted) {
+          setState(() {
+            _routePoints = coords
+                .map((c) => LatLng(c[1] as double, c[0] as double))
+                .toList();
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Gagal menarik rute OSRM: $e");
     }
   }
 
@@ -129,28 +187,7 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
     super.dispose();
   }
 
-  Future<void> _checkBiteshipStatus() async {
-    setState(() => _isCheckingBiteship = true);
-    try {
-      final status = await _orderService.getBiteshipOrderStatus(
-        widget.noPesanan,
-      );
-      if (!mounted) return;
-      setState(() {
-        _biteshipStatus = status;
-        _isCheckingBiteship = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _isCheckingBiteship = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Gagal mengecek status Biteship'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
+  // _checkBiteshipStatus removed, integrated into refresh
 
   @override
   Widget build(BuildContext context) {
@@ -243,18 +280,17 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
             ),
-            IconButton(
-              onPressed: _isLoading ? null : _fetchTracking,
-              icon: const Icon(Icons.refresh, color: Color(0xFFAD510D)),
-            ),
+            if (tipeEkspedisi != 'internal')
+              IconButton(
+                onPressed: _isLoading ? null : _fetchTracking,
+                icon: const Icon(Icons.refresh, color: Color(0xFFAD510D)),
+              ),
           ],
         ),
         const SizedBox(height: 12),
         if (noTrackingData)
           _buildWaitingState()
         else ...[
-          _buildModeBadge(tipeEkspedisi),
-          const SizedBox(height: 16),
           if (tipeEkspedisi == 'internal')
             _buildInternalTracking(data)
           else
@@ -293,39 +329,24 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
     );
   }
 
-  Widget _buildModeBadge(String tipeEkspedisi) {
-    final isInternal = tipeEkspedisi == 'internal';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: (isInternal ? Colors.blue : Colors.purple).withValues(
-          alpha: 0.08,
-        ),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        isInternal ? 'Mode internal courier' : 'Mode ekspedisi external',
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: isInternal ? Colors.blue : Colors.purple,
-        ),
-      ),
-    );
-  }
 
   Widget _buildInternalTracking(Map<String, dynamic> data) {
     final kurir = _asMap(data['kurir']);
     final lokasi = _asMap(data['lokasi_kurir']);
     final latitude = _asDouble(lokasi?['latitude']);
     final longitude = _asDouble(lokasi?['longitude']);
+
+    final lokasiTujuan = _asMap(data['lokasi_tujuan']);
+    final destLat = _asDouble(lokasiTujuan?['latitude']);
+    final destLng = _asDouble(lokasiTujuan?['longitude']);
+
     final jarakMeter = _asInt(data['jarak_meter']);
     final estimasiTiba = (data['estimasi_tiba'] ?? '').toString();
 
     final hasValidLocation = latitude != null && longitude != null &&
         !(latitude == 0 && longitude == 0);
-    final mapLat = hasValidLocation ? latitude! : -6.2088;
-    final mapLng = hasValidLocation ? longitude! : 106.8456;
+    final mapLat = hasValidLocation ? latitude : (destLat ?? -6.2088);
+    final mapLng = hasValidLocation ? longitude : (destLng ?? 106.8456);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -333,6 +354,8 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
         _buildMapCard(
           mapLat,
           mapLng,
+          destLat: destLat,
+          destLng: destLng,
           showWaitingOverlay: !hasValidLocation,
         ),
         const SizedBox(height: 16),
@@ -367,7 +390,7 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
   }
 
   Widget _buildExternalTracking(Map<String, dynamic> data) {
-    final history = _asListMap(data['history']);
+    var history = _asListMap(data['history']);
     final nomorResi = _stringValue(
       _biteshipStatus?['waybill_id'] ??
           data['nomor_resi'] ??
@@ -383,6 +406,27 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
       fallback: 'pending',
     );
 
+    final alamatTujuan = _stringValue(
+      data['lokasi_tujuan']?['alamat_lengkap'] ??
+          data['tujuan_pengantaran']?['alamat_lengkap'],
+      fallback: 'alamat penerima',
+    );
+
+    if (nomorResi.startsWith('MOCK-BITE-')) {
+      history = [
+        {
+          'status': 'On Delivery',
+          'deskripsi': 'Paket sedang diantar dari Toko Mantra menuju $alamatTujuan.',
+          'waktu': 'Baru saja'
+        },
+        {
+          'status': 'Picked Up',
+          'deskripsi': 'Paket telah diambil dari Toko Mantra.',
+          'waktu': 'Beberapa saat lalu'
+        }
+      ];
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -391,7 +435,7 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
           children: [
             SelectableText(
               nomorResi,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             ),
           ],
         ),
@@ -419,44 +463,14 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
           _buildEmptyCard(
             icon: Icons.hourglass_empty,
             title: 'Riwayat belum tersedia',
-            subtitle:
-                'Status pengiriman masih pending atau belum ada update dari ekspedisi.',
-            actionLabel: 'Cek Status Biteship',
-            action: _isCheckingBiteship ? null : _checkBiteshipStatus,
-            trailing: _isCheckingBiteship
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Color(0xFFAD510D),
-                    ),
-                  )
-                : null,
+            subtitle: 'Status pengiriman masih pending atau belum ada update dari ekspedisi.',
+            actionLabel: null,
+            action: null,
           )
         else
           Column(
             children: [
-              if (_biteshipStatus != null) ...[
-                _buildInfoCard(
-                  title: 'Status Biteship',
-                  children: [
-                    _buildKeyValue(
-                      'Waybill',
-                      _stringValue(
-                        _biteshipStatus?['waybill_id'],
-                        fallback: '-',
-                      ),
-                    ),
-                    _buildKeyValue(
-                      'Status',
-                      _stringValue(_biteshipStatus?['status'], fallback: '-'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-              ],
-              ...history.map((item) => _buildTimelineItem(item)).toList(),
+              ...history.map((item) => _buildTimelineItem(item)),
             ],
           ),
       ],
@@ -525,7 +539,44 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
     );
   }
 
-  Widget _buildMapCard(double latitude, double longitude, {bool showWaitingOverlay = false}) {
+  Widget _buildMapCard(double latitude, double longitude, {double? destLat, double? destLng, bool showWaitingOverlay = false}) {
+    List<Marker> markers = [
+      Marker(
+        point: LatLng(latitude, longitude),
+        width: 50,
+        height: 50,
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(color: Colors.black26, blurRadius: 4),
+            ],
+          ),
+          child: const Icon(
+            Icons.delivery_dining,
+            color: Colors.blue,
+            size: 30,
+          ),
+        ),
+      ),
+    ];
+
+    if (destLat != null && destLng != null && destLat != 0 && destLng != 0) {
+      markers.add(
+        Marker(
+          point: LatLng(destLat, destLng),
+          width: 50,
+          height: 50,
+          child: const Icon(
+            Icons.location_on,
+            color: Colors.red,
+            size: 40,
+          ),
+        ),
+      );
+    }
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: SizedBox(
@@ -544,28 +595,18 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   userAgentPackageName: 'com.mantra.app',
                 ),
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: LatLng(latitude, longitude),
-                      width: 50,
-                      height: 50,
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(color: Colors.black26, blurRadius: 4),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.delivery_dining,
-                          color: Colors.blue,
-                          size: 30,
-                        ),
+                if (_routePoints.isNotEmpty)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: _routePoints,
+                        color: Colors.blueAccent,
+                        strokeWidth: 5.0,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                MarkerLayer(
+                  markers: markers,
                 ),
               ],
             ),
@@ -697,7 +738,7 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
                   ],
                 ),
               ),
-              if (trailing != null) trailing,
+              ?trailing,
             ],
           ),
           if (actionLabel != null && action != null) ...[
@@ -728,8 +769,8 @@ class OrderTrackingSectionState extends State<OrderTrackingSection> {
   List<Map<String, dynamic>> _asListMap(dynamic value) {
     if (value is List) {
       return value
-          .where((item) => item is Map)
-          .map((item) => Map<String, dynamic>.from(item as Map))
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
           .toList();
     }
     return [];

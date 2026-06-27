@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'services/dashboard_kasir_service.dart';
 
@@ -88,7 +89,7 @@ class _SemuaAktivitasPageState extends State<SemuaAktivitasPage> {
                     : ListView.separated(
                         padding: const EdgeInsets.all(20),
                         itemCount: _aktivitas.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        separatorBuilder: (_, _) => const Divider(height: 1),
                         itemBuilder: (context, index) {
                           final item = _aktivitas[index];
                           return _transactionItem(

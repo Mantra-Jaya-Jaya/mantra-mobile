@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../core/models/pesanan_kurir_model.dart'; // Sesuaikan path model lu yang bener (DetailPesananModel)
@@ -173,7 +174,7 @@ class _DetailPesananPageState extends State<DetailPesananPage> {
                                   ),
                                   decoration: BoxDecoration(
                                     color: data.statusPesanan.toLowerCase() == 'selesai' || widget.isSelesai
-                                        ? const Color(0xFFAD510D).withOpacity(0.15)
+                                        ? const Color(0xFFAD510D).withValues(alpha: 0.15)
                                         : data.statusPesanan.toLowerCase() == 'dikirim' || widget.isSedangDiantar
                                         ? const Color(0xFFAD510D)
                                         : const Color(0xFF5B6B76),
@@ -210,7 +211,7 @@ class _DetailPesananPageState extends State<DetailPesananPage> {
                                 harga: _formatRupiah(item.subtotalItem),
                                 imageUrl: item.gambarBarang,
                               );
-                            }).toList(),
+                            }),
 
                             const SizedBox(height: 8),
                             const Text(
@@ -242,7 +243,7 @@ class _DetailPesananPageState extends State<DetailPesananPage> {
                                     decoration: BoxDecoration(
                                       color: const Color(
                                         0xFFAD510D,
-                                      ).withOpacity(0.1),
+                                      ).withValues(alpha: 0.1),
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(
@@ -308,14 +309,14 @@ class _DetailPesananPageState extends State<DetailPesananPage> {
                                     vertical: 6,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFAD510D).withOpacity(
-                                      0.1,
+                                    color: const Color(0xFFAD510D).withValues(
+                                      alpha: 0.1,
                                     ), // 🚀 Background Coklat Transparan
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
                                       color: const Color(
                                         0xFFAD510D,
-                                      ).withOpacity(0.3),
+                                      ).withValues(alpha: 0.3),
                                     ),
                                   ),
                                   child: Text(

@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/features/home/services/katalog_service.dart';
@@ -48,20 +49,12 @@ class _SearchResultPageState extends State<SearchResultPage> {
     });
 
     try {
-      // Mengambil data dari service katalog
-      final data = await _katalogService.getDaftarBarang();
-
-      // Filter data berdasarkan namaBarang secara lokal
-      final filteredData = data
-          .where(
-            (barang) =>
-                barang.namaBarang.toLowerCase().contains(query.toLowerCase()),
-          )
-          .toList();
+      // Mengambil data dari service katalog (sekarang langsung difilter oleh backend!)
+      final data = await _katalogService.getBarang(search: query);
 
       if (mounted) {
         setState(() {
-          _searchResultList = filteredData;
+          _searchResultList = data;
           _isLoading = false;
         });
       }

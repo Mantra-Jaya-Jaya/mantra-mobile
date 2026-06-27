@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../core/widgets/base_header_widget.dart';
@@ -228,7 +229,7 @@ class _MyOrderPageState extends State<MyOrderPage> {
 
   Widget _buildOrderCardFromData(Map<String, dynamic> order) {
     final String publicId = order['id_pesanan'] ?? '-';
-    final String nomorPesanan = order['id_pesanan'] ?? publicId;
+
     String statusAsli = order['nama_status_pesanan'] ?? 'Belum Dibayar';
     if (statusAsli == 'Menunggu Pembayaran') {
       statusAsli = 'Belum Dibayar';
@@ -254,7 +255,7 @@ class _MyOrderPageState extends State<MyOrderPage> {
         final date = DateTime.parse(rawDateStr);
         tanggalStr = DateFormat('dd MMMM yyyy', 'id_ID').format(date);
       } catch (error) {
-        print("Gagal parsing tanggal");
+        debugPrint("Gagal parsing tanggal");
       }
     }
 
@@ -282,7 +283,7 @@ class _MyOrderPageState extends State<MyOrderPage> {
           border: Border.all(color: Colors.blueGrey.shade50),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.02),
+              color: Colors.black.withValues(alpha: 0.02),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -321,7 +322,7 @@ class _MyOrderPageState extends State<MyOrderPage> {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(statusAsli).withOpacity(0.1),
+                    color: _getStatusColor(statusAsli).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -370,7 +371,7 @@ class _MyOrderPageState extends State<MyOrderPage> {
                                 child: Image.network(
                                   itemImage,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Icon(
+                                  errorBuilder: (_, _, _) => const Icon(
                                     Icons.shopping_bag_outlined,
                                     color: Colors.grey,
                                     size: 20,

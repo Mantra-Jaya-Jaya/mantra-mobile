@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+import 'package:flutter/foundation.dart';
 import 'package:frontend/core/network/api_client.dart';
 
 class CustomerOrderService {
@@ -55,7 +57,7 @@ class CustomerOrderService {
   }
 
   /// Mengambil daftar metode pembayaran yang aktif
-  Future<List<Map<String, dynamic>>> GetMetodePembayaran() async {
+  Future<List<Map<String, dynamic>>> getMetodePembayaran() async {
     final response = await _client.dio.get('/customer/metode-pembayaran');
     final List data = response.data['data'] ?? [];
     return List<Map<String, dynamic>>.from(data);
@@ -102,5 +104,16 @@ class CustomerOrderService {
   /// Batalkan pengiriman Biteship
   Future<void> cancelBiteshipShipment(String publicId) async {
     await _client.dio.post('/customer/pesanan/$publicId/cancel-shipment');
+  }
+
+  /// Selesaikan pesanan (Konfirmasi Diterima)
+  Future<bool> selesaikanPesanan(String publicId) async {
+    try {
+      final response = await _client.dio.post('/customer/pesanan/$publicId/selesai');
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint("Error selesaikanPesanan: $e");
+      return false;
+    }
   }
 }

@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../models/order_model.dart'; // <-- Pastikan mengarah ke model yang baru
 import '../network/api_client.dart'; // <-- Sesuaikan dengan lokasi ApiClient kamu
@@ -17,7 +19,7 @@ class OrderService {
       }
       return [];
     } catch (e) {
-      print("❌ Error pada OrderService: $e");
+      debugPrint("❌ Error pada OrderService: $e");
       return [];
     }
   }
@@ -32,12 +34,12 @@ class OrderService {
         // {"status": "success", "data": { ...isi detail pesanan... }}
         // Maka kita kembalikan response.data agar UI bisa mengaksesnya
       
-        print("Data diterima: ${response.data}"); 
+        debugPrint("Data diterima: ${response.data}"); 
         return response.data; 
       }
       return null;
     } catch (e) {
-      print("Error di Service: $e");
+      debugPrint("Error di Service: $e");
       return null;
     }
   }
@@ -68,6 +70,20 @@ class OrderService {
       return response.data;
     } on DioException catch (e) {
       throw Exception(e.response?.data['message'] ?? 'Gagal membuat pesanan');
+    }
+  }
+
+  Future<bool> serahkanKeEkspedisi(String publicId, {String? nomorResi}) async {
+    try {
+      final resi = nomorResi ?? 'MOCK-BITE-${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
+      final response = await _dio.patch(
+        '/kasir/pesanan/$publicId/kirim',
+        data: {'nomor_resi': resi},
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint("Error serahkanKeEkspedisi: $e");
+      return false;
     }
   }
 }

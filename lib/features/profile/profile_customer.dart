@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'edit_informasi_akun.dart';
@@ -8,6 +9,7 @@ import '../auth/login.dart';
 import '../../core/services/profile_service.dart';
 import 'package:frontend/core/widgets/base_header_widget.dart';
 import 'package:frontend/core/models/alamat_model.dart';
+import 'package:image_picker/image_picker.dart';
 
 class Profil extends StatefulWidget {
   const Profil({super.key});
@@ -23,6 +25,44 @@ class _ProfilState extends State<Profil> {
   String? _errorMessage;
   Map<String, dynamic>? _profil;
   List<AlamatModel> _daftarAlamat = [];
+  bool _isUploading = false;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickAndUploadImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      if (image == null) return;
+
+      setState(() {
+        _isUploading = true;
+      });
+
+      await _profileService.updateFotoProfil(image.path);
+
+      if (mounted) {
+        _showSuccessDialog(
+          title: "Foto Berhasil\nDiperbarui!",
+          message: "Foto profil Anda berhasil diubah.",
+        );
+        _loadData(forceRefresh: true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengunggah foto: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -58,7 +98,7 @@ class _ProfilState extends State<Profil> {
         });
       }
     } catch (e) {
-      print("Error loading profile: $e");
+      debugPrint("Error loading profile: $e");
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -383,14 +423,68 @@ class _ProfilState extends State<Profil> {
                 ),
               )
             else ...[
-              CircleAvatar(
-                radius: 55,
-
-                backgroundImage:
-                    _profil?['foto_profil'] != null &&
-                        _profil!['foto_profil'].isNotEmpty
-                    ? NetworkImage(_profil!['foto_profil']) as ImageProvider
-                    : const AssetImage("assets/images/profile.jpg"),
+              Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFAF510C),
+                        width: 3.0,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: CircleAvatar(
+                      radius: 55,
+                      backgroundColor: Colors.white,
+                      backgroundImage:
+                          _profil?['foto_profil'] != null &&
+                                  _profil!['foto_profil'].isNotEmpty
+                              ? NetworkImage(_profil!['foto_profil']) as ImageProvider
+                              : const AssetImage("assets/images/profile.jpg"),
+                      child: _isUploading
+                          ? const CircularProgressIndicator(color: Color(0xFFAF510C))
+                          : null,
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 4,
+                    child: GestureDetector(
+                      onTap: _isUploading ? null : _pickAndUploadImage,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFAF510C),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 2.0,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 4,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.edit,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
 
               const SizedBox(height: 12),

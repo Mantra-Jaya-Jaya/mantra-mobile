@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'checkout.dart'; // Pastikan import halaman checkout
 import 'package:frontend/core/widgets/base_header_widget.dart';
@@ -150,7 +151,7 @@ class _CartCustomerPageState extends State<CartCustomerPage> {
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: Colors.black.withValues(alpha: 0.04),
                     blurRadius: 12,
                     offset: const Offset(0, -4),
                   ),

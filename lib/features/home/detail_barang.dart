@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/features/home/services/katalog_service.dart';
@@ -216,7 +217,7 @@ class _DetailBarangPageState extends State<DetailBarangPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '$namaSpek',
+                                namaSpek,
                                 style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -255,7 +256,7 @@ class _DetailBarangPageState extends State<DetailBarangPage> {
                                           },
                                     selectedColor: const Color(
                                       0xFFAD510D,
-                                    ).withOpacity(0.15),
+                                    ).withValues(alpha: 0.15),
                                     backgroundColor: isOutOfStock
                                         ? Colors.grey.shade200
                                         : Colors.grey.shade50,
@@ -288,7 +289,7 @@ class _DetailBarangPageState extends State<DetailBarangPage> {
                               const SizedBox(height: 16),
                             ],
                           );
-                        }).toList(),
+                        }),
 
                         if (groupedVarians.isNotEmpty)
                           const Divider(height: 16, thickness: 1),
@@ -331,7 +332,7 @@ class _DetailBarangPageState extends State<DetailBarangPage> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                           offset: const Offset(0, -2),
                           blurRadius: 10,
                         ),
@@ -434,7 +435,7 @@ class _DetailBarangPageState extends State<DetailBarangPage> {
                     color: Colors.white,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.2),
+                        color: Colors.grey.withValues(alpha: 0.2),
                         spreadRadius: 1,
                         blurRadius: 5,
                         offset: const Offset(0, -3),
@@ -450,7 +451,7 @@ class _DetailBarangPageState extends State<DetailBarangPage> {
                             if (selectedVarians.length <
                                 groupedVarians.length) {
                               final List<String> belumDipilih = [];
-                              groupedVarians.keys.forEach((key) {
+                              for (var key in groupedVarians.keys) {
                                 if (!selectedVarians.containsKey(key)) {
                                   belumDipilih.add(
                                     key.isNotEmpty
@@ -459,7 +460,7 @@ class _DetailBarangPageState extends State<DetailBarangPage> {
                                         : key,
                                   );
                                 }
-                              });
+                              }
 
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
@@ -589,7 +590,7 @@ class _DetailBarangPageState extends State<DetailBarangPage> {
                             onPressed: () {
                               if (!allVariansSelected) {
                                 final List<String> belumDipilih = [];
-                                groupedVarians.keys.forEach((key) {
+                                for (var key in groupedVarians.keys) {
                                   if (!selectedVarians.containsKey(key)) {
                                     belumDipilih.add(
                                       key.isNotEmpty
@@ -598,7 +599,7 @@ class _DetailBarangPageState extends State<DetailBarangPage> {
                                           : key,
                                     );
                                   }
-                                });
+                                }
 
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(

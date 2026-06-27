@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../models/payment_model.dart';
 import '../network/api_client.dart';
@@ -47,7 +49,7 @@ class PaymentService {
         return data.map((item) => HasilCariProduk.fromJson(item)).toList();
       }
     } catch (e) {
-      print("Error cari produk: $e");
+      debugPrint("Error cari produk: $e");
     }
     return [];
   }
@@ -112,7 +114,7 @@ class PaymentService {
     required String metode, // 🚀 BISA DIISI "qris", "bca", "bni", dll
   }) async {
     try {
-      print("🚀 Memulai bayarNonTunai: idPesanan=$idPesanan, metode=$metode");
+      debugPrint("🚀 Memulai bayarNonTunai: idPesanan=$idPesanan, metode=$metode");
       final response = await _apiClient.dio.post(
         '/kasir/transaksi/bayar/non-tunai',
         data: {
@@ -122,7 +124,7 @@ class PaymentService {
         options: Options(headers: {'Content-Type': 'application/json'}),
       );
 
-      print("✅ Response bayarNonTunai: ${response.data}");
+      debugPrint("✅ Response bayarNonTunai: ${response.data}");
 
       if (response.statusCode == 200) {
         return HasilBayarNonTunai.fromJson(response.data);
@@ -132,7 +134,7 @@ class PaymentService {
         );
       }
     } on DioException catch (e) {
-      print("❌ Error Dio bayarNonTunai: ${e.response?.data}");
+      debugPrint("❌ Error Dio bayarNonTunai: ${e.response?.data}");
       throw Exception(
         e.response?.data['message'] ??
             'Terjadi kesalahan saat memproses pembayaran',

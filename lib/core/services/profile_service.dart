@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+import 'package:dio/dio.dart';
 import '../network/api_client.dart';
 
 class ProfileService {
@@ -20,6 +22,18 @@ class ProfileService {
     final response = await _client.dio.put(
       '/customer/akun',
       data: {'nama_lengkap': namaLengkap, 'no_telp': noTelp, 'email': email},
+    );
+    return response.data['data'];
+  }
+
+  /// Mengunggah foto profil baru
+  Future<Map<String, dynamic>> updateFotoProfil(String imagePath) async {
+    final formData = FormData.fromMap({
+      'foto': await MultipartFile.fromFile(imagePath),
+    });
+    final response = await _client.dio.post(
+      '/customer/profil/foto',
+      data: formData,
     );
     return response.data['data'];
   }

@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../models/pesanan_kurir_model.dart';
 import '../network/api_client.dart';
@@ -67,7 +69,7 @@ class DetailPesananService {
       }
       return null;
     } catch (e) {
-      print('Gagal terima pesanan: $e');
+      debugPrint('Gagal terima pesanan: $e');
       return null;
     }
   }

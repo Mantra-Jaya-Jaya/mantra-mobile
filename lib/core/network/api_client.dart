@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -17,12 +18,22 @@ class ApiClient {
 
   static OnUnauthorized? onUnauthorized;
 
+  static final ApiClient _instance = ApiClient._internal();
+
+  factory ApiClient({Dio? dio, FlutterSecureStorage? storage}) {
+    return _instance;
+  }
+
   final Dio _dio;
   final FlutterSecureStorage _storage;
 
-  ApiClient({Dio? dio, FlutterSecureStorage? storage})
-    : _dio = dio ?? Dio(BaseOptions(baseUrl: baseUrl)),
-      _storage = storage ?? const FlutterSecureStorage() {
+  ApiClient._internal()
+    : _dio = Dio(BaseOptions(
+        baseUrl: baseUrl,
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 15),
+      )),
+      _storage = const FlutterSecureStorage() {
     _dio.interceptors.add(_AuthInterceptor(_storage, _dio));
   }
 

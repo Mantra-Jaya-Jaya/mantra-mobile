@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import '../../core/models/pesanan_kurir_model.dart';
 import '../../core/models/laporan_kurir_model.dart';
@@ -334,8 +335,8 @@ class _DashboardContentState extends State<DashboardContent> {
         boxShadow: [
           BoxShadow(
             color: isPrimary
-                ? const Color(0xFFAD510D).withOpacity(0.25)
-                : Colors.black.withOpacity(0.02),
+                ? const Color(0xFFAD510D).withValues(alpha: 0.25)
+                : Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -349,8 +350,8 @@ class _DashboardContentState extends State<DashboardContent> {
             height: 48,
             decoration: BoxDecoration(
               color: isPrimary
-                  ? Colors.white.withOpacity(0.2)
-                  : const Color(0xFFAD510D).withOpacity(0.1),
+                  ? Colors.white.withValues(alpha: 0.2)
+                  : const Color(0xFFAD510D).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
@@ -380,7 +381,7 @@ class _DashboardContentState extends State<DashboardContent> {
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: isPrimary
-                        ? Colors.white.withOpacity(0.8)
+                        ? Colors.white.withValues(alpha: 0.8)
                         : Colors.grey.shade500,
                   ),
                 ),

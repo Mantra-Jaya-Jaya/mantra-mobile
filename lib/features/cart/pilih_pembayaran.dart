@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import '../../core/widgets/base_header_widget.dart';
 import '../../core/widgets/payment_icon_widget.dart';
@@ -5,8 +6,9 @@ import '../orders/services/customer_order_service.dart';
 
 class PilihPembayaranPage extends StatefulWidget {
   final Map<String, dynamic>? pembayaranSekarang;
+  final bool isEksternal;
 
-  const PilihPembayaranPage({super.key, this.pembayaranSekarang});
+  const PilihPembayaranPage({super.key, this.pembayaranSekarang, this.isEksternal = false});
 
   @override
   State<PilihPembayaranPage> createState() => _PilihPembayaranPageState();
@@ -62,7 +64,16 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
       _errorMessage = null;
     });
     try {
-      final metodeData = await _orderService.GetMetodePembayaran();
+      final metodeData = await _orderService.getMetodePembayaran();
+      
+      // Hapus metode COD (atau cash) kalau kurir eksternal
+      if (widget.isEksternal) {
+        metodeData.removeWhere((item) {
+          final k = (item['kode_metode'] ?? '').toString().toLowerCase();
+          return k == 'cod' || k == 'cash';
+        });
+      }
+
       setState(() {
         _daftarMetode = metodeData;
         _isLoading = false;
@@ -166,8 +177,9 @@ class _PilihPembayaranPageState extends State<PilihPembayaranPage> {
               final namaLower = namaBank.toLowerCase();
               if (namaLower.contains('bni')) idMetodeFrontend = 'va_bni';
               if (namaLower.contains('bca')) idMetodeFrontend = 'va_bca';
-              if (namaLower.contains('mandiri'))
+              if (namaLower.contains('mandiri')) {
                 idMetodeFrontend = 'va_mandiri';
+              }
               if (namaLower.contains('bri')) idMetodeFrontend = 'va_bri';
 
               return _buildSubMetodeTile(

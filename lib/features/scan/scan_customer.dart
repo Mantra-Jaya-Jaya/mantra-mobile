@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../main.dart'
@@ -50,7 +51,7 @@ class _ScanPageState extends State<ScanPage>
       }
 
       final rawPublicId = data['public_id'];
-      final publicIdStr = rawPublicId != null ? rawPublicId.toString() : null;
+      final publicIdStr = rawPublicId?.toString();
 
       setState(() {
         barcodeTerdeteksi = code;

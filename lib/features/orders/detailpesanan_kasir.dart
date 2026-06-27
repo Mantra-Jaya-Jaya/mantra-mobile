@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:frontend/core/services/order_service.dart';
 
@@ -12,8 +13,9 @@ class DetailPesanan extends StatefulWidget {
 
 class DetailPesananState extends State<DetailPesanan> {
   final OrderService _orderService = OrderService();
-  Map<String, dynamic>? detailData;
   bool isLoading = true;
+  bool isActionLoading = false;
+  Map<String, dynamic>? detailData;
 
   // ── Palet warna ──────────────────────────────────────────
   static const Color _orange      = Color(0xFFAF510C);
@@ -103,27 +105,23 @@ class DetailPesananState extends State<DetailPesanan> {
     }
 
     final String idAsli = data['public_id'] ?? widget.publicId;
+    final int idTipeKurir = data['id_tipe_kurir'] ?? 1;
     final String noPesananPendek = idAsli.length > 8
-        ? "#ORD-" + idAsli.substring(0, 8).toUpperCase()
+        ? "#ORD-${idAsli.substring(0, 8).toUpperCase()}"
         : idAsli;
 
     final List items   = data['items'] ?? [];
     
     // ── LOGIKA SYNC STATUS DENGAN HALAMAN DEPAN ──────────────────
-    // Karena backend GetDetailPesanan tidak kirim 'nama_status_pesanan', 
-    // kita petakan manual dari id_status_pesanan
-    final int idStatus = data['id_status_pesanan'] ?? 0;
-    String statusStr = "Diproses";
-    if (idStatus == 2) statusStr = "Menunggu Pembayaran";
-    else if (idStatus == 3) statusStr = "Diproses";
-    else if (idStatus == 4) statusStr = "Dikemas";
-    else if (idStatus == 5) statusStr = "Dikirim";
-    else if (idStatus == 6) statusStr = "Selesai";
-    else if (idStatus == 7) statusStr = "Dibatalkan";
+    String statusStr = data['nama_status_pesanan'] ?? "Diproses";
 
     // Gunakan logika override yang sama dengan OrderModel (halaman depan)
-    bool checkIsOnline = idStatus == 2 || idStatus == 3 || idStatus == 4 || idStatus == 5;
-    if (!checkIsOnline && idStatus != 7) {
+    bool checkIsOnline = statusStr.toLowerCase() == 'diproses' || 
+                         statusStr.toLowerCase() == 'dikemas' || 
+                         statusStr.toLowerCase() == 'dikirim' || 
+                         statusStr.toLowerCase() == 'menunggu pembayaran';
+                         
+    if (!checkIsOnline && statusStr.toLowerCase() != 'dibatalkan') {
       statusStr = "Selesai";
     }
     final String status = statusStr;
@@ -170,6 +168,67 @@ class DetailPesananState extends State<DetailPesanan> {
           ],
         ),
       ),
+      bottomNavigationBar: (statusStr.toLowerCase() == 'dikemas' && idTipeKurir == 2)
+          ? Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 10,
+                    offset: Offset(0, -5),
+                  )
+                ],
+              ),
+              child: ElevatedButton(
+                onPressed: isActionLoading
+                    ? null
+                    : () async {
+                        setState(() => isActionLoading = true);
+                        final success = await OrderService()
+                            .serahkanKeEkspedisi(idAsli);
+                        setState(() => isActionLoading = false);
+                        if (success) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text("Pesanan berhasil diserahkan ke kurir!")),
+                          );
+                          _loadDetail();
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text("Gagal memproses pesanan")),
+                          );
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _orange,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: isActionLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        "Serahkan ke Ekspedisi",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+              ),
+            )
+          : null,
     );
   }
 
@@ -236,9 +295,9 @@ class DetailPesananState extends State<DetailPesanan> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
-        color: _white.withOpacity(0.18),
+        color: _white.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _white.withOpacity(0.4)),
+        border: Border.all(color: _white.withValues(alpha: 0.4)),
       ),
       child: Text(
         status,
@@ -327,7 +386,7 @@ class DetailPesananState extends State<DetailPesanan> {
                         ? Image.network(
                             gambar,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
+                            errorBuilder: (_, _, _) => const Icon(
                               Icons.fastfood_rounded,
                               color: _orange,
                               size: 20,
@@ -520,63 +579,5 @@ class DetailPesananState extends State<DetailPesanan> {
     );
   }
 
-  // ── Legacy helpers (tidak dipakai langsung di UI baru,
-  //    tapi sengaja dibiarkan agar tidak break referensi lain) ──
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 20, top: 18, bottom: 8),
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: _grey,
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
 
-  Widget _buildCardContainer(List<Widget> children) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        color: _white,
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0D000000),
-            blurRadius: 2,
-            offset: Offset(0, 1),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      width: double.infinity,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: children,
-      ),
-    );
-  }
-
-  Widget _buildRowDetail(String label, String value,
-      {bool isValueBold = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(color: _grey, fontSize: 14),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            color: _black,
-            fontSize: 14,
-            fontWeight: isValueBold ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ],
-    );
-  }
 }

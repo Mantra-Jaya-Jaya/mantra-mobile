@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import '../models/pengantaran_model.dart';
@@ -21,7 +23,7 @@ class PengantaranService {
       }
       return [];
     } catch (e) {
-      print("❌ Error pada PengantaranService: $e");
+      debugPrint("❌ Error pada PengantaranService: $e");
       return [];
     }
   }
@@ -49,12 +51,12 @@ class DetailPengantaranService {
       }
       return null;
     } on DioException catch (e) {
-      print(
+      debugPrint(
         '❌ DEBUG API PETA: Error nembak detail -> ${e.response?.statusCode} - ${e.message}',
       );
       return null;
     } catch (e) {
-      print('❌ DEBUG API PETA: Gagal Parsing Model -> $e');
+      debugPrint('❌ DEBUG API PETA: Gagal Parsing Model -> $e');
       return null;
     }
   }
@@ -70,7 +72,7 @@ class DetailPengantaranService {
       );
       return response.statusCode == 200;
     } on DioException catch (e) {
-      print('❌ Gagal update lokasi kurir: ${e.response?.statusCode} - ${e.message}');
+      debugPrint('❌ Gagal update lokasi kurir: ${e.response?.statusCode} - ${e.message}');
       return false;
     }
   }
@@ -86,7 +88,7 @@ class DetailPengantaranService {
       );
       return response.data;
     } on DioException catch (e) {
-      print('❌ Gagal upload bukti selesai: ${e.response?.statusCode} - ${e.message}');
+      debugPrint('❌ Gagal upload bukti selesai: ${e.response?.statusCode} - ${e.message}');
       return null;
     }
   }
@@ -98,7 +100,7 @@ class DetailPengantaranService {
       );
       return response.statusCode == 200;
     } on DioException catch (e) {
-      print('❌ Gagal konfirmasi pembayaran: ${e.response?.statusCode} - ${e.message}');
+      debugPrint('❌ Gagal konfirmasi pembayaran: ${e.response?.statusCode} - ${e.message}');
       return false;
     }
   }

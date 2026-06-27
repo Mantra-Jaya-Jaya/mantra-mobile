@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import '../../features/orders/detail_pengantaran_kurir.dart';
 import '../models/pengantaran_model.dart';
@@ -32,7 +33,7 @@ class DeliveryCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -163,7 +164,7 @@ class DeliveryCard extends StatelessWidget {
     
     // Sesuaikan warna dengan palet coklat
     Color bgColor = variant == CardVariant.done
-        ? const Color(0xFFAD510D).withOpacity(0.15) // Light brown for done
+        ? const Color(0xFFAD510D).withValues(alpha: 0.15) // Light brown for done
         : const Color(0xFFAD510D); // Solid brown for active
 
     Color textColor = variant == CardVariant.done

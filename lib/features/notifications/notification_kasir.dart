@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:frontend/core/models/notifikasi_model.dart';
 import 'package:frontend/core/services/notifikasi_service.dart';

@@ -1,5 +1,5 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 // summary_model.dart
-import 'package:flutter/material.dart';
 
 class ProductModel {
   final String idProduk;
