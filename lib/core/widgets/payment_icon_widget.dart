@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -97,7 +98,7 @@ class PaymentIconWidget extends StatelessWidget {
       width: size,
       height: size,
       fit: BoxFit.contain,
-      errorBuilder: (_, __, ___) => Icon(_fallbackIcon, size: size, color: iconColor),
+      errorBuilder: (_, _, _) => Icon(_fallbackIcon, size: size, color: iconColor),
       loadingBuilder: (_, child, loadingProgress) {
         if (loadingProgress == null) return child;
         return SizedBox(

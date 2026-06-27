@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:frontend/features/cart/cart_customer.dart';
 import 'package:frontend/features/orders/order_customer.dart';
@@ -13,6 +14,7 @@ import 'package:frontend/features/home/kategori_page.dart';
 import 'package:frontend/features/home/diskon_barang_page.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/core/services/push_notification_service.dart';
+import 'dart:async';
 
 // ✅ Deklarasi RouteObserver global untuk mendeteksi navigasi halaman
 final RouteObserver<Route> routeObserver = RouteObserver<Route>();
@@ -109,11 +111,41 @@ class _HomeContentState extends State<HomeContent> {
   String? _errorKategori;
   String? _errorBarang;
   int _currentPromoIndex = 0;
+  final PageController _pageController = PageController();
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _startAutoScroll();
+  }
+
+  void _startAutoScroll() {
+    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (_promoList.length > 1 && _pageController.hasClients) {
+        int nextIndex = _currentPromoIndex + 1;
+        if (nextIndex >= _promoList.length) {
+          nextIndex = 0;
+          // Kalau kembali ke awal, pakai jump agar tidak scroll panjang balik ke awal
+          _pageController.jumpToPage(nextIndex);
+          setState(() => _currentPromoIndex = nextIndex);
+        } else {
+          _pageController.animateToPage(
+            nextIndex,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeInOut,
+          );
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _pageController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -203,10 +235,8 @@ class _HomeContentState extends State<HomeContent> {
                     children: [
                       Expanded(
                         child: TextField(
-                          readOnly:
-                              true, // 👈 1. Menghalangi keyboard bawaan beranda muncul
+                          readOnly: true,
                           onTap: () {
-                            // 👈 2. Membuka SearchPage saat kolom disentuh
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -252,8 +282,7 @@ class _HomeContentState extends State<HomeContent> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  const NotificationCustomerPage(),
+                              builder: (context) => const NotificationCustomerPage(),
                             ),
                           );
                         },
@@ -347,6 +376,7 @@ class _HomeContentState extends State<HomeContent> {
         SizedBox(
           height: 150,
           child: PageView.builder(
+            controller: _pageController,
             itemCount: _promoList.length,
             onPageChanged: (index) {
               setState(() => _currentPromoIndex = index);
@@ -642,7 +672,7 @@ class _HomeContentState extends State<HomeContent> {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 13,
-                      color: const Color(0xFFAD510D),
+                      color: Color(0xFFAD510D),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -669,7 +699,7 @@ class _HomeContentState extends State<HomeContent> {
                       style: const TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 13,
-                        color: const Color(0xFFAD510D),
+                        color: Color(0xFFAD510D),
                       ),
                     ),
                   ],

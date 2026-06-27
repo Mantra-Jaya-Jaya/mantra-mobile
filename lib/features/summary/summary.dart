@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 // summary.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -175,9 +176,13 @@ Future<void> _fetchLaporanData() async {
 
     final visibleLabelIndexes = <int>{};
     if (chartLabels.length <= 7) {
-      for (int i = 0; i < chartLabels.length; i++) visibleLabelIndexes.add(i);
+      for (int i = 0; i < chartLabels.length; i++) {
+        visibleLabelIndexes.add(i);
+      }
     } else {
-      for (int i = 0; i < chartLabels.length; i += 2) visibleLabelIndexes.add(i);
+      for (int i = 0; i < chartLabels.length; i += 2) {
+        visibleLabelIndexes.add(i);
+      }
     }
 
     return Column(
@@ -347,7 +352,7 @@ Future<void> _fetchLaporanData() async {
                 width: 48,
                 height: 48,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+                errorBuilder: (_, _, _) => Container(
                   width: 48,
                   height: 48,
                   color: const Color(0xFFF3EDE5),

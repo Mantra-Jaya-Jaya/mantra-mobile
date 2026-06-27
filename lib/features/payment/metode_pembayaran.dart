@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -71,7 +72,7 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
       }
     } catch (e) {
       if (mounted) setState(() => _syncing = false);
-      print("Gagal sinkron data checkout: $e");
+      debugPrint("Gagal sinkron data checkout: $e");
     }
   }
 
@@ -84,7 +85,7 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
 
   Future<void> _konfirmasiBayarTunai() async {
     if (_syncing) return;
-    print("ID Pesanan yang dikirim = ${widget.idPesanan}");
+    debugPrint("ID Pesanan yang dikirim = ${widget.idPesanan}");
     setState(() => _loadingBayar = true);
     try {
       final hasil = await _service.bayarTunai(
@@ -114,7 +115,7 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
 
   Future<void> _prosesBayarNonTunai() async {
     if (_syncing) return;
-    print("DEBUG: Memulai proses non-tunai. ID: ${widget.idPesanan}, Total: $_subtotal, Metode: $_selectedMetode");
+    debugPrint("DEBUG: Memulai proses non-tunai. ID: ${widget.idPesanan}, Total: $_subtotal, Metode: $_selectedMetode");
     
     if (_subtotal <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -201,7 +202,7 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
             height: 36,
             margin: const EdgeInsets.only(left: 4, right: 10),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
+              color: Colors.white.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
@@ -222,7 +223,7 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
                 '#${widget.idPesanan.toString().padLeft(5, '0')}',
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.white.withOpacity(0.75),
+                  color: Colors.white.withValues(alpha: 0.75),
                   fontWeight: FontWeight.w400,
                 ),
               ),
@@ -236,7 +237,7 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           height: 42,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.18),
+            color: Colors.white.withValues(alpha: 0.18),
             borderRadius: BorderRadius.circular(12),
           ),
           child: TabBar(
@@ -320,7 +321,7 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 3),
                 ),
@@ -535,12 +536,12 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
 
   // ── Nominal cepat ──────────────────────────────────────
   Widget _buildNominalCepat() {
-    final nominals = [
+    final nominals = {
       _subtotal,
       _roundUp(_subtotal, 5000),
       _roundUp(_subtotal, 10000),
       _roundUp(_subtotal, 50000),
-    ].toSet().toList()..sort();
+    }.toList()..sort();
 
     return Wrap(
       spacing: 8,
@@ -559,7 +560,7 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
               color: isExact ? _K.orange : _K.orangeLight,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isExact ? _K.orange : _K.orange.withOpacity(0.3),
+                color: isExact ? _K.orange : _K.orange.withValues(alpha: 0.3),
               ),
             ),
             child: Text(
@@ -581,10 +582,12 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
   }
 
   String _fmtShort(int v) {
-    if (v >= 1000000)
+    if (v >= 1000000) {
       return 'Rp ${(v / 1000000).toStringAsFixed(v % 1000000 == 0 ? 0 : 1)}jt';
-    if (v >= 1000)
+    }
+    if (v >= 1000) {
       return 'Rp ${(v / 1000).toStringAsFixed(v % 1000 == 0 ? 0 : 1)}rb';
+    }
     return 'Rp $v';
   }
 
@@ -667,7 +670,7 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? _K.orangeLight.withOpacity(0.3) : _K.white,
+          color: isSelected ? _K.orangeLight.withValues(alpha: 0.3) : _K.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? _K.orange : _K.grey300,
@@ -722,7 +725,7 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: _K.orange.withOpacity(0.35),
+            color: _K.orange.withValues(alpha: 0.35),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -752,7 +755,7 @@ class _MetodePembayaranScreenState extends State<MetodePembayaranScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(

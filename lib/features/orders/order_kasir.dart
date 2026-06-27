@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:frontend/core/services/order_service.dart';
 import 'package:frontend/core/models/order_model.dart';
@@ -47,7 +48,7 @@ class OrderKasirState extends State<OrderKasir> {
           isLoading = false;
         });
       }
-      print("❌ Error memuat data dari backend: $e");
+      debugPrint("❌ Error memuat data dari backend: $e");
     }
   }
 
@@ -245,7 +246,7 @@ class OrderKasirState extends State<OrderKasir> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4, offset: const Offset(0, 2))],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 2))],
         ),
         child: Row(
           children: [
@@ -256,7 +257,7 @@ class OrderKasirState extends State<OrderKasir> {
                 width: 52, 
                 height: 52, 
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+                errorBuilder: (_, _, _) => Container(
                   width: 52, 
                   height: 52, 
                   color: const Color(0xFFF3EDE5),

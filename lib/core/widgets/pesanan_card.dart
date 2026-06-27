@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import '../../features/orders/detail_pengantaran_kurir.dart';
 import '../../features/pengantaran/rute_pengantaran_page.dart';
@@ -32,14 +33,14 @@ class PesananCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isHighlight ? 0.05 : 0.02),
+            color: Colors.black.withValues(alpha: isHighlight ? 0.05 : 0.02),
             blurRadius: isHighlight ? 20 : 10,
             offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(
           color: isHighlight
-              ? const Color(0xFFAD510D).withOpacity(0.3)
+              ? const Color(0xFFAD510D).withValues(alpha: 0.3)
               : Colors.grey.shade100,
         ),
       ),
@@ -126,7 +127,7 @@ class PesananCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      data.namaCustomer.toUpperCase(),
+                      'Ambil di: Toko Mantra Basecamp',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -135,14 +136,14 @@ class PesananCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      data.alamatLengkap,
+                      'Kirim ke: ${data.namaCustomer.toUpperCase()}\n${data.alamatLengkap}',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade600,
                         height: 1.5,
                         fontWeight: FontWeight.bold,
                       ),
-                      maxLines: 2,
+                      maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],

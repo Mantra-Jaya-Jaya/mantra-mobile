@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import '../../core/services/profile_service.dart';
 import '../../core/services/customer_checkout_service.dart';
@@ -72,7 +73,7 @@ class _CheckoutState extends State<Checkout> {
         }
       }
     } catch (e) {
-      print("Error ambil alamat checkout: $e");
+      debugPrint("Error ambil alamat checkout: $e");
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -98,7 +99,7 @@ class _CheckoutState extends State<Checkout> {
         });
       }
     } catch (e) {
-      print("Error cek radius: $e");
+      debugPrint("Error cek radius: $e");
       if (mounted) {
         setState(() => _isLoadingRadius = false);
       }
@@ -128,7 +129,7 @@ class _CheckoutState extends State<Checkout> {
         });
       }
     } catch (e) {
-      print("Error cek ongkir: $e");
+      debugPrint("Error cek ongkir: $e");
       if (mounted) {
         setState(() => _isLoadingOngkir = false);
       }
@@ -200,7 +201,7 @@ class _CheckoutState extends State<Checkout> {
       final idPesanan = data['id_pesanan'];
 
       if (midtransToken != null && midtransToken.toString().isNotEmpty) {
-        print("Midtrans Token: $midtransToken");
+        debugPrint("Midtrans Token: $midtransToken");
       }
 
       if (mounted) {
@@ -213,7 +214,7 @@ class _CheckoutState extends State<Checkout> {
         );
       }
     } catch (e) {
-      print("Error checkout: $e");
+      debugPrint("Error checkout: $e");
       if (mounted) {
         _showSnackBar('Gagal membuat pesanan: ${e.toString()}');
         setState(() => _isSubmitting = false);
@@ -254,8 +255,10 @@ class _CheckoutState extends State<Checkout> {
     final pembayaranBaru = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            PilihPembayaranPage(pembayaranSekarang: _pembayaranDipilih),
+        builder: (context) => PilihPembayaranPage(
+          pembayaranSekarang: _pembayaranDipilih,
+          isEksternal: _tipeKurir == 2,
+        ),
       ),
     );
 
@@ -383,7 +386,7 @@ class _CheckoutState extends State<Checkout> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               offset: const Offset(0, -4),
               blurRadius: 10,
             ),
@@ -460,7 +463,7 @@ class _CheckoutState extends State<Checkout> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -543,7 +546,7 @@ class _CheckoutState extends State<Checkout> {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.red.withOpacity(0.1),
+          color: Colors.red.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
@@ -558,7 +561,7 @@ class _CheckoutState extends State<Checkout> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 10,
               offset: const Offset(0, 4),
             )
@@ -594,7 +597,7 @@ class _CheckoutState extends State<Checkout> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -667,7 +670,7 @@ class _CheckoutState extends State<Checkout> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -770,6 +773,10 @@ class _CheckoutState extends State<Checkout> {
             onTap: () {
               setState(() {
                 _tipeKurir = 2;
+                final kat = (_pembayaranDipilih?['kategori'] ?? _pembayaranDipilih?['id_metode'] ?? _pembayaranDipilih?['kode_metode'] ?? '').toString().toLowerCase();
+                if (kat == 'cod' || kat == 'cash') {
+                  _pembayaranDipilih = null;
+                }
               });
               _cekOngkir();
             },
@@ -793,6 +800,10 @@ class _CheckoutState extends State<Checkout> {
                     onChanged: (v) {
                       setState(() {
                         _tipeKurir = v!;
+                        final kat = (_pembayaranDipilih?['kategori'] ?? _pembayaranDipilih?['id_metode'] ?? _pembayaranDipilih?['kode_metode'] ?? '').toString().toLowerCase();
+                        if (_tipeKurir == 2 && (kat == 'cod' || kat == 'cash')) {
+                          _pembayaranDipilih = null;
+                        }
                       });
                       _cekOngkir();
                     },
@@ -823,7 +834,7 @@ class _CheckoutState extends State<Checkout> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -962,7 +973,7 @@ class _CheckoutState extends State<Checkout> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -1058,7 +1069,7 @@ class _CheckoutState extends State<Checkout> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -1103,7 +1114,7 @@ class _CheckoutState extends State<Checkout> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )

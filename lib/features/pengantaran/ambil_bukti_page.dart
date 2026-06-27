@@ -1,10 +1,12 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; 
+import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../core/services/pengantaran_service.dart';
 import '../../core/widgets/global_appbar_kurir.dart';
+import '../home/home_kurir.dart';
 
 class AmbilBuktiPage extends StatefulWidget {
   final String publicId;
@@ -15,7 +17,8 @@ class AmbilBuktiPage extends StatefulWidget {
   State<AmbilBuktiPage> createState() => _AmbilBuktiPageState();
 }
 
-class _AmbilBuktiPageState extends State<AmbilBuktiPage> with WidgetsBindingObserver {
+class _AmbilBuktiPageState extends State<AmbilBuktiPage>
+    with WidgetsBindingObserver {
   CameraController? _cameraController;
   List<CameraDescription>? _cameras;
   XFile? _imageFile;
@@ -41,7 +44,8 @@ class _AmbilBuktiPageState extends State<AmbilBuktiPage> with WidgetsBindingObse
       return;
     }
 
-    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
       // Free up camera resources ketika app minimize / background
       cameraController.dispose();
     } else if (state == AppLifecycleState.resumed) {
@@ -114,13 +118,13 @@ class _AmbilBuktiPageState extends State<AmbilBuktiPage> with WidgetsBindingObse
     );
 
     await _cameraController!.dispose();
-    
+
     final newController = CameraController(
       newCamera,
       ResolutionPreset.high,
       enableAudio: false,
     );
-    
+
     try {
       await newController.initialize();
       if (!mounted) {
@@ -210,8 +214,15 @@ class _AmbilBuktiPageState extends State<AmbilBuktiPage> with WidgetsBindingObse
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.of(context).pop(); // Tutup Dialog
-                      Navigator.of(context).pop(true); // Tutup Kamera + kirim hasil sukses ke Detail
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (context) => const DashboardKurir(
+                            initialIndex: 1,
+                            tugasInitialTabIndex: 1,
+                          ),
+                        ),
+                        (route) => false,
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFAD510D),
@@ -245,7 +256,7 @@ class _AmbilBuktiPageState extends State<AmbilBuktiPage> with WidgetsBindingObse
     super.dispose();
   }
 
-@override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       // 🚀 Background utama warna coklat khas aplikasi lu
@@ -375,7 +386,7 @@ class _AmbilBuktiPageState extends State<AmbilBuktiPage> with WidgetsBindingObse
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 4),
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
               ),
             ),
           ),

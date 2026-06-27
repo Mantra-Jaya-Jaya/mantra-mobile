@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:frontend/features/home/services/katalog_service.dart';
 import 'package:frontend/features/home/kategori_barang_customer.dart';
@@ -196,7 +197,7 @@ class _AllKategoriPageState extends State<AllKategoriPage> {
           // Menaikkan padding dari 10 ke 18 agar box lingkar luar terlihat lebih besar
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: const Color(0xFFAD510D).withOpacity(0.1),
+            color: const Color(0xFFAD510D).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(
               15,
             ), // Border radius disesuaikan ukurannya

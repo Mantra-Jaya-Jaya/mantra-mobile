@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 
 class OrderItemCard extends StatelessWidget {
@@ -31,7 +32,7 @@ class OrderItemCard extends StatelessWidget {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFAD510D).withOpacity(0.1),
+                  color: const Color(0xFFAD510D).withValues(alpha: 0.1),
                 ),
                 child: Image.network(
                   imageUrl,

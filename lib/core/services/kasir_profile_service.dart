@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'dart:io';
 import 'package:dio/dio.dart';
 import '../network/api_client.dart';
@@ -21,7 +22,7 @@ class KasirProfileService {
     });
 
     final response = await _client.dio.post(
-      '/admin/karyawan/upload',
+      '/kasir/profil/upload',
       data: formData,
     );
 

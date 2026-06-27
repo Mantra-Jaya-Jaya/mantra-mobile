@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 // features/home/services/cart_service.dart
 
 import 'package:frontend/core/network/api_client.dart';

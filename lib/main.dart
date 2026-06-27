@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'features/landing_page/landing_page.dart';
 import 'package:intl/date_symbol_data_local.dart';

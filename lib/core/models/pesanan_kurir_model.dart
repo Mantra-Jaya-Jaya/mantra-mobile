@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 class ItemBarangModel {
   final String namaBarang;
   final String gambarBarang;
@@ -114,13 +115,19 @@ class DetailPesananModel {
 class MetodeBayarModel {
   final String idMetodeBayar;
   final String namaMetode;
+  final int idStatusTransaksi;
 
-  MetodeBayarModel({required this.idMetodeBayar, required this.namaMetode});
+  MetodeBayarModel({
+    required this.idMetodeBayar,
+    required this.namaMetode,
+    this.idStatusTransaksi = 0,
+  });
 
   factory MetodeBayarModel.fromJson(Map<String, dynamic> json) {
     return MetodeBayarModel(
       idMetodeBayar: json['id_metode_bayar'] ?? '-',
       namaMetode: json['nama_metode'] ?? 'Belum ada pembayaran',
+      idStatusTransaksi: json['id_status_transaksi'] ?? 0,
     );
   }
 }

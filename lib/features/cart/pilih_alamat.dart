@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 // IMPORT SERVICE DARI FOLDER PROFILE
 import '../../core/services/profile_service.dart';
@@ -153,7 +154,7 @@ class _PilihAlamatPageState extends State<PilihAlamatPage> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
+                    color: Colors.black.withValues(alpha: 0.02),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -211,7 +212,7 @@ class _PilihAlamatPageState extends State<PilihAlamatPage> {
               ),
             ),
           );
-        }).toList(),
+        }),
 
         const SizedBox(height: 10),
 

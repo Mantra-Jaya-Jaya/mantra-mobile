@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
@@ -83,9 +84,9 @@ class _BayarNonTunaiScreenState extends State<BayarNonTunaiScreen> {
         widget.metode.toLowerCase() == 'qris' ||
         widget.metode.toLowerCase() == 'gopay';
     if (isQris && widget.qrUrl != null) {
-      print("=============Kode QR===========");
-      print(widget.qrUrl);
-      print("===============================");
+      debugPrint("=============Kode QR===========");
+      debugPrint(widget.qrUrl);
+      debugPrint("===============================");
     }
   }
 
@@ -106,7 +107,7 @@ class _BayarNonTunaiScreenState extends State<BayarNonTunaiScreen> {
         _keSukses(widget.metode);
       }
     } catch (e) {
-      print("Polling status error: $e");
+      debugPrint("Polling status error: $e");
     }
   }
 
@@ -216,7 +217,7 @@ class _BayarNonTunaiScreenState extends State<BayarNonTunaiScreen> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: Colors.black.withValues(alpha: 0.04),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -259,7 +260,7 @@ class _BayarNonTunaiScreenState extends State<BayarNonTunaiScreen> {
                         width: 220,
                         height: 220,
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => const Icon(
+                        errorBuilder: (_, _, _) => const Icon(
                           Icons.broken_image,
                           size: 100,
                           color: _K.grey600,
@@ -278,9 +279,9 @@ class _BayarNonTunaiScreenState extends State<BayarNonTunaiScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: _K.orangeLight.withOpacity(0.3),
+                        color: _K.orangeLight.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: _K.orange.withOpacity(0.5)),
+                        border: Border.all(color: _K.orange.withValues(alpha: 0.5)),
                       ),
                       child: Column(
                         children: [
@@ -331,9 +332,9 @@ class _BayarNonTunaiScreenState extends State<BayarNonTunaiScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: _K.orangeLight.withOpacity(0.3),
+                        color: _K.orangeLight.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: _K.orange.withOpacity(0.5)),
+                        border: Border.all(color: _K.orange.withValues(alpha: 0.5)),
                       ),
                       child: Column(
                         children: [

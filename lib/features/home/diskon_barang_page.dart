@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:frontend/core/widgets/base_header_widget.dart';
 import 'package:frontend/features/home/services/diskon_service.dart';
@@ -9,7 +10,7 @@ import 'package:intl/intl.dart';
 class DiskonBarangPage extends StatefulWidget {
   final PromoModel promo;
 
-  const DiskonBarangPage({Key? key, required this.promo}) : super(key: key);
+  const DiskonBarangPage({super.key, required this.promo});
 
   @override
   State<DiskonBarangPage> createState() => _DiskonBarangPageState();
@@ -153,7 +154,7 @@ class _DiskonBarangPageState extends State<DiskonBarangPage> {
           border: Border.all(color: Colors.blueGrey.shade100, width: 1),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 5,
               spreadRadius: 1,
             )

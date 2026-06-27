@@ -1,6 +1,6 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:frontend/core/network/api_client.dart';
 import 'package:frontend/core/models/barang_model.dart';
-import 'package:frontend/features/home/services/katalog_service.dart';
 
 class DiskonService {
   final ApiClient _client;

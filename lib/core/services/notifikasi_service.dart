@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../network/api_client.dart';
 import '../models/notifikasi_model.dart';
@@ -17,14 +19,14 @@ class NotifikasiService {
       if (response.statusCode == 200) {
         final dynamic rawData = response.data['data'];
         if (rawData != null && rawData is List) {
-          return (rawData as List)
+          return (rawData)
               .map((json) => NotifikasiModel.fromJson(json))
               .toList();
         }
       }
       return [];
     } catch (e) {
-      print("Error pada getNotifikasiCustomer: $e");
+      debugPrint("Error pada getNotifikasiCustomer: $e");
       throw Exception('Gagal memuat notifikasi customer: $e');
     }
   }
@@ -33,7 +35,7 @@ class NotifikasiService {
     try {
       await _apiClient.dio.patch('/customer/notifikasi/$id/baca');
     } catch (e) {
-      print("Error bacaNotifikasiCustomer: $e");
+      debugPrint("Error bacaNotifikasiCustomer: $e");
     }
   }
 
@@ -46,9 +48,9 @@ class NotifikasiService {
         options: Options(headers: {'X-Skip-Auth-Redirect': 'true'}),
       );
 
-      print("--- [NotifikasiService Kasir Debug] ---");
-      print("Status Code: ${response.statusCode}");
-      print("Full Response Data: ${response.data}");
+      debugPrint("--- [NotifikasiService Kasir Debug] ---");
+      debugPrint("Status Code: ${response.statusCode}");
+      debugPrint("Full Response Data: ${response.data}");
 
       if (response.statusCode == 200) {
         final dynamic rawData = response.data['data'];
@@ -60,7 +62,7 @@ class NotifikasiService {
       }
       return [];
     } catch (e) {
-      print("Error pada getNotifikasiKasir: $e");
+      debugPrint("Error pada getNotifikasiKasir: $e");
       throw Exception('Gagal memuat notifikasi kasir: $e');
     }
   }
@@ -69,7 +71,7 @@ class NotifikasiService {
     try {
       await _apiClient.dio.patch('/kasir/notifikasi/$id/baca');
     } catch (e) {
-      print("Error bacaNotifikasiKasir: $e");
+      debugPrint("Error bacaNotifikasiKasir: $e");
     }
   }
 
@@ -82,9 +84,9 @@ class NotifikasiService {
         options: Options(headers: {'X-Skip-Auth-Redirect': 'true'}),
       );
 
-      print("--- [NotifikasiService Kurir Debug] ---");
-      print("Status Code: ${response.statusCode}");
-      print("Full Response Data: ${response.data}");
+      debugPrint("--- [NotifikasiService Kurir Debug] ---");
+      debugPrint("Status Code: ${response.statusCode}");
+      debugPrint("Full Response Data: ${response.data}");
 
       if (response.statusCode == 200) {
         final dynamic rawData = response.data['data'];
@@ -96,7 +98,7 @@ class NotifikasiService {
       }
       return [];
     } catch (e) {
-      print("Error pada getNotifikasiKurir: $e");
+      debugPrint("Error pada getNotifikasiKurir: $e");
       throw Exception('Gagal memuat notifikasi kurir: $e');
     }
   }
@@ -105,7 +107,7 @@ class NotifikasiService {
     try {
       await _apiClient.dio.patch('/kurir/notifikasi/$id/baca');
     } catch (e) {
-      print("Error bacaNotifikasiKurir: $e");
+      debugPrint("Error bacaNotifikasiKurir: $e");
     }
   }
 }

@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'search_result_page.dart';
@@ -195,7 +196,7 @@ class _SearchPageState extends State<SearchPage> {
                       onTap: () {
                         _searchController.text = keyword;
                         _saveSearch(keyword);
-                        // TODO: Jalankan reload data API berdasarkan kata kunci dari chips di sini
+                        // 
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(

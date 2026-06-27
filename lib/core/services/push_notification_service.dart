@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -22,7 +23,7 @@ class PushNotificationService {
 
   static void setRole(String role) {
     _role = role;
-    print("--- PushNotificationService: Role di-set ke '$role' ---");
+    debugPrint("--- PushNotificationService: Role di-set ke '$role' ---");
   }
 
   static Future<void> initialize() async {
@@ -88,7 +89,7 @@ class PushNotificationService {
   }
 
   static void startPolling() {
-    print("--- Polling Notifikasi Dimulai (role: $_role) ---");
+    debugPrint("--- Polling Notifikasi Dimulai (role: $_role) ---");
     _pollingTimer?.cancel();
     _pollingTimer = Timer.periodic(const Duration(seconds: 60), (timer) async {
       await checkNewNotifications();
@@ -96,7 +97,7 @@ class PushNotificationService {
   }
 
   static void stopPolling() {
-    print("--- Polling Notifikasi Berhenti ---");
+    debugPrint("--- Polling Notifikasi Berhenti ---");
     _pollingTimer?.cancel();
   }
 
@@ -124,7 +125,7 @@ class PushNotificationService {
       final newNotifs =
           notifList.where((n) => n.idNotifikasi > lastId).toList();
 
-      print(
+      debugPrint(
           "Polling ($_role): Ditemukan ${notifList.length} total, ${newNotifs.length} baru (Last ID: $lastId)");
 
       if (newNotifs.isNotEmpty) {
@@ -142,7 +143,7 @@ class PushNotificationService {
             'last_notification_id_$_role', newNotifs.last.idNotifikasi);
       }
     } catch (e) {
-      print("Polling error ($_role): $e");
+      debugPrint("Polling error ($_role): $e");
     }
   }
 

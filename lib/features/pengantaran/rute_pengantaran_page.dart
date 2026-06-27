@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -329,8 +330,8 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
                                               width: 50,
                                               height: 4,
                                               decoration: BoxDecoration(
-                                                color: Colors.white.withOpacity(
-                                                  0.5,
+                                                color: Colors.white.withValues(
+                                                  alpha: 0.5,
                                                 ),
                                                 borderRadius:
                                                     BorderRadius.circular(10),
@@ -344,8 +345,8 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
                                             style: TextStyle(
                                               fontSize: 10,
                                               fontWeight: FontWeight.bold,
-                                              color: Colors.white.withOpacity(
-                                                0.7,
+                                              color: Colors.white.withValues(
+                                                alpha: 0.7,
                                               ),
                                             ),
                                           ),
@@ -405,7 +406,7 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
                                                       style: TextStyle(
                                                         fontSize: 14,
                                                         color: Colors.white
-                                                            .withOpacity(0.8),
+                                                            .withValues(alpha: 0.8),
                                                         height: 1.5,
                                                       ),
                                                     ),
