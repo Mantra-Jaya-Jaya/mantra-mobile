@@ -1,7 +1,13 @@
 // ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../core/network/api_client.dart';
+import '../auth/services/auth_service.dart';
+import '../auth/login.dart';
 import '../auth/lupa_password.dart';
 import 'package:frontend/core/widgets/base_header_widget.dart';
+import 'components/succes_dialog.dart';
 
 class UbahPassword extends StatefulWidget {
   const UbahPassword({super.key});
@@ -19,6 +25,7 @@ class UbahPasswordState extends State<UbahPassword> {
   bool _obscureOld = true;
   bool _obscureNew = true;
   bool _obscureConfirm = true;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -35,6 +42,61 @@ class UbahPasswordState extends State<UbahPassword> {
           _newPassController.text.isNotEmpty &&
           _confirmPassController.text.isNotEmpty;
     });
+  }
+
+  void _submitUbahPassword() async {
+    if (!_isFormValid || _isLoading) return;
+
+    setState(() => _isLoading = true);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFFAF510C)),
+      ),
+    );
+
+    try {
+      final storage = const FlutterSecureStorage();
+      final dio = ApiClient().dio;
+      final authService = AuthService(dio, storage);
+      await authService.changePassword(
+        passwordLama: _oldPassController.text,
+        passwordBaru: _newPassController.text,
+        konfirmasiPassword: _confirmPassController.text,
+      );
+
+      if (!context.mounted) return;
+      Navigator.pop(context);
+
+      showSuccessDialog(
+        context,
+        title: "Password Berhasil Diubah",
+        message: "Password berhasil diubah. Silakan login kembali.",
+      ).then((_) async {
+        await storage.deleteAll();
+        if (!context.mounted) return;
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
+        );
+      });
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context);
+
+      String errMsg = 'Gagal mengubah password';
+      if (e is DioException && e.response?.data != null) {
+        errMsg = e.response!.data['message'] ?? errMsg;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errMsg), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -125,8 +187,8 @@ class UbahPasswordState extends State<UbahPassword> {
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
-                onPressed: _isFormValid
-                    ? () => Navigator.pop(context, true)
+                onPressed: _isFormValid && !_isLoading
+                    ? _submitUbahPassword
                     : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFAF510C),
@@ -139,7 +201,7 @@ class UbahPasswordState extends State<UbahPassword> {
                 child: Text(
                   "Simpan Password",
                   style: TextStyle(
-                    color: _isFormValid ? Colors.white : Colors.white70,
+                    color: _isFormValid && !_isLoading ? Colors.white : Colors.white70,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -153,7 +215,7 @@ class UbahPasswordState extends State<UbahPassword> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF3E7DD), // Warna krem kecoklatan lembut
+                color: const Color(0xFFF3E7DD),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFD8B08C)),
               ),
