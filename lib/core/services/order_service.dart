@@ -10,7 +10,7 @@ class OrderService {
   // Pastikan tipe kembaliannya tertulis List<OrderModel> secara tegas
   Future<List<OrderModel>> getDaftarPesanan() async {
     try {
-      final response = await _dio.get('/kasir/pesanan');
+      final response = await _dio.get('/kasir/pesanan?limit=100');
       
       if (response.data != null && response.data['data'] != null) {
         final List<dynamic> rawData = response.data['data'];
