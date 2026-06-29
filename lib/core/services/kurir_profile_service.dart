@@ -1,4 +1,5 @@
 // ignore_for_file: use_build_context_synchronously, deprecated_member_use
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../models/profil_kurir_model.dart'; 
@@ -30,5 +31,14 @@ class KurirService {
       // Lempar error biar FutureBuilder di UI bisa nangkep dan nampilin pesan
       rethrow;
     }
+  }
+
+  Future<String> uploadFoto(File file) async {
+    String fileName = file.path.split('/').last;
+    final formData = FormData.fromMap({
+      'foto': await MultipartFile.fromFile(file.path, filename: fileName),
+    });
+    final response = await _dio.post('/kurir/profil/foto', data: formData);
+    return response.data['url'];
   }
 }
