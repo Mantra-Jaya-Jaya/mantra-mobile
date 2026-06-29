@@ -4,10 +4,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/network/api_client.dart';
 import '../auth/services/auth_service.dart';
-import '../auth/login.dart';
 import '../auth/lupa_password.dart';
 import 'package:frontend/core/widgets/base_header_widget.dart';
-import 'components/succes_dialog.dart';
 
 class UbahPassword extends StatefulWidget {
   const UbahPassword({super.key});
@@ -58,9 +56,8 @@ class UbahPasswordState extends State<UbahPassword> {
     );
 
     try {
-      final storage = const FlutterSecureStorage();
       final dio = ApiClient().dio;
-      final authService = AuthService(dio, storage);
+      final authService = AuthService(dio, const FlutterSecureStorage());
       await authService.changePassword(
         passwordLama: _oldPassController.text,
         passwordBaru: _newPassController.text,
@@ -70,19 +67,14 @@ class UbahPasswordState extends State<UbahPassword> {
       if (!context.mounted) return;
       Navigator.pop(context);
 
-      showSuccessDialog(
-        context,
-        title: "Password Berhasil Diubah",
-        message: "Password berhasil diubah. Silakan login kembali.",
-      ).then((_) async {
-        await storage.deleteAll();
-        if (!context.mounted) return;
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-          (route) => false,
-        );
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Password berhasil diubah"),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.pop(context, true);
     } catch (e) {
       if (!context.mounted) return;
       Navigator.pop(context);
