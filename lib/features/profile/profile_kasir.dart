@@ -348,20 +348,6 @@ class ProfileKasirState extends State<ProfileKasir> {
                     buildInfoTile(Icons.email, "Email", _user!.email.isNotEmpty ? _user!.email : '-'),
                     buildInfoTile(Icons.person, "Username", _user!.username.isNotEmpty ? _user!.username : '-'),
                     buildInfoTile(Icons.location_on, "Alamat", _user!.alamat.isNotEmpty ? _user!.alamat : '-'),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.green.shade200),
-                      ),
-                      child: const Text(
-                        "Aktif",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green),
-                      ),
-                    ),
                   ],
                 ),
               ),

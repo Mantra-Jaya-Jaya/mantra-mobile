@@ -310,21 +310,6 @@ class _ProfileKurirPageState extends State<ProfileKurirPage> {
                     buildInfoTile(Icons.email, "Email", _profil!.email),
                     buildInfoTile(Icons.person, "Username", _profil!.username),
                     buildInfoTile(Icons.location_on, "Alamat", _profil!.alamat),
-                    // Status
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.green.shade200),
-                      ),
-                      child: const Text(
-                        "Aktif",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green),
-                      ),
-                    ),
                   ],
                 ),
               ),
