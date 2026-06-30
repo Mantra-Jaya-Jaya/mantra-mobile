@@ -18,9 +18,14 @@ class CustomerOrderService {
     };
     final backendStatus = statusMap[status];
 
+    final queryParams = <String, dynamic>{'limit': 100};
+    if (backendStatus != null) {
+      queryParams['status'] = backendStatus;
+    }
+
     final response = await _client.dio.get(
       '/customer/pesanan',
-      queryParameters: backendStatus != null ? {'status': backendStatus} : null,
+      queryParameters: queryParams,
     );
     final List data = response.data['data'] ?? [];
     return List<Map<String, dynamic>>.from(data);

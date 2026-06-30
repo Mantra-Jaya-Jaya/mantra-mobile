@@ -1,7 +1,8 @@
-// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:dio/dio.dart';
+import 'package:frontend/core/network/api_client.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/models/user_model.dart';
 import '../../core/services/kasir_profile_service.dart';
@@ -174,11 +175,12 @@ class ProfileKasirState extends State<ProfileKasir> {
                               child: CircularProgressIndicator(color: Color(0xFFAF510C)),
                             ),
                           );
-                          await _storage.deleteAll();
-                          _kasirService.logout().catchError((error) {
-                            debugPrint("API Logout error (ignored): $error");
-                            return null;
-                          });
+                          final storage = const FlutterSecureStorage();
+                          final refreshToken = await storage.read(key: 'refresh_token');
+                          try {
+                            await Dio().post('${ApiClient.baseUrl}/logout', data: {'refresh_token': refreshToken});
+                          } catch (_) {}
+                          await storage.deleteAll();
                           if (!mounted) return;
                           Navigator.pop(context);
                           Navigator.pushAndRemoveUntil(
@@ -223,13 +225,20 @@ class ProfileKasirState extends State<ProfileKasir> {
             child: Icon(icon, color: Colors.white),
           ),
           const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-              const SizedBox(height: 2),
-              Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ],
       ),

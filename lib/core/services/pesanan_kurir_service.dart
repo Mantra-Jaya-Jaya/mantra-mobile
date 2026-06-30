@@ -24,7 +24,7 @@ class PesananService {
   // 🚀 2. Narik Semua Pesanan Online (Buat List di bawahnya)
   Future<List<PesananRingkasModel>> getAllPesananOnline() async {
     try {
-      final response = await _dio.get('/kurir/pesanan');
+      final response = await _dio.get('/kurir/pesanan?limit=100');
       if (response.statusCode == 200 && response.data['data'] != null) {
         final List<dynamic> rawData = response.data['data'];
         return rawData

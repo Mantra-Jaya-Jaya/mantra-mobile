@@ -2,6 +2,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -134,7 +135,7 @@ class _ProfileKurirPageState extends State<ProfileKurirPage> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          Navigator.pop(context);
+                          Navigator.pop(context); // Tutup konfirmasi
                           showDialog(
                             context: context,
                             barrierDismissible: false,
@@ -142,14 +143,16 @@ class _ProfileKurirPageState extends State<ProfileKurirPage> {
                               child: CircularProgressIndicator(color: Color(0xFFAD510D)),
                             ),
                           );
-                          await _storage.deleteAll();
+                          
+                          final storage = const FlutterSecureStorage();
+                          final refreshToken = await storage.read(key: 'refresh_token');
                           try {
-                            await ApiClient().dio.post('/auth/logout');
-                          } catch (error) {
-                            debugPrint("API Logout error (ignored): $error");
-                          }
+                            await Dio().post('${ApiClient.baseUrl}/logout', data: {'refresh_token': refreshToken});
+                          } catch (_) {}
+                          await storage.deleteAll();
+
                           if (!mounted) return;
-                          Navigator.pop(context);
+                          Navigator.pop(context); // Tutup loading
                           Navigator.pushAndRemoveUntil(
                             context,
                             MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -188,13 +191,20 @@ class _ProfileKurirPageState extends State<ProfileKurirPage> {
             child: Icon(icon, color: Colors.white),
           ),
           const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-              const SizedBox(height: 2),
-              Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle, 
+                  style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ],
       ),

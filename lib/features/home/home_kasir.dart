@@ -296,7 +296,7 @@ class _DashboardContentState extends State<DashboardContent> {
                           _smallStatItem(
                             Icons.receipt_long,
                             'Total Transaksi',
-                            '${data.jumlahTransaksiSelesai}/${data.jumlahTransaksi}',
+                            '${data.jumlahTransaksiSelesai}',
                           ),
                           const SizedBox(width: 15),
                           _smallStatItem(

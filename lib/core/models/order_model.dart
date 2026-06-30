@@ -49,21 +49,22 @@ class OrderModel {
     // 1. Ambil Status Pesanan Terlebih Dahulu (Gunakan key 'nama_status_pesanan' dari backend Go)
     String statusStr = (json['nama_status_pesanan'] ?? json['status_pesanan'] ?? json['status'] ?? '').toString().trim();
 
-    // 2. KUNCI UTAMA FILTER TAB (Siasat Tanpa Mengubah Backend):
-    // Karena temanmu tidak mengirim 'tipe_pesanan', kita tahu dari request kamu kalau:
-    // - Jika statusnya "Diproses", "Dikemas", "Dikirim", atau "Menunggu Pembayaran", itu PASTI pesanan Online.
-    // - Jika status selain itu (atau Offline), nanti kita paksa jadi "Selesai".
-    bool checkIsOnline = statusStr.toLowerCase() == 'diproses' || 
-                         statusStr.toLowerCase() == 'dikemas' ||
-                         statusStr.toLowerCase() == 'dikirim' ||
-                         statusStr.toLowerCase() == 'menunggu pembayaran';
+    // 2. KUNCI UTAMA FILTER TAB:
+    // Backend sekarang sudah mengirimkan 'tipe_pesanan' (Online/Offline)
+    String tipePesananStr = (json['tipe_pesanan'] ?? '').toString().toLowerCase();
+    
+    // Default cek ke status kalau misal tipe_pesanan belum ke-load
+    bool checkIsOnline = tipePesananStr == 'online';
+    if (tipePesananStr.isEmpty) {
+      checkIsOnline = statusStr.toLowerCase() == 'diproses' || 
+                           statusStr.toLowerCase() == 'dikemas' ||
+                           statusStr.toLowerCase() == 'dikirim' ||
+                           statusStr.toLowerCase() == 'menunggu pembayaran';
+    }
 
     // Sesuaikan teks status untuk tampilan UI Kasir
     if (!checkIsOnline && statusStr.toLowerCase() != 'dibatalkan') {
       statusStr = "Selesai"; // Sesuai request: Offline udah pasti statusnya selesai semua
-    } else if (checkIsOnline) {
-      // Biarkan status aslinya muncul jika online (Diproses/Dikemas/Dikirim)
-      // statusStr tetap sesuai data backend
     }
 
     // 3. Ambil Harga Nyata (Membaca key 'total_bayar' dari backend temanmu)
