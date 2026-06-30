@@ -69,6 +69,10 @@ class AuthService {
     required String konfirmasiPassword,
     required String namaLengkap,
     required String noTelp,
+    required String alamatLengkap,
+    required double latitude,
+    required double longitude,
+    String? catatanLokasi,
   }) async {
     await _dio.post(
       '/register',
@@ -79,6 +83,10 @@ class AuthService {
         'konfirmasi_password': konfirmasiPassword,
         'nama_lengkap': namaLengkap,
         'no_telp': noTelp,
+        'alamat_lengkap': alamatLengkap,
+        'latitude': latitude,
+        'longitude': longitude,
+        'catatan_lokasi': catatanLokasi ?? '',
       },
     );
     // Tidak auto-login setelah register — arahkan ke halaman login
@@ -99,36 +107,8 @@ class AuthService {
 
   // CEK SESI — dipakai di splash screen
   Future<bool> isLoggedIn() async {
-    final token = await _storage.read(key: 'access_token');
-    if (token == null || token.isEmpty) return false;
-
-    try {
-      final parts = token.split('.');
-      if (parts.length != 3) return false;
-
-      // Base64Url decode requires padding
-      String payloadStr = parts[1];
-      while (payloadStr.length % 4 != 0) {
-        payloadStr += '=';
-      }
-
-      final payloadMap = json.decode(utf8.decode(base64Url.decode(payloadStr)));
-      if (payloadMap['exp'] == null) return true;
-
-      // exp is in seconds, convert to milliseconds
-      final expTime = DateTime.fromMillisecondsSinceEpoch(
-        payloadMap['exp'] * 1000,
-      );
-
-      // Jika token sudah expired, hapus dari storage dan return false
-      if (DateTime.now().isAfter(expTime)) {
-        await _storage.deleteAll();
-        return false;
-      }
-      return true;
-    } catch (_) {
-      return false;
-    }
+    final refreshToken = await _storage.read(key: 'refresh_token');
+    return refreshToken != null && refreshToken.isNotEmpty;
   }
 
   Future<void> changePassword({

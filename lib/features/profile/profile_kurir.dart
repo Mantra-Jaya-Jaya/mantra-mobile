@@ -11,6 +11,7 @@ import '../../core/services/kurir_profile_service.dart';
 import '../../core/widgets/base_header_widget.dart';
 import '../../core/models/profil_kurir_model.dart';
 import '../auth/login.dart';
+import '../auth/services/auth_service.dart';
 import 'ubah_password.dart';
 
 class ProfileKurirPage extends StatefulWidget {
@@ -98,7 +99,7 @@ class _ProfileKurirPageState extends State<ProfileKurirPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           child: Container(
@@ -122,7 +123,7 @@ class _ProfileKurirPageState extends State<ProfileKurirPage> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () => Navigator.pop(dialogContext),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 13),
                           side: const BorderSide(color: Color(0xFFAD510D)),
@@ -135,29 +136,29 @@ class _ProfileKurirPageState extends State<ProfileKurirPage> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          Navigator.pop(context); // Tutup konfirmasi
+                          Navigator.pop(dialogContext); // Tutup konfirmasi
                           showDialog(
                             context: context,
                             barrierDismissible: false,
-                            builder: (context) => const Center(
+                            builder: (BuildContext loadingContext) => const Center(
                               child: CircularProgressIndicator(color: Color(0xFFAD510D)),
                             ),
                           );
                           
-                          final storage = const FlutterSecureStorage();
-                          final refreshToken = await storage.read(key: 'refresh_token');
+                          
                           try {
-                            await Dio().post('${ApiClient.baseUrl}/logout', data: {'refresh_token': refreshToken});
-                          } catch (_) {}
-                          await storage.deleteAll();
-
-                          if (!mounted) return;
-                          Navigator.pop(context); // Tutup loading
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(builder: (context) => const LoginScreen()),
-                            (route) => false,
-                          );
+                            final authService = AuthService(ApiClient().dio, const FlutterSecureStorage());
+                            await authService.logout();
+                          } finally {
+                            if (mounted) {
+                              Navigator.pop(context); // Tutup loading
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                                (route) => false,
+                              );
+                            }
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFAD510D),

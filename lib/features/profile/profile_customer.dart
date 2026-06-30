@@ -10,6 +10,8 @@ import '../../core/services/profile_service.dart';
 import 'package:frontend/core/widgets/base_header_widget.dart';
 import 'package:frontend/core/models/alamat_model.dart';
 import 'package:image_picker/image_picker.dart';
+import '../auth/services/auth_service.dart';
+import 'package:frontend/core/network/api_client.dart';
 
 class Profil extends StatefulWidget {
   const Profil({super.key});
@@ -289,7 +291,7 @@ class _ProfilState extends State<Profil> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
@@ -334,7 +336,7 @@ class _ProfilState extends State<Profil> {
                     // Tombol Tidak — kembali ke profil
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () => Navigator.pop(dialogContext),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 13),
                           side: const BorderSide(color: Color(0xFFAF510C)),
@@ -353,18 +355,32 @@ class _ProfilState extends State<Profil> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          Navigator.pop(context); // Tutup dialog dulu
-                          // Hapus semua token dari storage
-                          await const FlutterSecureStorage().deleteAll();
-                          if (!mounted) return;
-                          // Arahkan ke login, hapus semua history
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const LoginScreen(),
+                          Navigator.pop(dialogContext); // Tutup dialog dulu
+                          
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (BuildContext loadingContext) => const Center(
+                              child: CircularProgressIndicator(color: Color(0xFFAF510C)),
                             ),
-                            (route) => false,
                           );
+
+                          try {
+                            final authService = AuthService(ApiClient().dio, const FlutterSecureStorage());
+                            await authService.logout();
+                          } finally {
+                            if (mounted) {
+                              Navigator.pop(context); // Tutup loading dialog
+                              // Arahkan ke login, hapus semua history
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const LoginScreen(),
+                                ),
+                                (route) => false,
+                              );
+                            }
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFAF510C),

@@ -292,24 +292,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                               ),
                             ),
-                            const Spacer(),
+                            const SizedBox(height: 25),
                             Center(
                               child: Column(
                                 children: [
-                                  const Text(
-                                    'or Log In with',
-                                    style: TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 15),
-                                  const Icon(
-                                    Icons.g_mobiledata,
-                                    size: 40,
-                                    color: Colors.red,
-                                  ), // Placeholder Google Logo
-                                  const SizedBox(height: 20),
+
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
