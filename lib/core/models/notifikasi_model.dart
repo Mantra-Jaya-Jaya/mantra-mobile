@@ -29,7 +29,7 @@ class NotifikasiModel {
       pesan: json['pesan'] ?? '',
       status: extractStatus(json['status'] ?? json['status_notifikasi']),
       createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'])?.toLocal()
           : null,
     );
   }

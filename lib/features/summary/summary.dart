@@ -123,11 +123,6 @@ Future<void> _fetchLaporanData() async {
 
   Widget _buildPendapatanCard() {
     final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
-    final isPositive = _data!.persentasePendapatan >= 0;
-    final badgeText = "${isPositive ? '+' : '-'}${currencyFormat.format(_data!.persentasePendapatan.abs())}";
-    final badgeBg = isPositive ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2);
-    final badgeColor = isPositive ? const Color(0xFF15803D) : const Color(0xFFB91C1C);
-    final badgeIcon = isPositive ? Icons.trending_up : Icons.trending_down;
 
     return Container(
       width: double.infinity,
@@ -145,16 +140,9 @@ Future<void> _fetchLaporanData() async {
             style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.5),
           ),
           const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                currencyFormat.format(_data!.totalPendapatan),
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1A1C1C)),
-              ),
-              const SizedBox(width: 8),
-              _buildBadge(badgeText, badgeBg, badgeColor, icon: badgeIcon),
-            ],
+          Text(
+            currencyFormat.format(_data!.totalPendapatan),
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1A1C1C)),
           ),
           const SizedBox(height: 14),
           SizedBox(
@@ -228,30 +216,13 @@ Future<void> _fetchLaporanData() async {
   }
 
   Widget _buildSmallStatRow() {
-     final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0); // ← tambah ini
-    final isTxPositive = _data!.persentaseTransaksi >= 0;
-    final txBadgeText = "${isTxPositive ? '+' : '-'}${currencyFormat.format(_data!.persentaseTransaksi.abs())}";
-    final txBadgeBg = isTxPositive ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2);
-    final txBadgeColor = isTxPositive ? const Color(0xFF15803D) : const Color(0xFFB91C1C);
-
-    Color avgBg = const Color(0xFFF3F4F6);
-    Color avgColor = const Color(0xFF374151);
-    if (_data!.statusRataRata == 'naik') {
-      avgBg = const Color(0xFFDCFCE7);
-      avgColor = const Color(0xFF15803D);
-    } else if (_data!.statusRataRata == 'turun') {
-      avgBg = const Color(0xFFFEE2E2);
-      avgColor = const Color(0xFFB91C1C);
-    }
+     final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
     return Row(
       children: [
         Expanded(
           child: _buildSmallStat(
             icon: Icons.receipt_long_outlined,
-            badge: txBadgeText,
-            badgeBg: txBadgeBg,
-            badgeColor: txBadgeColor,
             label: "Total Transaksi",
             value: "${_data!.totalTransaksi}",
           ),
@@ -260,9 +231,6 @@ Future<void> _fetchLaporanData() async {
         Expanded(
           child: _buildSmallStat(
             icon: Icons.analytics_outlined,
-            badge: _data!.statusRataRata.toUpperCase(),
-            badgeBg: avgBg,
-            badgeColor: avgColor,
             label: "Rata-rata Pesanan",
             value: currencyFormat.format(_data!.rataRataPesanan),
             valueSize: 12,
@@ -274,9 +242,6 @@ Future<void> _fetchLaporanData() async {
 
   Widget _buildSmallStat({
     required IconData icon,
-    required String badge,
-    required Color badgeBg,
-    required Color badgeColor,
     required String label,
     required String value,
     double valueSize = 16,
@@ -295,10 +260,9 @@ Future<void> _fetchLaporanData() async {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Icon(icon, size: 20, color: const Color(0xFFAF510C)),
-              _buildBadge(badge, badgeBg, badgeColor),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(label, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 11)),
           const SizedBox(height: 2),
           Text(value, style: TextStyle(fontSize: valueSize, fontWeight: FontWeight.bold, color: const Color(0xFF1A1C1C))),
