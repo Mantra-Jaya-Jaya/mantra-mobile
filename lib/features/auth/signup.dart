@@ -203,7 +203,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ),
                               ),
                             ),
-                            const Spacer(), // Dorong tulisan login ke paling bawah
+                            const SizedBox(height: 25),
                             Center(
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,

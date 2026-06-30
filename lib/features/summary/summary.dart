@@ -59,12 +59,6 @@ Future<void> _fetchLaporanData() async {
       appBar: BaseHeaderWidget(
         title: "Laporan Penjualan",
         hasRadius: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFFAF510C)))

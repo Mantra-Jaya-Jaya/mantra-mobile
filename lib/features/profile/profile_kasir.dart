@@ -8,6 +8,7 @@ import '../../core/models/user_model.dart';
 import '../../core/services/kasir_profile_service.dart';
 import '../../core/widgets/base_header_widget.dart';
 import '../auth/login.dart';
+import '../auth/services/auth_service.dart';
 import 'edit_profile_kasir.dart';
 import 'ubah_password.dart';
 
@@ -130,7 +131,7 @@ class ProfileKasirState extends State<ProfileKasir> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           child: Container(
@@ -154,7 +155,7 @@ class ProfileKasirState extends State<ProfileKasir> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () => Navigator.pop(dialogContext),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 13),
                           side: const BorderSide(color: Color(0xFFAF510C)),
@@ -167,27 +168,27 @@ class ProfileKasirState extends State<ProfileKasir> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          Navigator.pop(context);
+                          Navigator.pop(dialogContext);
                           showDialog(
                             context: context,
                             barrierDismissible: false,
-                            builder: (context) => const Center(
+                            builder: (BuildContext loadingContext) => const Center(
                               child: CircularProgressIndicator(color: Color(0xFFAF510C)),
                             ),
                           );
-                          final storage = const FlutterSecureStorage();
-                          final refreshToken = await storage.read(key: 'refresh_token');
                           try {
-                            await Dio().post('${ApiClient.baseUrl}/logout', data: {'refresh_token': refreshToken});
-                          } catch (_) {}
-                          await storage.deleteAll();
-                          if (!mounted) return;
-                          Navigator.pop(context);
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(builder: (context) => const LoginScreen()),
-                            (route) => false,
-                          );
+                            final authService = AuthService(ApiClient().dio, const FlutterSecureStorage());
+                            await authService.logout();
+                          } finally {
+                            if (mounted) {
+                              Navigator.pop(context); // Tutup loading dialog
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                                (route) => false,
+                              );
+                            }
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFAF510C),
