@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:dio/dio.dart';
 import 'package:frontend/core/network/api_client.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/models/user_model.dart';
@@ -21,7 +20,6 @@ class ProfileKasir extends StatefulWidget {
 
 class ProfileKasirState extends State<ProfileKasir> {
   final KasirProfileService _kasirService = KasirProfileService();
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = true;
   bool _isUploading = false;

@@ -78,7 +78,7 @@ class _Signup2State extends State<Signup2> {
         _mapController.move(_selectedLocation, 15.0);
       }
     } catch (e) {
-      print("Error getting location: $e");
+      debugPrint("Error getting location: $e");
     }
   }
 

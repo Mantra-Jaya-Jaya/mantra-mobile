@@ -265,22 +265,6 @@ Future<void> _fetchLaporanData() async {
     );
   }
 
-  Widget _buildBadge(String text, Color bg, Color textColor, {IconData? icon}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 11, color: textColor),
-            const SizedBox(width: 3),
-          ],
-          Text(text, style: TextStyle(color: textColor, fontSize: 11, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
 
   Widget _buildProductItem(model.ProductModel product) {
     return GestureDetector(
