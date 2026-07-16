@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'edit_informasi_akun.dart';
@@ -8,6 +9,9 @@ import '../auth/login.dart';
 import '../../core/services/profile_service.dart';
 import 'package:frontend/core/widgets/base_header_widget.dart';
 import 'package:frontend/core/models/alamat_model.dart';
+import 'package:image_picker/image_picker.dart';
+import '../auth/services/auth_service.dart';
+import 'package:frontend/core/network/api_client.dart';
 
 class Profil extends StatefulWidget {
   const Profil({super.key});
@@ -23,6 +27,44 @@ class _ProfilState extends State<Profil> {
   String? _errorMessage;
   Map<String, dynamic>? _profil;
   List<AlamatModel> _daftarAlamat = [];
+  bool _isUploading = false;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickAndUploadImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      if (image == null) return;
+
+      setState(() {
+        _isUploading = true;
+      });
+
+      await _profileService.updateFotoProfil(image.path);
+
+      if (mounted) {
+        _showSuccessDialog(
+          title: "Foto Berhasil\nDiperbarui!",
+          message: "Foto profil Anda berhasil diubah.",
+        );
+        _loadData(forceRefresh: true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengunggah foto: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -58,7 +100,7 @@ class _ProfilState extends State<Profil> {
         });
       }
     } catch (e) {
-      print("Error loading profile: $e");
+      debugPrint("Error loading profile: $e");
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -249,7 +291,7 @@ class _ProfilState extends State<Profil> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
@@ -294,7 +336,7 @@ class _ProfilState extends State<Profil> {
                     // Tombol Tidak — kembali ke profil
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () => Navigator.pop(dialogContext),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 13),
                           side: const BorderSide(color: Color(0xFFAF510C)),
@@ -313,18 +355,32 @@ class _ProfilState extends State<Profil> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          Navigator.pop(context); // Tutup dialog dulu
-                          // Hapus semua token dari storage
-                          await const FlutterSecureStorage().deleteAll();
-                          if (!mounted) return;
-                          // Arahkan ke login, hapus semua history
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const LoginScreen(),
+                          Navigator.pop(dialogContext); // Tutup dialog dulu
+                          
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (BuildContext loadingContext) => const Center(
+                              child: CircularProgressIndicator(color: Color(0xFFAF510C)),
                             ),
-                            (route) => false,
                           );
+
+                          try {
+                            final authService = AuthService(ApiClient().dio, const FlutterSecureStorage());
+                            await authService.logout();
+                          } finally {
+                            if (mounted) {
+                              Navigator.pop(context); // Tutup loading dialog
+                              // Arahkan ke login, hapus semua history
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const LoginScreen(),
+                                ),
+                                (route) => false,
+                              );
+                            }
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFAF510C),
@@ -383,14 +439,68 @@ class _ProfilState extends State<Profil> {
                 ),
               )
             else ...[
-              CircleAvatar(
-                radius: 55,
-
-                backgroundImage:
-                    _profil?['foto_profil'] != null &&
-                        _profil!['foto_profil'].isNotEmpty
-                    ? NetworkImage(_profil!['foto_profil']) as ImageProvider
-                    : const AssetImage("assets/images/profile.jpg"),
+              Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFAF510C),
+                        width: 3.0,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: CircleAvatar(
+                      radius: 55,
+                      backgroundColor: Colors.white,
+                      backgroundImage:
+                          _profil?['foto_profil'] != null &&
+                                  _profil!['foto_profil'].isNotEmpty
+                              ? NetworkImage(_profil!['foto_profil']) as ImageProvider
+                              : const AssetImage("assets/images/profile.jpg"),
+                      child: _isUploading
+                          ? const CircularProgressIndicator(color: Color(0xFFAF510C))
+                          : null,
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 4,
+                    child: GestureDetector(
+                      onTap: _isUploading ? null : _pickAndUploadImage,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFAF510C),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 2.0,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 4,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.edit,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
 
               const SizedBox(height: 12),
@@ -634,7 +744,7 @@ class _ProfilState extends State<Profil> {
             ),
           ),
           const SizedBox(height: 20),
-          ...List.generate(_daftarAlamat.length, (index) {
+              ...List.generate(_daftarAlamat.length, (index) {
             // 🌟 5. Sekarang 'item' sudah berupa cetakan AlamatModel, bukan Map lagi.
             final AlamatModel item = _daftarAlamat[index];
             return Column(
@@ -647,6 +757,8 @@ class _ProfilState extends State<Profil> {
                   telepon: item.noTelpPenerima,
                   alamat: item.alamatLengkap,
                   isPrimary: item.isUtama,
+                  latitude: item.latitude,
+                  longitude: item.longitude,
                 ),
                 if (index < _daftarAlamat.length - 1)
                   const SizedBox(height: 14),
@@ -690,6 +802,8 @@ class _ProfilState extends State<Profil> {
     required String telepon,
     required String alamat,
     required bool isPrimary,
+    double latitude = 0.0,
+    double longitude = 0.0,
   }) {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -735,12 +849,13 @@ class _ProfilState extends State<Profil> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => EditAlamat(
-                        idAlamat:
-                            idAlamat, // 🌟 Mengirim data bertipe String UUID ke halaman Edit
+                        idAlamat: idAlamat,
                         labelAwal: label,
                         namaAwal: nama,
                         teleponAwal: telepon,
                         alamatAwal: alamat,
+                        latitudeAwal: latitude,
+                        longitudeAwal: longitude,
                       ),
                     ),
                   );

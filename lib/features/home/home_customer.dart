@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:frontend/features/cart/cart_customer.dart';
 import 'package:frontend/features/orders/order_customer.dart';
@@ -7,27 +8,38 @@ import 'package:frontend/features/scan/scan_customer.dart';
 import 'package:frontend/core/widgets/bottom_navbar.dart';
 import 'package:frontend/features/home/services/katalog_service.dart';
 import 'package:frontend/features/home/kategori_barang_customer.dart';
-import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:frontend/features/home/search_page.dart';
 import 'package:frontend/features/home/detail_barang.dart';
+import 'package:frontend/features/home/kategori_page.dart';
+import 'package:frontend/features/home/diskon_barang_page.dart';
 import 'package:intl/intl.dart';
+import 'package:frontend/core/services/push_notification_service.dart';
+import 'dart:async';
 
 // ✅ Deklarasi RouteObserver global untuk mendeteksi navigasi halaman
 final RouteObserver<Route> routeObserver = RouteObserver<Route>();
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final int initialIndex;
+  const HomeScreen({super.key, this.initialIndex = 0});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 0;
+  late int _currentIndex;
 
-  final List<Widget> _pages = [
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    PushNotificationService.setRole('customer');
+  }
+
+  List<Widget> get _pages => [
     const HomeContent(),
-    const ScanPage(),
+    ScanPage(isActive: _currentIndex == 1),
     const MyOrderPage(),
     const Profil(),
   ];
@@ -99,11 +111,41 @@ class _HomeContentState extends State<HomeContent> {
   String? _errorKategori;
   String? _errorBarang;
   int _currentPromoIndex = 0;
+  final PageController _pageController = PageController();
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _startAutoScroll();
+  }
+
+  void _startAutoScroll() {
+    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (_promoList.length > 1 && _pageController.hasClients) {
+        int nextIndex = _currentPromoIndex + 1;
+        if (nextIndex >= _promoList.length) {
+          nextIndex = 0;
+          // Kalau kembali ke awal, pakai jump agar tidak scroll panjang balik ke awal
+          _pageController.jumpToPage(nextIndex);
+          setState(() => _currentPromoIndex = nextIndex);
+        } else {
+          _pageController.animateToPage(
+            nextIndex,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeInOut,
+          );
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _pageController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -193,10 +235,8 @@ class _HomeContentState extends State<HomeContent> {
                     children: [
                       Expanded(
                         child: TextField(
-                          readOnly:
-                              true, // 👈 1. Menghalangi keyboard bawaan beranda muncul
+                          readOnly: true,
                           onTap: () {
-                            // 👈 2. Membuka SearchPage saat kolom disentuh
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -242,8 +282,7 @@ class _HomeContentState extends State<HomeContent> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  const NotificationCustomerPage(),
+                              builder: (context) => const NotificationCustomerPage(),
                             ),
                           );
                         },
@@ -260,11 +299,36 @@ class _HomeContentState extends State<HomeContent> {
                 ],
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
-              child: Text(
-                'Kategori',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Kategori',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      // Navigasi ke halaman semua kategori dengan membawa data list awal dari API
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              AllKategoriPage(initialCategories: _kategoriList),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Lihat Semua',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFAD510D),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             _buildKategoriSection(),
@@ -312,6 +376,7 @@ class _HomeContentState extends State<HomeContent> {
         SizedBox(
           height: 150,
           child: PageView.builder(
+            controller: _pageController,
             itemCount: _promoList.length,
             onPageChanged: (index) {
               setState(() => _currentPromoIndex = index);
@@ -320,41 +385,51 @@ class _HomeContentState extends State<HomeContent> {
               final promo = _promoList[index];
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: promo.bannerUrl.isNotEmpty
-                      ? Image.network(
-                          promo.bannerUrl,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          errorBuilder: (context, error, stackTrace) =>
-                              Container(
-                                color: Colors.orange.shade100,
-                                child: Center(
-                                  child: Text(
-                                    promo.namaDiskon,
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFFAD510D),
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DiskonBarangPage(promo: promo),
+                      ),
+                    );
+                  },
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: promo.bannerUrl.isNotEmpty
+                        ? Image.network(
+                            promo.bannerUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                                  color: Colors.orange.shade100,
+                                  child: Center(
+                                    child: Text(
+                                      promo.namaDiskon,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFFAD510D),
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                        )
-                      : Container(
-                          color: Colors.orange.shade100,
-                          child: Center(
-                            child: Text(
-                              promo.namaDiskon,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFFAD510D),
+                          )
+                        : Container(
+                            color: Colors.orange.shade100,
+                            child: Center(
+                              child: Text(
+                                promo.namaDiskon,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFAD510D),
+                                ),
                               ),
                             ),
                           ),
-                        ),
+                  ),
                 ),
               );
             },
@@ -432,14 +507,13 @@ class _HomeContentState extends State<HomeContent> {
               context,
               MaterialPageRoute(
                 builder: (context) => KategoriBarangPage(
-                  initialCategory: k.namaKategori, // Nama kategori yang diklik
-                  apiCategories: _kategoriList, // Kirim seluruh list kategori
+                  category: k,
                 ),
               ),
             );
           },
-          // Memanggil k.iconKategori dari service/model kamu dan mem-parsingnya ke package MdiIcons
-          child: _catItem(k.namaKategori, getIconFromString(k.iconKategori)),
+          // Memanggil icon_kategori yang berisi URL dari backend
+          child: _catItem(k.namaKategori, k.iconKategori),
         );
       },
     );
@@ -507,7 +581,7 @@ class _HomeContentState extends State<HomeContent> {
     );
   }
 
-  Widget _catItem(String label, IconData icon) {
+  Widget _catItem(String label, String iconUrl) {
     return Column(
       children: [
         Container(
@@ -516,7 +590,15 @@ class _HomeContentState extends State<HomeContent> {
             color: const Color(0xFFAD510D).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, color: const Color(0xFFAD510D), size: 30),
+          child: iconUrl.isNotEmpty && iconUrl.startsWith('http')
+              ? Image.network(
+                  iconUrl,
+                  width: 30,
+                  height: 30,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.category_outlined, color: Color(0xFFAD510D), size: 30),
+                )
+              : const Icon(Icons.category_outlined, color: Color(0xFFAD510D), size: 30),
         ),
         const SizedBox(height: 5),
         Text(
@@ -542,6 +624,7 @@ class _HomeContentState extends State<HomeContent> {
         );
       },
       child: Card(
+        color: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         elevation: 2,
         child: Column(
@@ -587,7 +670,10 @@ class _HomeContentState extends State<HomeContent> {
                     barang.namaBarang,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFFAD510D),
+                    ),
                   ),
                   const SizedBox(height: 2),
                   if (barang.punyaDiskon) ...[
@@ -602,7 +688,7 @@ class _HomeContentState extends State<HomeContent> {
                     Text(
                       _currencyFormat.format(barang.hargaDiskon),
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w800,
                         color: Color(0xFFAD510D),
                         fontSize: 13,
                       ),
@@ -611,8 +697,9 @@ class _HomeContentState extends State<HomeContent> {
                     Text(
                       _currencyFormat.format(barang.hargaTerendah),
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w800,
                         fontSize: 13,
+                        color: Color(0xFFAD510D),
                       ),
                     ),
                   ],
@@ -626,10 +713,3 @@ class _HomeContentState extends State<HomeContent> {
   }
 }
 
-// Helper fungsi untuk mengambil ikon berdasarkan string dari DB
-IconData getIconFromString(String? iconName) {
-  if (iconName == null) return Icons.category_outlined;
-
-  // Fungsi bawaan package untuk mencari IconData berdasarkan string namanya
-  return MdiIcons.fromString(iconName) ?? Icons.category_outlined;
-}

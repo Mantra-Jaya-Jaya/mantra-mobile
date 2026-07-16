@@ -1,7 +1,9 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:frontend/core/widgets/base_header_widget.dart';
 
 import '../../core/services/profile_service.dart';
+import 'widgets/map_picker_widget.dart';
 
 class EditAlamat extends StatefulWidget {
   final String idAlamat;
@@ -9,6 +11,8 @@ class EditAlamat extends StatefulWidget {
   final String namaAwal;
   final String teleponAwal;
   final String alamatAwal;
+  final double? latitudeAwal;
+  final double? longitudeAwal;
 
   const EditAlamat({
     super.key,
@@ -17,6 +21,8 @@ class EditAlamat extends StatefulWidget {
     required this.namaAwal,
     required this.teleponAwal,
     required this.alamatAwal,
+    this.latitudeAwal,
+    this.longitudeAwal,
   });
 
   @override
@@ -28,26 +34,33 @@ class EditAlamatState extends State<EditAlamat> {
   late TextEditingController _namaController;
   late TextEditingController _teleponController;
   late TextEditingController _alamatController;
+  late TextEditingController _catatanController;
 
   final ProfileService _profileService = ProfileService();
+  final GlobalKey<MapPickerWidgetState> _mapPickerKey = GlobalKey();
+
   bool _isFormValid = false;
   bool _isLoading = false;
+  bool _showMapPicker = false;
+  double? _selectedLat;
+  double? _selectedLng;
 
   @override
   void initState() {
     super.initState();
-    // Pre-fill dengan data yang sudah ada
     _labelController = TextEditingController(text: widget.labelAwal);
     _namaController = TextEditingController(text: widget.namaAwal);
     _teleponController = TextEditingController(text: widget.teleponAwal);
     _alamatController = TextEditingController(text: widget.alamatAwal);
+    _catatanController = TextEditingController();
+    _selectedLat = widget.latitudeAwal;
+    _selectedLng = widget.longitudeAwal;
 
     _labelController.addListener(_validateForm);
     _namaController.addListener(_validateForm);
     _teleponController.addListener(_validateForm);
     _alamatController.addListener(_validateForm);
 
-    // Sudah ada isi, langsung valid dari awal
     _isFormValid = true;
   }
 
@@ -67,6 +80,7 @@ class EditAlamatState extends State<EditAlamat> {
     _namaController.dispose();
     _teleponController.dispose();
     _alamatController.dispose();
+    _catatanController.dispose();
     super.dispose();
   }
 
@@ -78,7 +92,6 @@ class EditAlamatState extends State<EditAlamat> {
         title: 'Edit Alamat',
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-
           icon: const Icon(Icons.arrow_back, color: Colors.white),
         ),
       ),
@@ -129,6 +142,119 @@ class EditAlamatState extends State<EditAlamat> {
               ),
             ),
 
+            const SizedBox(height: 20),
+
+            // Map Picker Toggle
+            GestureDetector(
+              onTap: () {
+                setState(() => _showMapPicker = !_showMapPicker);
+              },
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEAEFEF),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(
+                    color: _showMapPicker
+                        ? const Color(0xFFAF510C)
+                        : Colors.transparent,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.map_outlined,
+                      color: Color(0xFFAF510C),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _selectedLat != null
+                            ? '📍 Lokasi dipilih (${_selectedLat!.toStringAsFixed(4)}, ${_selectedLng!.toStringAsFixed(4)})'
+                            : '📍 Pilih Lokasi di Peta',
+                        style: TextStyle(
+                          color: _selectedLat != null
+                              ? Colors.black87
+                              : Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      _showMapPicker
+                          ? Icons.expand_less
+                          : Icons.expand_more,
+                      color: const Color(0xFFAF510C),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            if (_showMapPicker) ...[
+              const SizedBox(height: 12),
+              MapPickerWidget(
+                key: _mapPickerKey,
+                initialLatitude: _selectedLat,
+                initialLongitude: _selectedLng,
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFAF510C),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  icon: const Icon(Icons.check, size: 18),
+                  label: const Text('Konfirmasi Lokasi'),
+                  onPressed: () {
+                    final picker = _mapPickerKey.currentState;
+                    if (picker != null) {
+                      setState(() {
+                        _selectedLat = picker.selectedLatitude;
+                        _selectedLng = picker.selectedLongitude;
+                        _showMapPicker = false;
+                      });
+                    }
+                  },
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 20),
+
+            const Text(
+              "Catatan Lokasi (opsional)",
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _catatanController,
+              maxLines: 2,
+              decoration: InputDecoration(
+                hintText: "Contoh: Depan gang, samping masjid, dll.",
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 15,
+                  vertical: 12,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: Color(0xFFAF510C)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: Color(0xFFAF510C), width: 2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
             // Tombol Simpan
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
@@ -147,6 +273,9 @@ class EditAlamatState extends State<EditAlamat> {
                               nama: _namaController.text,
                               telepon: _teleponController.text,
                               alamatLengkap: _alamatController.text,
+                              latitude: _selectedLat,
+                              longitude: _selectedLng,
+                              catatanLokasi: _catatanController.text,
                             );
                             if (mounted) Navigator.pop(context, true);
                           } catch (e) {

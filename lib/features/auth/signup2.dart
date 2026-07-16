@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -5,6 +6,9 @@ import '../../core/network/api_client.dart';
 import '../../core/utils/api_error.dart';
 import 'services/auth_service.dart';
 import 'package:frontend/features/auth/login.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 
 class Signup2 extends StatefulWidget {
   final String email;
@@ -20,6 +24,9 @@ class _Signup2State extends State<Signup2> {
   final TextEditingController _namaController = TextEditingController();
   final TextEditingController _alamatController = TextEditingController();
   final TextEditingController _telpController = TextEditingController();
+  final TextEditingController _catatanController = TextEditingController();
+  final MapController _mapController = MapController();
+  LatLng _selectedLocation = const LatLng(-3.2941, 102.8647);
   bool _isFormValid = false;
   bool _isLoading = false;
   late final AuthService _authService;
@@ -35,6 +42,54 @@ class _Signup2State extends State<Signup2> {
     _namaController.addListener(_validateForm);
     _alamatController.addListener(_validateForm);
     _telpController.addListener(_validateForm);
+    _getCurrentLocation();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return;
+    }
+
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      
+      if (mounted) {
+        setState(() {
+          _selectedLocation = LatLng(position.latitude, position.longitude);
+        });
+        _mapController.move(_selectedLocation, 15.0);
+      }
+    } catch (e) {
+      debugPrint("Error getting location: $e");
+    }
+  }
+
+  @override
+  void dispose() {
+    _namaController.dispose();
+    _alamatController.dispose();
+    _telpController.dispose();
+    _catatanController.dispose();
+    _mapController.dispose();
+    super.dispose();
   }
 
   void _validateForm() {
@@ -84,6 +139,10 @@ class _Signup2State extends State<Signup2> {
         konfirmasiPassword: widget.password,
         namaLengkap: _namaController.text,
         noTelp: _telpController.text,
+        alamatLengkap: _alamatController.text,
+        latitude: _selectedLocation.latitude,
+        longitude: _selectedLocation.longitude,
+        catatanLokasi: _catatanController.text.isNotEmpty ? _catatanController.text : null,
       );
       if (!mounted) return;
       _showSuccessDialog(context);
@@ -181,6 +240,63 @@ class _Signup2State extends State<Signup2> {
                               hint: '08xxxx',
                               errorText: _telpError,
                             ),
+                            const SizedBox(height: 20),
+                            _buildTextField(
+                              controller: _catatanController,
+                              label: 'Catatan Lokasi',
+                              hint: 'Opsional (Warna rumah, patokan, dll)',
+                              maxLines: 2,
+                            ),
+                            const SizedBox(height: 20),
+                            const Text(
+                              "Tandai Lokasi di Peta",
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              height: 250,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(15),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(15),
+                                child: Stack(
+                                  children: [
+                                    FlutterMap(
+                                      mapController: _mapController,
+                                      options: MapOptions(
+                                        initialCenter: _selectedLocation,
+                                        initialZoom: 15.0,
+                                        onPositionChanged: (position, hasGesture) {
+                                          setState(() {
+                                            _selectedLocation = position.center;
+                                          });
+                                        },
+                                      ),
+                                      children: [
+                                        TileLayer(
+                                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                          userAgentPackageName: 'com.example.frontend',
+                                        ),
+                                      ],
+                                    ),
+                                    const Center(
+                                      child: Icon(
+                                        Icons.location_on,
+                                        color: Color(0xFFAD510D),
+                                        size: 40,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              "Koordinat: ${_selectedLocation.latitude.toStringAsFixed(5)}, ${_selectedLocation.longitude.toStringAsFixed(5)}",
+                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                            ),
                             const SizedBox(height: 30),
                             Row(
                               children: [
@@ -233,7 +349,7 @@ class _Signup2State extends State<Signup2> {
                                 ),
                               ],
                             ),
-                            const Spacer(),
+                            const SizedBox(height: 25),
                             Center(
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,

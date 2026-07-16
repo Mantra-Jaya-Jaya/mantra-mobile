@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:frontend/core/network/api_client.dart';
 
 class AktivitasItem {
@@ -26,14 +27,18 @@ class AktivitasItem {
 class DashboardKasirData {
   final String namaKasir;
   final int totalPendapatan;
+  final int totalPendapatanBersih;
   final int jumlahTransaksi;
+  final int jumlahTransaksiSelesai;
   final int totalItemTerjual;
   final List<AktivitasItem> aktivitasTerkini;
 
   DashboardKasirData({
     required this.namaKasir,
     required this.totalPendapatan,
+    required this.totalPendapatanBersih,
     required this.jumlahTransaksi,
+    required this.jumlahTransaksiSelesai,
     required this.totalItemTerjual,
     required this.aktivitasTerkini,
   });
@@ -46,7 +51,9 @@ class DashboardKasirData {
     return DashboardKasirData(
       namaKasir: user['nama_kasir'] ?? 'Kasir',
       totalPendapatan: statistik['total_pendapatan'] ?? 0,
+      totalPendapatanBersih: statistik['total_pendapatan_bersih'] ?? 0,
       jumlahTransaksi: statistik['jumlah_transaksi'] ?? 0,
+      jumlahTransaksiSelesai: statistik['jumlah_transaksi_selesai'] ?? 0,
       totalItemTerjual: statistik['total_item_terjual'] ?? 0,
       aktivitasTerkini:
           aktivitas.map((e) => AktivitasItem.fromJson(e)).toList(),
@@ -64,5 +71,13 @@ class DashboardKasirService {
   Future<DashboardKasirData> getDashboard() async {
     final response = await _client.dio.get('/kasir/dashboard');
     return DashboardKasirData.fromJson(response.data['data']);
+  }
+
+  /// Ambil semua aktivitas transaksi hari ini.
+  /// Endpoint: GET /kasir/aktivitas-hari-ini
+  Future<List<AktivitasItem>> getSemuaAktivitas() async {
+    final response = await _client.dio.get('/kasir/aktivitas-hari-ini');
+    final List data = response.data['data'] ?? [];
+    return data.map((e) => AktivitasItem.fromJson(e)).toList();
   }
 }

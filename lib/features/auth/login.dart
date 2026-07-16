@@ -1,6 +1,8 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:frontend/core/services/push_notification_service.dart';
 import '../../core/network/api_client.dart';
 import '../../core/utils/api_error.dart';
 import 'services/auth_service.dart';
@@ -26,7 +28,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   bool _isFormValid = false;
 
-
   bool _isLoading = false;
   late final AuthService _authService;
 
@@ -36,11 +37,26 @@ class _LoginScreenState extends State<LoginScreen> {
     _authService = AuthService(ApiClient().dio, const FlutterSecureStorage());
     _usernameController.addListener(_validateForm);
     _passwordController.addListener(_validateForm);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!ApiClient.hasExplicitBaseUrl) {
+        _showNotice(
+          'BASE_URL belum diset. Jalankan dengan --dart-define=BASE_URL=http://<ip>:8080/api/v1',
+        );
+      }
+    });
   }
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  void _showNotice(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.orange),
     );
   }
 
@@ -68,13 +84,15 @@ class _LoginScreenState extends State<LoginScreen> {
           );
           break;
         case 'kurir':
+          PushNotificationService.setRole('kurir');
+          PushNotificationService.startPolling(); 
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const DashboardKurir()),
           );
           break;
         case 'admin':
-          // Navigator.pushReplacementNamed(context, '/admin/home'); // TODO: Sesuaikan dengan Admin
+          // Navigator.pushReplacementNamed(context, '/admin/home'); // 
           break;
         default:
           Navigator.pushReplacement(
@@ -85,13 +103,16 @@ class _LoginScreenState extends State<LoginScreen> {
     } on DioException catch (e) {
       final apiError = ApiError.fromDioException(e);
       _showError(apiError.userMessage);
+    } on FormatException catch (e) {
+      _showError(e.message);
+    } catch (_) {
+      _showError('Login gagal. Periksa koneksi atau coba lagi.');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
   }
-
 
   void _validateForm() {
     setState(() {
@@ -220,9 +241,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => const LupaPassword(),
+                                        builder: (context) =>
+                                            const LupaPassword(),
                                       ),
-                                      );
+                                    );
                                   },
                                   child: const Text(
                                     'Lupa password?',
@@ -270,24 +292,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                               ),
                             ),
-                            const Spacer(),
+                            const SizedBox(height: 25),
                             Center(
                               child: Column(
                                 children: [
-                                  const Text(
-                                    'or Log In with',
-                                    style: TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 15),
-                                  const Icon(
-                                    Icons.g_mobiledata,
-                                    size: 40,
-                                    color: Colors.red,
-                                  ), // Placeholder Google Logo
-                                  const SizedBox(height: 20),
+
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [

@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 class OrderItemModel {
   final String namaBarang;
   final int qty;
@@ -21,6 +22,7 @@ class OrderItemModel {
 
 class OrderModel {
   final String orderId;       // Menampilkan ID pesanan ringkas/UUID terpotong
+  final String fullPublicId;  // Menampilkan ID asli untuk API call
   final String statusText;
   final String itemsDetail; 
   final String timeInfo;      // Menampilkan tanggal yang sudah diformat rapi
@@ -32,6 +34,7 @@ class OrderModel {
 
   OrderModel({
     required this.orderId,
+    required this.fullPublicId,
     required this.statusText,
     required this.itemsDetail,
     required this.timeInfo,
@@ -43,22 +46,25 @@ class OrderModel {
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
-    // 1. Ambil Status Pesanan Terlebih Dahulu
-    String statusStr = (json['status_pesanan'] ?? json['status'] ?? '').toString().trim();
+    // 1. Ambil Status Pesanan Terlebih Dahulu (Gunakan key 'nama_status_pesanan' dari backend Go)
+    String statusStr = (json['nama_status_pesanan'] ?? json['status_pesanan'] ?? json['status'] ?? '').toString().trim();
 
-    // 2. KUNCI UTAMA FILTER TAB (Siasat Tanpa Mengubah Backend):
-    // Karena temanmu tidak mengirim 'tipe_pesanan', kita tahu dari request kamu kalau:
-    // - Jika statusnya "Diproses" atau "Dikemas", itu PASTI pesanan Online.
-    // - Jika status selain itu (atau Offline), nanti kita paksa jadi "Selesai".
-    bool checkIsOnline = statusStr.toLowerCase() == 'diproses' || 
-                         statusStr.toLowerCase() == 'dikemas' ||
-                         statusStr.toLowerCase() == 'dikirim';
+    // 2. KUNCI UTAMA FILTER TAB:
+    // Backend sekarang sudah mengirimkan 'tipe_pesanan' (Online/Offline)
+    String tipePesananStr = (json['tipe_pesanan'] ?? '').toString().toLowerCase();
+    
+    // Default cek ke status kalau misal tipe_pesanan belum ke-load
+    bool checkIsOnline = tipePesananStr == 'online';
+    if (tipePesananStr.isEmpty) {
+      checkIsOnline = statusStr.toLowerCase() == 'diproses' || 
+                           statusStr.toLowerCase() == 'dikemas' ||
+                           statusStr.toLowerCase() == 'dikirim' ||
+                           statusStr.toLowerCase() == 'menunggu pembayaran';
+    }
 
     // Sesuaikan teks status untuk tampilan UI Kasir
-    if (!checkIsOnline) {
+    if (!checkIsOnline && statusStr.toLowerCase() != 'dibatalkan') {
       statusStr = "Selesai"; // Sesuai request: Offline udah pasti statusnya selesai semua
-    } else {
-      statusStr = "Diproses"; // Standarisasi teks tampilan online biar seragam
     }
 
     // 3. Ambil Harga Nyata (Membaca key 'total_bayar' dari backend temanmu)
@@ -73,7 +79,8 @@ class OrderModel {
     }
 
     // 4. Ambil ID Pesanan (Membaca key 'id_pesanan' dari backend)
-    String idTampil = (json['id_pesanan'] ?? json['public_id'] ?? json['publicId'] ?? '').toString();
+    String fullId = (json['id_pesanan'] ?? json['public_id'] ?? json['publicId'] ?? '').toString();
+    String idTampil = fullId;
     if (idTampil.length > 8) {
       idTampil = idTampil.substring(0, 8).toUpperCase();
     }
@@ -105,6 +112,7 @@ class OrderModel {
 
     return OrderModel(
       orderId: idTampil.isNotEmpty ? "#ORD-$idTampil" : "#ORD-UNKNOWN",
+      fullPublicId: fullId,
       statusText: statusStr,
       itemsDetail: ringkasanItem,
       timeInfo: formatTanggal,

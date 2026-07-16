@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 class PengantaranModel {
   final String publicId;
   final String status;
@@ -21,12 +22,28 @@ class PengantaranModel {
     required this.totalPendapatan,
   });
 
+  String get statusLabel {
+    switch (status.toLowerCase()) {
+      case 'menunggu pickup':
+        return 'Menunggu';
+      case 'dalam perjalanan':
+        return 'Diantar';
+      case 'tiba di tujuan':
+        return 'Tiba';
+      case 'selesai':
+        return 'Selesai';
+      case 'gagal antar':
+        return 'Gagal';
+      default:
+        return status;
+    }
+  }
+
   factory PengantaranModel.fromJson(Map<String, dynamic> json) {
     return PengantaranModel(
-      // 🚀 SEKARANG DATANYA DIAMBIL LANGSUNG KARENA JSON-NYA UDAH FLAT (DTO)
       publicId: json['public_id'] ?? '',
-      status: json['status'] ?? 'MENUNGGU',
-      ekspedisi: json['ekspedisi'] ?? 'Internal / Belum Ada',
+      status: json['status'] ?? 'Menunggu',
+      ekspedisi: json['ekspedisi'] ?? 'Internal',
       waktuPickup: json['waktu_pickup'],
       waktuSampai: json['waktu_sampai'],
       namaCustomer: json['nama_customer'] ?? 'Customer',
@@ -83,6 +100,9 @@ class DetailPengantaranModel {
   final String? waktuSampai;
   final Penerima penerima;
   final Tujuan tujuan;
+  final String? fotoBukti;
+  final int idMetodePembayaran;
+  final int idStatusTransaksi;
 
   DetailPengantaranModel({
     required this.idPengantaran,
@@ -91,6 +111,9 @@ class DetailPengantaranModel {
     this.waktuSampai,
     required this.penerima,
     required this.tujuan,
+    this.fotoBukti,
+    this.idMetodePembayaran = 0,
+    this.idStatusTransaksi = 0,
   });
 
   factory DetailPengantaranModel.fromJson(Map<String, dynamic> json) {
@@ -102,6 +125,27 @@ class DetailPengantaranModel {
       // Manggil class anaknya buat mecah JSON yang di dalem
       penerima: Penerima.fromJson(json['penerima'] ?? {}),
       tujuan: Tujuan.fromJson(json['tujuan'] ?? {}),
+      fotoBukti: json['foto_bukti'],
+      idMetodePembayaran: json['id_metode_pembayaran'] ?? 0,
+      idStatusTransaksi: json['id_status_transaksi'] ?? 0,
+    );
+  }
+}
+
+class SelesaikanPengantaranModel {
+  final String urlBukti;
+  final DateTime waktuSampai;
+
+  SelesaikanPengantaranModel({
+    required this.urlBukti,
+    required this.waktuSampai,
+  });
+
+  factory SelesaikanPengantaranModel.fromJson(Map<String, dynamic> json) {
+    return SelesaikanPengantaranModel(
+      urlBukti: json['url_bukti'] ?? '',
+      // Parsing string waktu dari Golang jadi objek DateTime di Dart
+      waktuSampai: DateTime.parse(json['waktu_sampai']),
     );
   }
 }

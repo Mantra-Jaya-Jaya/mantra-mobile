@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import '../../core/models/pesanan_kurir_model.dart';
 import '../../core/models/laporan_kurir_model.dart';
@@ -13,26 +14,40 @@ import '../profile/profile_kurir.dart';
 // 1. WIDGET INDUK (Pegang Bottom Nav & Routing)
 // ==========================================
 class DashboardKurir extends StatefulWidget {
-  const DashboardKurir({super.key});
+  final int initialIndex;
+  final int tugasInitialTabIndex;
+
+  const DashboardKurir({
+    super.key,
+    this.initialIndex = 0,
+    this.tugasInitialTabIndex = 0,
+  });
 
   @override
   State<DashboardKurir> createState() => _DashboardKurirState();
 }
 
 class _DashboardKurirState extends State<DashboardKurir> {
-  int _currentIndex = 0;
+  late int _currentIndex;
 
-  final List<Widget> _pages = [
-    const DashboardContent(),
-    const TugasKurirPage(),
-    const ProfileKurirPage(),
-  ];
+  late List<Widget> _pages;
 
   final List<NavMenuModel> _menus = [
     NavMenuModel(label: 'Home', icon: Icons.home_filled, index: 0),
     NavMenuModel(label: 'Tugas', icon: Icons.local_shipping_outlined, index: 1),
     NavMenuModel(label: 'Profile', icon: Icons.person_outline, index: 2),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pages = [
+      const DashboardContent(),
+      TugasKurirPage(initialTabIndex: widget.tugasInitialTabIndex),
+      const ProfileKurirPage(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -299,7 +314,7 @@ class _DashboardContentState extends State<DashboardContent> {
     );
   }
 
-// 🚀 DESAIN KOTAK LAPORAN BARU (MODERN LIST TILE)
+  // 🚀 DESAIN KOTAK LAPORAN BARU (MODERN LIST TILE)
   Widget _buildLaporanTile(
     IconData icon,
     String title,
@@ -320,8 +335,8 @@ class _DashboardContentState extends State<DashboardContent> {
         boxShadow: [
           BoxShadow(
             color: isPrimary
-                ? const Color(0xFFAD510D).withOpacity(0.25)
-                : Colors.black.withOpacity(0.02),
+                ? const Color(0xFFAD510D).withValues(alpha: 0.25)
+                : Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -335,8 +350,8 @@ class _DashboardContentState extends State<DashboardContent> {
             height: 48,
             decoration: BoxDecoration(
               color: isPrimary
-                  ? Colors.white.withOpacity(0.2)
-                  : const Color(0xFFAD510D).withOpacity(0.1),
+                  ? Colors.white.withValues(alpha: 0.2)
+                  : const Color(0xFFAD510D).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
@@ -366,7 +381,7 @@ class _DashboardContentState extends State<DashboardContent> {
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: isPrimary
-                        ? Colors.white.withOpacity(0.8)
+                        ? Colors.white.withValues(alpha: 0.8)
                         : Colors.grey.shade500,
                   ),
                 ),

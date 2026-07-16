@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+import 'package:dio/dio.dart';
 import '../network/api_client.dart';
 
 class ProfileService {
@@ -24,6 +26,18 @@ class ProfileService {
     return response.data['data'];
   }
 
+  /// Mengunggah foto profil baru
+  Future<Map<String, dynamic>> updateFotoProfil(String imagePath) async {
+    final formData = FormData.fromMap({
+      'foto': await MultipartFile.fromFile(imagePath),
+    });
+    final response = await _client.dio.post(
+      '/customer/profil/foto',
+      data: formData,
+    );
+    return response.data['data'];
+  }
+
   Future<List<Map<String, dynamic>>> getAlamat() async {
     final response = await _client.dio.get('/customer/alamat');
     final data = response.data['data'] as List?;
@@ -36,6 +50,9 @@ class ProfileService {
     required String nama,
     required String telepon,
     required String alamatLengkap,
+    double? latitude,
+    double? longitude,
+    String? catatanLokasi,
     bool isUtama = false,
   }) async {
     final response = await _client.dio.post(
@@ -45,6 +62,9 @@ class ProfileService {
         'nama_penerima': nama,
         'no_telp_penerima': telepon,
         'alamat_lengkap': alamatLengkap,
+        'latitude': latitude,
+        'longitude': longitude,
+        'catatan_lokasi': catatanLokasi,
         'is_utama': isUtama,
       },
     );
@@ -58,6 +78,9 @@ class ProfileService {
     required String nama,
     required String telepon,
     required String alamatLengkap,
+    double? latitude,
+    double? longitude,
+    String? catatanLokasi,
     bool isUtama = false,
   }) async {
     final response = await _client.dio.put(
@@ -67,6 +90,9 @@ class ProfileService {
         'nama_penerima': nama,
         'no_telp_penerima': telepon,
         'alamat_lengkap': alamatLengkap,
+        'latitude': latitude,
+        'longitude': longitude,
+        'catatan_lokasi': catatanLokasi,
         'is_utama': isUtama,
       },
     );

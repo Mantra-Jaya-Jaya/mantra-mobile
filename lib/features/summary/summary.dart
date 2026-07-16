@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 // summary.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -25,30 +26,31 @@ class _SummaryPageState extends State<SummaryPage> {
     _fetchLaporanData();
   }
 
-  Future<void> _fetchLaporanData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+Future<void> _fetchLaporanData() async {
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
 
-    try {
-      final rawData = await _summaryService.getLaporanRingkasan();
+  try {
+    // Service sekarang langsung mengembalikan objek SummaryData yang sudah di-parse
+    final data = await _summaryService.getLaporanRingkasan();
 
-      if (mounted) {
-        setState(() {
-          _data = model.SummaryData.fromJson(rawData);
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = e.toString().replaceAll('Exception: ', '');
-          _isLoading = false;
-        });
-      }
+    if (mounted) {
+      setState(() {
+        _data = data; // Tidak perlu .fromJson(rawData) lagi, karena sudah jadi objek
+        _isLoading = false;
+      });
+    }
+  } catch (e) {
+    if (mounted) {
+      setState(() {
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
+        _isLoading = false;
+      });
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -57,12 +59,6 @@ class _SummaryPageState extends State<SummaryPage> {
       appBar: BaseHeaderWidget(
         title: "Laporan Penjualan",
         hasRadius: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFFAF510C)))
@@ -121,11 +117,6 @@ class _SummaryPageState extends State<SummaryPage> {
 
   Widget _buildPendapatanCard() {
     final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
-    final isPositive = _data!.persentasePendapatan >= 0;
-    final badgeText = "${isPositive ? '+' : ''}${_data!.persentasePendapatan.toStringAsFixed(1)}%";
-    final badgeBg = isPositive ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2);
-    final badgeColor = isPositive ? const Color(0xFF15803D) : const Color(0xFFB91C1C);
-    final badgeIcon = isPositive ? Icons.trending_up : Icons.trending_down;
 
     return Container(
       width: double.infinity,
@@ -143,16 +134,9 @@ class _SummaryPageState extends State<SummaryPage> {
             style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.5),
           ),
           const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                currencyFormat.format(_data!.totalPendapatan),
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1A1C1C)),
-              ),
-              const SizedBox(width: 8),
-              _buildBadge(badgeText, badgeBg, badgeColor, icon: badgeIcon),
-            ],
+          Text(
+            currencyFormat.format(_data!.totalPendapatan),
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1A1C1C)),
           ),
           const SizedBox(height: 14),
           SizedBox(
@@ -174,9 +158,13 @@ class _SummaryPageState extends State<SummaryPage> {
 
     final visibleLabelIndexes = <int>{};
     if (chartLabels.length <= 7) {
-      for (int i = 0; i < chartLabels.length; i++) visibleLabelIndexes.add(i);
+      for (int i = 0; i < chartLabels.length; i++) {
+        visibleLabelIndexes.add(i);
+      }
     } else {
-      for (int i = 0; i < chartLabels.length; i += 2) visibleLabelIndexes.add(i);
+      for (int i = 0; i < chartLabels.length; i += 2) {
+        visibleLabelIndexes.add(i);
+      }
     }
 
     return Column(
@@ -222,30 +210,13 @@ class _SummaryPageState extends State<SummaryPage> {
   }
 
   Widget _buildSmallStatRow() {
-    final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
-    final isTxPositive = _data!.persentaseTransaksi >= 0;
-    final txBadgeText = "${isTxPositive ? '+' : ''}${_data!.persentaseTransaksi}%";
-    final txBadgeBg = isTxPositive ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2);
-    final txBadgeColor = isTxPositive ? const Color(0xFF15803D) : const Color(0xFFB91C1C);
-
-    Color avgBg = const Color(0xFFF3F4F6);
-    Color avgColor = const Color(0xFF374151);
-    if (_data!.statusRataRata == 'naik') {
-      avgBg = const Color(0xFFDCFCE7);
-      avgColor = const Color(0xFF15803D);
-    } else if (_data!.statusRataRata == 'turun') {
-      avgBg = const Color(0xFFFEE2E2);
-      avgColor = const Color(0xFFB91C1C);
-    }
+     final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
     return Row(
       children: [
         Expanded(
           child: _buildSmallStat(
             icon: Icons.receipt_long_outlined,
-            badge: txBadgeText,
-            badgeBg: txBadgeBg,
-            badgeColor: txBadgeColor,
             label: "Total Transaksi",
             value: "${_data!.totalTransaksi}",
           ),
@@ -254,9 +225,6 @@ class _SummaryPageState extends State<SummaryPage> {
         Expanded(
           child: _buildSmallStat(
             icon: Icons.analytics_outlined,
-            badge: _data!.statusRataRata.toUpperCase(),
-            badgeBg: avgBg,
-            badgeColor: avgColor,
             label: "Rata-rata Pesanan",
             value: currencyFormat.format(_data!.rataRataPesanan),
             valueSize: 12,
@@ -268,9 +236,6 @@ class _SummaryPageState extends State<SummaryPage> {
 
   Widget _buildSmallStat({
     required IconData icon,
-    required String badge,
-    required Color badgeBg,
-    required Color badgeColor,
     required String label,
     required String value,
     double valueSize = 16,
@@ -289,10 +254,9 @@ class _SummaryPageState extends State<SummaryPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Icon(icon, size: 20, color: const Color(0xFFAF510C)),
-              _buildBadge(badge, badgeBg, badgeColor),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(label, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 11)),
           const SizedBox(height: 2),
           Text(value, style: TextStyle(fontSize: valueSize, fontWeight: FontWeight.bold, color: const Color(0xFF1A1C1C))),
@@ -301,22 +265,6 @@ class _SummaryPageState extends State<SummaryPage> {
     );
   }
 
-  Widget _buildBadge(String text, Color bg, Color textColor, {IconData? icon}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 11, color: textColor),
-            const SizedBox(width: 3),
-          ],
-          Text(text, style: TextStyle(color: textColor, fontSize: 11, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
 
   Widget _buildProductItem(model.ProductModel product) {
     return GestureDetector(
@@ -324,8 +272,8 @@ class _SummaryPageState extends State<SummaryPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            // Mengirim ID Produk (int) ke halaman detail riwayat transaksi
-            builder: (context) => RiwayatTransaksi(productId: product.idProduk),
+            // Mengirim ID Produk ke halaman detail riwayat transaksi
+            builder: (context) => RiwayatTransaksi(publicId: product.idProduk),
           ),
         );
       },
@@ -346,7 +294,7 @@ class _SummaryPageState extends State<SummaryPage> {
                 width: 48,
                 height: 48,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+                errorBuilder: (_, _, _) => Container(
                   width: 48,
                   height: 48,
                   color: const Color(0xFFF3EDE5),
@@ -361,7 +309,7 @@ class _SummaryPageState extends State<SummaryPage> {
                 children: [
                   Text(product.nama, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1A1C1C))),
                   const SizedBox(height: 2),
-                  Text(product.deskripsi, style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(product.deskripsi ?? '', style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)), maxLines: 1, overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),

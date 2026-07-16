@@ -1,4 +1,8 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../core/services/profile_service.dart';
 import 'package:frontend/core/widgets/base_header_widget.dart';
 
@@ -14,8 +18,14 @@ class AlamatBaruState extends State<AlamatBaru> {
   final TextEditingController _namaController = TextEditingController();
   final TextEditingController _teleponController = TextEditingController();
   final TextEditingController _alamatController = TextEditingController();
+  final TextEditingController _catatanController = TextEditingController();
 
   final ProfileService _profileService = ProfileService();
+  final MapController _mapController = MapController();
+  
+  // Default to Lubuk Linggau center
+  LatLng _selectedLocation = const LatLng(-3.2941, 102.8647);
+  
   bool _isFormValid = false;
   bool _isLoading = false;
 
@@ -27,6 +37,45 @@ class AlamatBaruState extends State<AlamatBaru> {
     _namaController.addListener(_validateForm);
     _teleponController.addListener(_validateForm);
     _alamatController.addListener(_validateForm);
+    
+    _getCurrentLocation();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return;
+    }
+
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      
+      if (mounted) {
+        setState(() {
+          _selectedLocation = LatLng(position.latitude, position.longitude);
+        });
+        _mapController.move(_selectedLocation, 15.0);
+      }
+    } catch (e) {
+      debugPrint("Error getting location: $e");
+    }
   }
 
   void _validateForm() {
@@ -45,6 +94,8 @@ class AlamatBaruState extends State<AlamatBaru> {
     _namaController.dispose();
     _teleponController.dispose();
     _alamatController.dispose();
+    _catatanController.dispose();
+    _mapController.dispose();
     super.dispose();
   }
 
@@ -111,8 +162,70 @@ class AlamatBaruState extends State<AlamatBaru> {
                     "Detail alamat...",
                     maxLines: 3,
                   ),
+
+                  const SizedBox(height: 15),
+
+                  _buildInputRow(
+                    Icons.note_alt_outlined,
+                    "Catatan Lokasi (Opsional)",
+                    _catatanController,
+                    "Warna rumah, patokan, dll",
+                    maxLines: 2,
+                  ),
                 ],
               ),
+            ),
+
+            const SizedBox(height: 20),
+
+            const Text(
+              "Tandai Lokasi di Peta",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              height: 250,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: Stack(
+                  children: [
+                    FlutterMap(
+                      mapController: _mapController,
+                      options: MapOptions(
+                        initialCenter: _selectedLocation,
+                        initialZoom: 15.0,
+                        onPositionChanged: (position, hasGesture) {
+                          setState(() {
+                            _selectedLocation = position.center;
+                          });
+                        },
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.example.frontend',
+                        ),
+                      ],
+                    ),
+                    const Center(
+                      child: Icon(
+                        Icons.location_on,
+                        color: Color(0xFFAD510D),
+                        size: 40,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Koordinat: ${_selectedLocation.latitude.toStringAsFixed(5)}, ${_selectedLocation.longitude.toStringAsFixed(5)}",
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
 
             const SizedBox(height: 30),
@@ -130,6 +243,9 @@ class AlamatBaruState extends State<AlamatBaru> {
                             nama: _namaController.text,
                             telepon: _teleponController.text,
                             alamatLengkap: _alamatController.text,
+                            latitude: _selectedLocation.latitude,
+                            longitude: _selectedLocation.longitude,
+                            catatanLokasi: _catatanController.text.isNotEmpty ? _catatanController.text : null,
                             isUtama: false, // Default
                           );
                           if (mounted) Navigator.pop(context, true);

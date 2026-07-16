@@ -1,0 +1,124 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+import 'package:flutter/foundation.dart';
+import 'package:frontend/core/network/api_client.dart';
+
+class CustomerOrderService {
+  final ApiClient _client;
+
+  CustomerOrderService({ApiClient? client}) : _client = client ?? ApiClient();
+
+  /// Mengambil daftar pesanan customer berdasarkan status
+  Future<List<Map<String, dynamic>>> getOrders({String? status}) async {
+    final statusMap = {
+      'Belum Dibayar': 'menunggu_pembayaran',
+      'Dikemas': 'dikemas',
+      'Dikirim': 'dikirim',
+      'Selesai': 'selesai',
+      'Dibatalkan': 'dibatalkan',
+    };
+    final backendStatus = statusMap[status];
+
+    final queryParams = <String, dynamic>{'limit': 100};
+    if (backendStatus != null) {
+      queryParams['status'] = backendStatus;
+    }
+
+    final response = await _client.dio.get(
+      '/customer/pesanan',
+      queryParameters: queryParams,
+    );
+    final List data = response.data['data'] ?? [];
+    return List<Map<String, dynamic>>.from(data);
+  }
+
+  /// Membuat pesanan baru (Checkout)
+  Future<Map<String, dynamic>> checkout({
+    required String idAlamat,
+    required String metodePembayaran,
+    required int grandTotal,
+    required List<Map<String, dynamic>> items,
+  }) async {
+    final response = await _client.dio.post(
+      '/customer/pesanan/checkout',
+      data: {
+        'id_alamat': idAlamat,
+        'metode_pembayaran': metodePembayaran,
+        'grand_total': grandTotal,
+        'items': items,
+      },
+    );
+    return response.data['data'];
+  }
+
+  /// Mengambil detail satu pesanan
+  Future<Map<String, dynamic>> getOrderDetail(String publicId) async {
+    final response = await _client.dio.get('/customer/pesanan/$publicId');
+    return response.data['data'];
+  }
+
+  /// Membatalkan pesanan (Hanya jika status Belum Dibayar)
+  Future<void> cancelOrder(String publicId) async {
+    await _client.dio.patch('/customer/pesanan/$publicId/batal');
+  }
+
+  /// Mengambil daftar metode pembayaran yang aktif
+  Future<List<Map<String, dynamic>>> getMetodePembayaran() async {
+    final response = await _client.dio.get('/customer/metode-pembayaran');
+    final List data = response.data['data'] ?? [];
+    return List<Map<String, dynamic>>.from(data);
+  }
+
+  /// Info lacak pengiriman
+  Future<Map<String, dynamic>> getTrackingInfo(String publicId) async {
+    final response = await _client.dio.get('/customer/pesanan/$publicId/lacak');
+    final raw = response.data;
+    final Map<String, dynamic> map = raw is Map<String, dynamic>
+        ? raw
+        : raw is Map
+        ? Map<String, dynamic>.from(raw)
+        : throw const FormatException('Format respons tracking tidak valid');
+
+    final data = map['data'];
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) return Map<String, dynamic>.from(data);
+
+    throw const FormatException('Data tracking tidak ditemukan');
+  }
+
+  /// Cek status order Biteship
+  Future<Map<String, dynamic>> getBiteshipOrderStatus(String publicId) async {
+    final response = await _client.dio.get(
+      '/customer/pesanan/$publicId/status-biteship',
+    );
+    final raw = response.data;
+    final Map<String, dynamic> map = raw is Map<String, dynamic>
+        ? raw
+        : raw is Map
+        ? Map<String, dynamic>.from(raw)
+        : throw const FormatException(
+            'Format respons status Biteship tidak valid',
+          );
+
+    final data = map['data'];
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) return Map<String, dynamic>.from(data);
+
+    throw const FormatException('Data status Biteship tidak ditemukan');
+  }
+
+  /// Batalkan pengiriman Biteship
+  Future<void> cancelBiteshipShipment(String publicId) async {
+    await _client.dio.post('/customer/pesanan/$publicId/cancel-shipment');
+  }
+
+  /// Selesaikan pesanan (Konfirmasi Diterima)
+  Future<bool> selesaikanPesanan(String publicId) async {
+    try {
+      final response = await _client.dio.post('/customer/pesanan/$publicId/selesai');
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint("Error selesaikanPesanan: $e");
+      return false;
+    }
+  }
+}

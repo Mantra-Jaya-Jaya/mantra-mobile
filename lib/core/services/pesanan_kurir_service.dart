@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../models/pesanan_kurir_model.dart';
 import '../network/api_client.dart';
@@ -22,7 +24,7 @@ class PesananService {
   // 🚀 2. Narik Semua Pesanan Online (Buat List di bawahnya)
   Future<List<PesananRingkasModel>> getAllPesananOnline() async {
     try {
-      final response = await _dio.get('/kurir/pesanan');
+      final response = await _dio.get('/kurir/pesanan?limit=100');
       if (response.statusCode == 200 && response.data['data'] != null) {
         final List<dynamic> rawData = response.data['data'];
         return rawData
@@ -35,3 +37,41 @@ class PesananService {
     }
   }
 }
+
+class DetailPesananService {
+  final Dio _dio = ApiClient().dio;
+
+  // 🚀 Narik Detail Pesanan Berdasarkan Public ID
+  Future<DetailPesananModel?> getDetailPesanan(String publicId) async {
+    try {
+      final response = await _dio.get('/kurir/pesanan/$publicId');
+
+      if (response.statusCode == 200 && response.data['data'] != null) {
+        return DetailPesananModel.fromJson(response.data['data']);
+      }
+      return null;
+    } catch (e) {
+      // Return null kalau meledak (misal 404 Not Found atau 500)
+      return null;
+    }
+  }
+
+  Future<String?> terimaPesanan(String publicIdPesanan) async {
+    try {
+      // Kita tembak API yang lu tes di Bruno tadi
+      final response = await _dio.post(
+        '/kurir/pesanan/$publicIdPesanan/terima',
+      );
+
+      // Kalau dapet 200 OK, kita tangkep ID Pengantaran barunya!
+      if (response.statusCode == 200 && response.data['data'] != null) {
+        return response.data['data'].toString();
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Gagal terima pesanan: $e');
+      return null;
+    }
+  }
+}
+

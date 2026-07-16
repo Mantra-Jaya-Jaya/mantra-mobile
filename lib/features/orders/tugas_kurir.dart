@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import '../../core/widgets/delivery_card.dart';
 import '../../core/widgets/global_appbar_kurir.dart';
@@ -5,31 +6,43 @@ import '../../core/services/pengantaran_service.dart';
 import '../../core/models/pengantaran_model.dart';
 
 class TugasKurirPage extends StatefulWidget {
-  const TugasKurirPage({super.key});
+  final int initialTabIndex;
+  const TugasKurirPage({super.key, this.initialTabIndex = 0});
 
   @override
   State<TugasKurirPage> createState() => _TugasKurirPageState();
 }
 
 class _TugasKurirPageState extends State<TugasKurirPage> {
-  // State untuk toggle tab (true = Pengantaran, false = Selesai)
-  bool _isPengantaran = true;
+  int _selectedTabIndex = 0;
 
-  // 🚀 Bikin variabel Future buat nampung tarikan data API
   late Future<List<PengantaranModel>> _pengantaranFuture;
 
   @override
   void initState() {
     super.initState();
-    // 🚀 Tarik data dari API saat halaman pertama kali dibuka
-    _pengantaranFuture = PengantaranService().getDaftarPengantaran();
+    _selectedTabIndex = widget.initialTabIndex;
+    _fetchData();
   }
 
-  // 🚀 Fungsi buat nge-refresh data kalau ditarik ke bawah (opsional, tapi best practice)
-  Future<void> _refreshData() async {
+  void _fetchData() {
+    String filter = "pengantaran";
+    if (_selectedTabIndex == 0) {
+      filter = "pengantaran";
+    } else if (_selectedTabIndex == 1) {
+      filter = "tiba_di_tujuan";
+    } else if (_selectedTabIndex == 2) {
+      filter = "selesai";
+    }
     setState(() {
-      _pengantaranFuture = PengantaranService().getDaftarPengantaran();
+      _pengantaranFuture = PengantaranService().getDaftarPengantaran(
+        status: filter,
+      );
     });
+  }
+
+  Future<void> _refreshData() async {
+    _fetchData();
   }
 
   @override
@@ -55,19 +68,22 @@ class _TugasKurirPageState extends State<TugasKurirPage> {
               decoration: BoxDecoration(
                 color: Colors.transparent,
                 borderRadius: BorderRadius.circular(25),
-                border: Border.all(color: Colors.white.withOpacity(0.3)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
                   // Tombol Pengantaran
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => setState(() => _isPengantaran = true),
+                      onTap: () {
+                        setState(() => _selectedTabIndex = 0);
+                        _fetchData();
+                      },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 250),
                         curve: Curves.easeInOut,
                         decoration: BoxDecoration(
-                          color: _isPengantaran
+                          color: _selectedTabIndex == 0
                               ? Colors.white
                               : Colors.transparent,
                           borderRadius: BorderRadius.circular(25),
@@ -76,9 +92,41 @@ class _TugasKurirPageState extends State<TugasKurirPage> {
                         child: Text(
                           'Pengantaran',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: _isPengantaran
+                            color: _selectedTabIndex == 0
+                                ? const Color(0xFFAD510D)
+                                : Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Tombol Tiba Di Tujuan
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() => _selectedTabIndex = 1);
+                        _fetchData();
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        curve: Curves.easeInOut,
+                        decoration: BoxDecoration(
+                          color: _selectedTabIndex == 1
+                              ? Colors.white
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Tiba Di Tujuan',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: _selectedTabIndex == 1
                                 ? const Color(0xFFAD510D)
                                 : Colors.white,
                           ),
@@ -90,12 +138,15 @@ class _TugasKurirPageState extends State<TugasKurirPage> {
                   // Tombol Selesai
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => setState(() => _isPengantaran = false),
+                      onTap: () {
+                        setState(() => _selectedTabIndex = 2);
+                        _fetchData();
+                      },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 250),
                         curve: Curves.easeInOut,
                         decoration: BoxDecoration(
-                          color: !_isPengantaran
+                          color: _selectedTabIndex == 2
                               ? Colors.white
                               : Colors.transparent,
                           borderRadius: BorderRadius.circular(25),
@@ -104,9 +155,9 @@ class _TugasKurirPageState extends State<TugasKurirPage> {
                         child: Text(
                           'Selesai',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: !_isPengantaran
+                            color: _selectedTabIndex == 2
                                 ? const Color(0xFFAD510D)
                                 : Colors.white,
                           ),
@@ -178,25 +229,17 @@ class _TugasKurirPageState extends State<TugasKurirPage> {
                           );
                         }
 
-                        // 🚀 4. DATANYA ADA! Sekarang kita filter sesuai tab yang dipencet
-                        final allData = snapshot.data!;
-                        final filteredData = allData.where((item) {
-                          if (_isPengantaran) {
-                            // Tab Pengantaran: Tampilkan yang statusnya BUKAN Selesai
-                            return item.status.toLowerCase() != 'selesai';
-                          } else {
-                            // Tab Selesai: Tampilkan KHUSUS yang statusnya Selesai
-                            return item.status.toLowerCase() == 'selesai';
-                          }
-                        }).toList();
+                        // 🚀 4. DATANYA ADA! Langsung tampilkan (backend sudah filter sesuai tab)
+                        final filteredData = snapshot.data!;
 
-                        // 5. Cek lagi kalau setelah difilter ternyata kosong
                         if (filteredData.isEmpty) {
                           return Center(
                             child: Text(
-                              _isPengantaran
+                              _selectedTabIndex == 0
                                   ? 'Tidak ada pesanan yang sedang diantar.'
-                                  : 'Belum ada pesanan yang diselesaikan.',
+                                  : _selectedTabIndex == 1
+                                      ? 'Tidak ada pesanan yang tiba di tujuan.'
+                                      : 'Belum ada pesanan yang diselesaikan.',
                               style: const TextStyle(
                                 color: Colors.grey,
                                 fontSize: 16,
@@ -205,7 +248,7 @@ class _TugasKurirPageState extends State<TugasKurirPage> {
                           );
                         }
 
-                        // 6. Kalau datanya ada, tampilkan di ListView!
+                        // 5. Kalau datanya ada, tampilkan di ListView!
                         return ListView.builder(
                           padding: const EdgeInsets.only(
                             top: 24,
@@ -221,11 +264,12 @@ class _TugasKurirPageState extends State<TugasKurirPage> {
 
                             // Panggil DeliveryCard
                             return DeliveryCard(
-                              variant: _isPengantaran
-                                  ? CardVariant.history
-                                  : CardVariant.done,
+                              variant: _selectedTabIndex == 2
+                                  ? CardVariant.done
+                                  : CardVariant.history,
                               idPengantaran: dataTugas.publicId,
                               data: dataTugas,
+                              isTibaDiTujuan: _selectedTabIndex == 1,
                             );
                           },
                         );

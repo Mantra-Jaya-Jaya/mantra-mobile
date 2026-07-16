@@ -1,22 +1,47 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+typedef OnUnauthorized = void Function();
+
 class ApiClient {
-  static const String baseUrl = String.fromEnvironment(
+  static const String _fallbackBaseUrl =
+      'http://172.16.160.135:8080/api/v1'; // local dev fallback
+  static const String _configuredBaseUrl = String.fromEnvironment(
     'BASE_URL',
-    defaultValue: 'http://172.16.177.91:8080/api/v1', // emulator Android
+    defaultValue: '',
   );
+
+  static bool get hasExplicitBaseUrl => _configuredBaseUrl.isNotEmpty;
+  static String get baseUrl =>
+      hasExplicitBaseUrl ? _configuredBaseUrl : _fallbackBaseUrl;
+
+  static OnUnauthorized? onUnauthorized;
+
+  static final ApiClient _instance = ApiClient._internal();
+
+  factory ApiClient({Dio? dio, FlutterSecureStorage? storage}) {
+    return _instance;
+  }
 
   final Dio _dio;
   final FlutterSecureStorage _storage;
 
-  ApiClient({Dio? dio, FlutterSecureStorage? storage})
-    : _dio = dio ?? Dio(BaseOptions(baseUrl: baseUrl)),
-      _storage = storage ?? const FlutterSecureStorage() {
+  ApiClient._internal()
+    : _dio = Dio(BaseOptions(
+        baseUrl: baseUrl,
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 15),
+      )),
+      _storage = const FlutterSecureStorage() {
     _dio.interceptors.add(_AuthInterceptor(_storage, _dio));
   }
 
   Dio get dio => _dio;
+
+  static void setOnUnauthorized(OnUnauthorized callback) {
+    onUnauthorized = callback;
+  }
 }
 
 class _AuthInterceptor extends Interceptor {
@@ -30,7 +55,6 @@ class _AuthInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    // Tandai semua request dari Flutter agar backend bisa membedakan dari NextJS
     options.headers['X-Client-Type'] = 'flutter';
 
     final token = await _storage.read(key: 'access_token');
@@ -43,18 +67,24 @@ class _AuthInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
     if (err.response?.statusCode == 401) {
-      // Coba refresh token
+      if (err.requestOptions.path.contains('/login')) {
+        handler.next(err);
+        return;
+      }
+      if (err.requestOptions.headers['X-Skip-Auth-Redirect'] == 'true') {
+        handler.next(err);
+        return;
+      }
       final refreshed = await _tryRefresh();
       if (refreshed) {
-        // Retry request asal
         final token = await _storage.read(key: 'access_token');
         err.requestOptions.headers['Authorization'] = 'Bearer $token';
         final response = await _dio.fetch(err.requestOptions);
         handler.resolve(response);
         return;
       }
-      // Refresh gagal — hapus token, redirect ke login
       await _storage.deleteAll();
+      ApiClient.onUnauthorized?.call();
     }
     handler.next(err);
   }

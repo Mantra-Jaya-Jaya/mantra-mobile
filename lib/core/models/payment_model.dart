@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 // ============================================================
 // models/payment_models.dart
 // ============================================================
@@ -20,10 +21,7 @@ class VarianProduk {
   factory VarianProduk.fromJson(Map<String, dynamic> json) {
     return VarianProduk(
       idSpesifikasiBarang: json['id_spesifikasi_barang'] ?? 0,
-      label:
-          json['nama_detail']?.toString() ??
-          json['label']?.toString() ??
-          'Default',
+      label: json['label'] ?? '',
       hargaBarang: json['harga_barang'] ?? 0,
       hargaDiskon: json['harga_diskon'] ?? 0,
       stok: json['stok'] ?? 0,
@@ -79,6 +77,7 @@ class ItemKeranjang {
 
 class RingkasanCheckout {
   final int idOrder;
+  final String publicId;
   final String nomorOrder;
   final List<ItemCheckout> items;
   final int subtotal;
@@ -87,6 +86,7 @@ class RingkasanCheckout {
 
   RingkasanCheckout({
     required this.idOrder,
+    required this.publicId,
     required this.nomorOrder,
     required this.items,
     required this.subtotal,
@@ -100,6 +100,7 @@ class RingkasanCheckout {
     final biaya = data['ringkasan_biaya'];
     return RingkasanCheckout(
       idOrder: orderInfo['id_order'] ?? 0,
+      publicId: orderInfo['public_id'] ?? '',
       nomorOrder: orderInfo['nomor_order'] ?? '',
       items: (data['item_checkout'] as List<dynamic>? ?? [])
           .map((i) => ItemCheckout.fromJson(i))
@@ -157,13 +158,83 @@ class HasilBayarTunai {
 }
 
 class HasilBayarNonTunai {
-  final String snapToken;
+  final String orderId;
+  final String metode;
+  final String? qrUrl;
+  final String? vaNumber;
+  final String? billKey;  // 🚀 Tambahan buat Mandiri
+  final String? billCode; // 🚀 Tambahan buat Mandiri
 
-  HasilBayarNonTunai({required this.snapToken});
+  HasilBayarNonTunai({
+    required this.orderId,
+    required this.metode,
+    this.qrUrl,
+    this.vaNumber,
+    this.billKey,
+    this.billCode,
+  });
 
   factory HasilBayarNonTunai.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] ?? {};
+
     return HasilBayarNonTunai(
-      snapToken: json['data']['midtrans_data']['token'] ?? '',
+      orderId: (data['order_id'] ?? '').toString(),
+      metode: (data['metode'] ?? '').toString(),
+      qrUrl: data['qr_url'],
+      vaNumber: data['va_number'],
+      billKey: data['bill_key'],
+      billCode: data['bill_code'],
+    );
+  }
+}
+
+
+class HasilCekStatus {
+  final bool isLunas;
+  final String statusTransaksi;
+
+  HasilCekStatus({required this.isLunas, required this.statusTransaksi});
+
+  factory HasilCekStatus.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] ?? {};
+    return HasilCekStatus(
+      isLunas: json['is_lunas'] ?? false,
+      statusTransaksi: data['status_transaksi'] ?? 'pending',
+    );
+  }
+}
+
+class MetodePembayaran {
+  final int idMetodePembayaran;
+  final String publicId;
+  final String namaMetode;
+  final String kodeMetode;
+  final String penyedia;
+  final String icon;
+  final int urutan;
+  final bool isActive;
+
+  MetodePembayaran({
+    required this.idMetodePembayaran,
+    required this.publicId,
+    required this.namaMetode,
+    required this.kodeMetode,
+    required this.penyedia,
+    required this.icon,
+    required this.urutan,
+    required this.isActive,
+  });
+
+  factory MetodePembayaran.fromJson(Map<String, dynamic> json) {
+    return MetodePembayaran(
+      idMetodePembayaran: json['id_metode_pembayaran'] ?? 0,
+      publicId: json['public_id'] ?? '',
+      namaMetode: json['nama_metode'] ?? '',
+      kodeMetode: json['kode_metode'] ?? '',
+      penyedia: json['penyedia'] ?? '',
+      icon: json['icon'] ?? '',
+      urutan: json['urutan'] ?? 0,
+      isActive: json['is_active'] ?? true,
     );
   }
 }

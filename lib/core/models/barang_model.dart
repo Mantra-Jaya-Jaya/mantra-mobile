@@ -1,22 +1,38 @@
-class BarangModel {
-  final int idBarang;
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+class BarangModelCore {
+  final String idBarang;
   final String namaBarang;
+  final int hargaTerendah;
+  final int hargaTertinggi;
+  final int hargaDiskon;
+  final bool punyaDiskon;
   final String gambarBarang;
   final String deskripsi;
+  final String stok;
 
-  BarangModel({
+  BarangModelCore({
     required this.idBarang,
     required this.namaBarang,
+    required this.hargaTerendah,
+    required this.hargaTertinggi,
+    required this.hargaDiskon,
+    required this.punyaDiskon,
     required this.gambarBarang,
     required this.deskripsi,
+    required this.stok,
   });
 
-  factory BarangModel.fromJson(Map<String, dynamic> json) {
-    return BarangModel(
-      idBarang: json['id_barang'],
-      namaBarang: json['nama_barang'],
-      gambarBarang: json['gambar_barang'],
-      deskripsi: json['deskripsi'],
+  factory BarangModelCore.fromJson(Map<String, dynamic> json) {
+    return BarangModelCore(
+      idBarang: (json['public_id'] ?? json['id_barang'] ?? '').toString(),
+      namaBarang: json['nama_barang'] ?? '',
+      hargaTerendah: json['harga_terendah'] ?? 0,
+      hargaTertinggi: json['harga_tertinggi'] ?? 0,
+      hargaDiskon: json['harga_diskon'] ?? 0,
+      punyaDiskon: json['punya_diskon'] ?? (json['diskon'] != null),
+      gambarBarang: json['gambar_barang'] ?? '',
+      deskripsi: json['deskripsi'] ?? '',
+      stok: (json['stok'] ?? '').toString(),
     );
   }
 }

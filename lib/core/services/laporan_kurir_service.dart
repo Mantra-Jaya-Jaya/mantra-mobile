@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../models/laporan_kurir_model.dart'; 
 import '../network/api_client.dart'; 
@@ -19,7 +21,7 @@ class LaporanService {
       }
       return null;
     } catch (e) {
-      print("❌ Error pada LaporanService: $e");
+      debugPrint("❌ Error pada LaporanService: $e");
       // Lempar error biar bisa ditangkap sama UI (FutureBuilder)
       rethrow;
     }

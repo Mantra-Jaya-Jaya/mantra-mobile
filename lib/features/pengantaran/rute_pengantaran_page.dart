@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -30,8 +31,12 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
   Position? _currentPosition;
   StreamSubscription<Position>? _positionStream;
 
+  Timer? _timerLokasi;
+
   // 🚀 PENAMPUNG GARIS RUTE
   List<LatLng> _routePoints = [];
+
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -39,26 +44,29 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
     _initDataAndLocation();
   }
 
-  // 🚀 ALUR BARU: Ambil Data -> Cek Lokasi -> Gambar Rute
   Future<void> _initDataAndLocation() async {
-    // 1. Tarik data tujuan dari Backend
+    setState(() => _errorMessage = null);
+
     final data = await _service.getDetailPengantaran(widget.idPengantaran);
     if (!mounted) return;
-    setState(() {
-      _dataPengantaran = data;
-    });
+    setState(() => _dataPengantaran = data);
 
-    if (data == null) return;
+    if (data == null) {
+      setState(() => _errorMessage = 'Gagal memuat data pengantaran');
+      return;
+    }
 
-    // 2. Minta izin dan ambil lokasi kurir
     var status = await Permission.location.request();
-    if (status.isGranted) {
-      _currentPosition = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
+    if (status.isGranted || status.isLimited) {
+      try {
+        _currentPosition = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
+      } catch (e) {
+        debugPrint('Gagal ambil posisi awal: $e');
+      }
       if (mounted) setState(() {});
 
-      // 3. Tarik Garis Rute (OSRM API)
       if (_currentPosition != null) {
         await _getRoute(
           LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
@@ -66,7 +74,6 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
         );
       }
 
-      // 4. Pantau pergerakan motor (Live Tracking)
       _positionStream =
           Geolocator.getPositionStream(
             locationSettings: const LocationSettings(
@@ -80,7 +87,29 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
               });
             }
           });
+
+      _mulaiRadarGPS();
+    } else {
+      setState(() => _errorMessage = 'Izin lokasi diperlukan untuk tracking');
     }
+  }
+
+  // 🚀 2. FUNGSI RADAR REALTIME KE BACKEND
+  void _mulaiRadarGPS() {
+    _timerLokasi = Timer.periodic(const Duration(seconds: 10), (timer) async {
+      if (_currentPosition != null) {
+        final ok = await _service.updateLokasiKurir(
+          widget.idPengantaran,
+          _currentPosition!.latitude,
+          _currentPosition!.longitude,
+        );
+        if (ok) {
+          debugPrint('✅ Radar update: ${_currentPosition!.latitude}, ${_currentPosition!.longitude}');
+        } else {
+          debugPrint('❌ Radar update gagal');
+        }
+      }
+    });
   }
 
   // 🚀 FUNGSI SAKTI: Nembak API OSRM Buat Dapetin Titik-Titik Garis
@@ -107,11 +136,17 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
       }
     } catch (e) {
       debugPrint("Gagal menarik rute OSRM: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal memuat rute perjalanan')),
+        );
+      }
     }
   }
 
   @override
   void dispose() {
+    _timerLokasi?.cancel();
     _positionStream?.cancel();
     _mapController.dispose();
     super.dispose();
@@ -128,7 +163,34 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
       ),
       body: SafeArea(
         bottom: false,
-        child: _dataPengantaran == null
+        child: _errorMessage != null
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline, color: Colors.white, size: 48),
+                      const SizedBox(height: 16),
+                      Text(
+                        _errorMessage!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: () => _initDataAndLocation(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFFAD510D),
+                        ),
+                        child: const Text('Coba Lagi'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : _dataPengantaran == null
             ? const Center(
                 child: CircularProgressIndicator(color: Colors.white),
               )
@@ -163,7 +225,6 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
                                 ),
 
                                 // 🚀 LAYER GARIS RUTE (Polyline)
-// 🚀 LAYER GARIS RUTE (Polyline)
                                 PolylineLayer(
                                   polylines: [
                                     // 🚀 TAMBAHIN BARIS INI: Cek dulu rutenya udah ada isinya belum!
@@ -269,8 +330,8 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
                                               width: 50,
                                               height: 4,
                                               decoration: BoxDecoration(
-                                                color: Colors.white.withOpacity(
-                                                  0.5,
+                                                color: Colors.white.withValues(
+                                                  alpha: 0.5,
                                                 ),
                                                 borderRadius:
                                                     BorderRadius.circular(10),
@@ -284,8 +345,8 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
                                             style: TextStyle(
                                               fontSize: 10,
                                               fontWeight: FontWeight.bold,
-                                              color: Colors.white.withOpacity(
-                                                0.7,
+                                              color: Colors.white.withValues(
+                                                alpha: 0.7,
                                               ),
                                             ),
                                           ),
@@ -345,7 +406,7 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
                                                       style: TextStyle(
                                                         fontSize: 14,
                                                         color: Colors.white
-                                                            .withOpacity(0.8),
+                                                            .withValues(alpha: 0.8),
                                                         height: 1.5,
                                                       ),
                                                     ),
@@ -366,8 +427,9 @@ class _RutePengantaranPageState extends State<RutePengantaranPage> {
                                                   MaterialPageRoute(
                                                     builder: (context) =>
                                                         DetailPesananPage(
-                                                          idPengantaran: widget
-                                                              .idPengantaran,
+                                                          idPengantaran: widget.idPengantaran,
+                                                          isSedangDiantar: true, 
+                                                          isDariPeta: true,
                                                         ),
                                                   ),
                                                 );

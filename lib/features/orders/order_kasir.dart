@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:frontend/core/services/order_service.dart';
 import 'package:frontend/core/models/order_model.dart';
@@ -47,15 +48,16 @@ class OrderKasirState extends State<OrderKasir> {
           isLoading = false;
         });
       }
-      print("❌ Error memuat data dari backend: $e");
+      debugPrint("❌ Error memuat data dari backend: $e");
     }
   }
 
   Color _getStatusColor(String status) {
     switch (status.trim().toLowerCase()) {
+      case 'menunggu pembayaran':
+        return const Color(0xFFFEF9C3); // Kuning muda
       case 'dikemas':
-      case 'diproses': 
-        return const Color(0xFFFFEDD5); 
+        return const Color(0xFFFFEDD5);
       case 'selesai': 
       case 'dikirim':
         return const Color(0xFFDCFCE7); 
@@ -66,9 +68,10 @@ class OrderKasirState extends State<OrderKasir> {
 
   Color _getStatusTextColor(String status) {
     switch (status.trim().toLowerCase()) {
+      case 'menunggu pembayaran':
+        return const Color(0xFF854D0E); // Coklat/Kuning tua
       case 'dikemas':
-      case 'diproses': 
-        return const Color(0xFFAF510C); 
+        return const Color(0xFFAF510C);
       case 'selesai': 
       case 'dikirim':
         return const Color(0xFF15803D); 
@@ -227,20 +230,23 @@ class OrderKasirState extends State<OrderKasir> {
   Widget _buildOrderItem(OrderModel order) {
     return GestureDetector(
       onTap: () {
+        // 1. Ambil ID-nya (contoh: #ORD-AF7C0671)
+        // 2. Kirim ke halaman DetailPesanan
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => DetailPesanan(pesanan: order),
+            // KODE BARU:
+            builder: (context) => DetailPesanan(publicId: order.fullPublicId), 
           ),
         );
       },
-      child: Container(
+    child: Container(
         margin: const EdgeInsets.only(bottom: 14),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4, offset: const Offset(0, 2))],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 2))],
         ),
         child: Row(
           children: [
@@ -251,7 +257,7 @@ class OrderKasirState extends State<OrderKasir> {
                 width: 52, 
                 height: 52, 
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+                errorBuilder: (_, _, _) => Container(
                   width: 52, 
                   height: 52, 
                   color: const Color(0xFFF3EDE5),

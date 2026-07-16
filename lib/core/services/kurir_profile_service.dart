@@ -1,3 +1,6 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../models/profil_kurir_model.dart'; 
 import '../network/api_client.dart';
@@ -23,10 +26,19 @@ class KurirService {
       }
     } catch (e) {
       // Print error biar gampang debugging di terminal lu
-      print("❌ Error pada KurirService (getProfilKurir): $e");
+      debugPrint("❌ Error pada KurirService (getProfilKurir): $e");
 
       // Lempar error biar FutureBuilder di UI bisa nangkep dan nampilin pesan
       rethrow;
     }
+  }
+
+  Future<String> uploadFoto(File file) async {
+    String fileName = file.path.split('/').last;
+    final formData = FormData.fromMap({
+      'foto': await MultipartFile.fromFile(file.path, filename: fileName),
+    });
+    final response = await _dio.post('/kurir/profil/foto', data: formData);
+    return response.data['url'];
   }
 }

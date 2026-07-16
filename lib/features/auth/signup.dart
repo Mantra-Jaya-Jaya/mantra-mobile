@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'signup2.dart';
 import 'login.dart';
@@ -202,7 +203,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ),
                               ),
                             ),
-                            const Spacer(), // Dorong tulisan login ke paling bawah
+                            const SizedBox(height: 25),
                             Center(
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
